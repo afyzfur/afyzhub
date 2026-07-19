@@ -67,8 +67,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveConfig(config: ApiConfig, newApiKey: String) {
+        var baseUrl = config.baseUrl.trim().trimEnd('/')
+        // 自动补全版本路径：若末尾没有 /v1、/v2 等，自动追加 /v1
+        if (!baseUrl.matches(Regex(".*(/v\\d+)$"))) {
+            baseUrl += "/v1"
+        }
         val normalized = config.copy(
-            baseUrl = config.baseUrl.trim().trimEnd('/'),
+            baseUrl = baseUrl,
             model = config.model.trim(),
             maxTokens = config.maxTokens.coerceAtLeast(1)
         )
