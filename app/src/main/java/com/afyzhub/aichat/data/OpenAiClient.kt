@@ -54,14 +54,15 @@ class OpenAiClient {
         val payload = JSONObject()
             .put("model", config.model)
             .put("messages", requestMessages)
-            .put("stream", true)
+            .put("stream", config.useStream)
             .put("temperature", config.temperature.toDouble())
             .put("max_tokens", config.maxTokens)
 
+        val accept = if (config.useStream) "text/event-stream" else "application/json"
         val request = Request.Builder()
             .url(config.baseUrl.trim().trimEnd('/') + "/chat/completions")
             .header("Authorization", "Bearer $apiKey")
-            .header("Accept", "text/event-stream")
+            .header("Accept", accept)
             .post(
                 payload.toString()
                     .toRequestBody("application/json; charset=utf-8".toMediaType())
@@ -85,36 +86,34 @@ class OpenAiClient {
                     )
                 }
 
-                val reader = response.body?.charStream()?.buffered()
-                    ?: throw IOException("服务返回了空响应")
-                                while (true) {
-                    coroutineContext.ensureActive()
-                    val line = reader.readLine() ?: break
-                    if (!line.startsWith("data:")) continue
-                    val data = line.removePrefix("data:").trim()
-                    if (data == "[DONE]" || data.contains("[DONE]")) break
-                    if (data.isBlank()) continue
+                val body = response.body?.string() ?: throw IOException("服务返回了空响应")
 
-                    try {
-                        val json = JSONObject(data)
-                val choice = json.optJSONArray("choices")?.optJSONObject(0)
-
-                        // 尝试 delta.content（标准 SSE 流式格式）
-                        var delta = choice?.optJSONObject("delta")?.optString("content").orEmpty()
-
-                        // 兼容部分非标准服务：message.content 或顶层 text 字段
-                        if (delta.isEmpty()) {
-                            delta = choice?.optJSONObject("message")?.optString("content").orEmpty()
-                        }
-                        if (delta.isEmpty()) {
-                            delta = json.optString("text").orEmpty()
-                        }
-
-                        if (delta.isNotEmpty() && delta != "null") {
-                            onDelta(delta)
-                        }
-                    } catch (_: Exception) {
-                        // 忽略单个损坏事件，继续读取后续 SSE 数据。
+                if (!config.useStream) {
+                    // 非流式：直接解析完整 JSON
+                    val json = JSONObject(body)
+                    val choice = json.optJSONArray("choices")?.optJSONObject(0)
+                    val content = choice?.optJSONObject("message")?.optString("content").orEmpty()
+                    if (content.isNotEmpty() && content != "null") {
+                        onDelta(content)
+                    } else {
+                        throw IOException("服务未返回文本内容")
+                    }
+                } else {
+                    // 流式：逐行解析 SSE
+                    body.lines().forEach { line ->
+                        coroutineContext.ensureActive()
+                        if (!line.startsWith("data:")) return@forEach
+                        val data = line.removePrefix("data:").trim()
+                        if (data == "[DONE]" || data.contains("[DONE]")) return@forEach
+                        if (data.isBlank()) return@forEach
+                        try {
+                            val json = JSONObject(data)
+                            val choice = json.optJSONArray("choices")?.optJSONObject(0)
+                            var delta = choice?.optJSONObject("delta")?.optString("content").orEmpty()
+                            if (delta.isEmpty()) delta = choice?.optJSONObject("message")?.optString("content").orEmpty()
+                            if (delta.isEmpty()) delta = json.optString("text").orEmpty()
+                            if (delta.isNotEmpty() && delta != "null") onDelta(delta)
+                        } catch (_: Exception) {}
                     }
                 }
             }
