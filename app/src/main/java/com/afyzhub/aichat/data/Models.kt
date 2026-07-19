@@ -19,7 +19,8 @@ data class ApiConfig(
     val model: String = "gpt-4o-mini",
     val systemPrompt: String = "",
     val temperature: Float = 0.7f,
-    val maxTokens: Int = 2048
+    val maxTokens: Int = 2048,
+    val useStream: Boolean = true
 )
 
 data class AppState(
