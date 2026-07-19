@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -365,6 +366,7 @@ private fun SettingsScreen(
     var maxTokens by remember(state.config) {
         mutableStateOf(state.config.maxTokens.toString())
     }
+        var useStream by remember(state.config) { mutableStateOf(state.config.useStream) }
     var showClearConfirm by remember { mutableStateOf(false) }
 
     if (showClearConfirm) {
@@ -455,6 +457,18 @@ private fun SettingsScreen(
             singleLine = true
         )
 
+                Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("流式输出（SSE）", modifier = Modifier.weight(1f))
+            Switch(checked = useStream, onCheckedChange = { useStream = it })}
+        Text(
+            "关闭后使用普通请求，适合不支持 SSE 流式的第三方服务",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
         Button(
             onClick = {
                 onSave(
@@ -463,7 +477,8 @@ private fun SettingsScreen(
                         model = model,
                         systemPrompt = systemPrompt,
                         temperature = temperature,
-                        maxTokens = maxTokens.toIntOrNull() ?: 2048
+                        maxTokens = maxTokens.toIntOrNull() ?: 2048,
+                        useStream = useStream
                     ),
                     apiKey
                 )
