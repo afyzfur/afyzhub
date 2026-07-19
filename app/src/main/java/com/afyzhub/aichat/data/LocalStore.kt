@@ -14,7 +14,8 @@ class LocalStore(context: Context) {
         model = preferences.getString("model", null) ?: "gpt-4o-mini",
         systemPrompt = preferences.getString("system_prompt", null) ?: "",
         temperature = preferences.getFloat("temperature", 0.7f),
-        maxTokens = preferences.getInt("max_tokens", 2048)
+        maxTokens = preferences.getInt("max_tokens", 2048),
+        useStream = preferences.getBoolean("use_stream", true)
     )
 
     fun saveConfig(config: ApiConfig) {
@@ -24,6 +25,7 @@ class LocalStore(context: Context) {
             .putString("system_prompt", config.systemPrompt)
             .putFloat("temperature", config.temperature)
             .putInt("max_tokens", config.maxTokens)
+            .putBoolean("use_stream", config.useStream)
             .apply()
     }
 
