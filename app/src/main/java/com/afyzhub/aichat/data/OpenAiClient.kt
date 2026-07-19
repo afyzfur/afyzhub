@@ -87,9 +87,7 @@ class OpenAiClient {
 
                 val reader = response.body?.charStream()?.buffered()
                     ?: throw IOException("服务返回了空响应")
-                var receivedContent = false
-
-                while (true) {
+                                while (true) {
                     coroutineContext.ensureActive()
                     val line = reader.readLine() ?: break
                     if (!line.startsWith("data:")) continue
@@ -98,23 +96,26 @@ class OpenAiClient {
                     if (data.isBlank()) continue
 
                     try {
-                        val delta = JSONObject(data)
-                            .optJSONArray("choices")
-                            ?.optJSONObject(0)
-                            ?.optJSONObject("delta")
-                            ?.optString("content")
-                            .orEmpty()
-                        if (delta.isNotEmpty()) {
-                            receivedContent = true
+                        val json = JSONObject(data)
+                val choice = json.optJSONArray("choices")?.optJSONObject(0)
+
+                        // 尝试 delta.content（标准 SSE 流式格式）
+                        var delta = choice?.optJSONObject("delta")?.optString("content").orEmpty()
+
+                        // 兼容部分非标准服务：message.content 或顶层 text 字段
+                        if (delta.isEmpty()) {
+                            delta = choice?.optJSONObject("message")?.optString("content").orEmpty()
+                        }
+                        if (delta.isEmpty()) {
+                            delta = json.optString("text").orEmpty()
+                        }
+
+                        if (delta.isNotEmpty() && delta != "null") {
                             onDelta(delta)
                         }
                     } catch (_: Exception) {
                         // 忽略单个损坏事件，继续读取后续 SSE 数据。
                     }
-                }
-
-                if (!receivedContent) {
-                    throw IOException("服务未返回可显示的文本内容")
                 }
             }
         } finally {
