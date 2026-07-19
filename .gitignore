@@ -1,0 +1,19 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+/.kotlin/
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+.DS_Store
+# 签名与密钥文件禁止入库
+*.jks
+*.keystore
+key.properties
+keystore.properties
+# 本地私密配置
+*.env
+secrets.properties
