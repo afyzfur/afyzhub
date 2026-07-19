@@ -15,10 +15,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.coroutineContext
 
 class OpenAiClient {
-    private val httpClient = OkHttpClient.Builder()
+        private val httpClient = OkHttpClient.Builder()
         .connectTimeout(25, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .build()
 
     @Volatile
@@ -92,7 +92,7 @@ class OpenAiClient {
                     val line = reader.readLine() ?: break
                     if (!line.startsWith("data:")) continue
                     val data = line.removePrefix("data:").trim()
-                    if (data == "[DONE]") break
+                    if (data == "[DONE]" || data.contains("[DONE]")) break
                     if (data.isBlank()) continue
 
                     try {
