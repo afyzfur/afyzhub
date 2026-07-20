@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -23,8 +24,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -32,6 +43,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -119,22 +132,27 @@ fun AfyzhubApp(viewModel: ChatViewModel) {
                     )
                 },
                 navigationIcon = {
-                    TextButton(
+                    IconButton(
                         onClick = {
                             if (page == Page.CHAT) showConversations = true
                             else page = Page.CHAT
                         }
                     ) {
-                        Text(if (page == Page.CHAT) "会话" else "返回")
+                        Icon(
+                            imageVector = if (page == Page.CHAT) Icons.Filled.Menu
+                            else Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = if (page == Page.CHAT) "会话列表" else "返回"
+                        )
                     }
                 },
                 actions = {
-                    TextButton(
-                        onClick = {
-                            page = if (page == Page.CHAT) Page.SETTINGS else Page.CHAT
+                    if (page == Page.CHAT) {
+                        IconButton(onClick = { viewModel.newConversation() }) {
+                            Icon(Icons.Filled.Add, contentDescription = "新建对话")
                         }
-                    ) {
-                        Text(if (page == Page.CHAT) "配置" else "聊天")
+                        IconButton(onClick = { page = Page.SETTINGS }) {
+                            Icon(Icons.Filled.Settings, contentDescription = "设置")
+                        }
                     }
                 }
             )
@@ -261,20 +279,22 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (state.isGenerating) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
+                            Icon(
+                                imageVector = Icons.Filled.Stop,
+                                contentDescription = "停止生成",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(24.dp)
                             )
                         } else {
-                            Text(
-                                "↑",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = if (input.isNotBlank()) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "发送",
+                                tint = if (input.isNotBlank()) {
                                     MaterialTheme.colorScheme.onPrimary
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
-                                }
+                                },
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
@@ -336,15 +356,18 @@ private fun MessageBubble(message: ChatMessage) {
                 )
             }
         }
-        // 复制按钮：仅在有内容时显示，轻量小号
+        // 复制按钮：仅在有内容时显示，图标小按钮
         if (message.content.isNotBlank()) {
-            TextButton(
+            IconButton(
                 onClick = { clipboard.setText(AnnotatedString(message.content)) },
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    horizontal = 8.dp, vertical = 2.dp
-                )
+                modifier = Modifier.size(32.dp)
             ) {
-                Text("复制", style = MaterialTheme.typography.labelSmall)
+                Icon(
+                    imageVector = Icons.Filled.ContentCopy,
+                    contentDescription = "复制",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -406,38 +429,65 @@ private fun ConversationsDialog(
                     onClick = onNew,
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
                     Text("新建对话")
                 }
+                Spacer(Modifier.height(4.dp))
                 state.conversations.forEach { conversation ->
-                    Row(
+                    val isSelected = conversation.id == state.selectedConversationId
+                    Surface(
+                        onClick = { onSelect(conversation.id) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            Color.Transparent
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(conversation.id) }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 2.dp)
                     ) {
-                        Text(
-                            text = conversation.title,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            fontWeight = if (
-                                conversation.id == state.selectedConversationId
-                            ) FontWeight.Bold else FontWeight.Normal
-                        )
-                        TextButton(
-                            onClick = {
-                                renameText = conversation.title
-                                renamingId = conversation.id
-                            }
+                        Row(
+                            modifier = Modifier.padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("重命名")
-                        }
-                        TextButton(onClick = { onDelete(conversation.id) }) {
-                            Text("删除")
+                            Text(
+                                text = conversation.title,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                            IconButton(
+                                onClick = {
+                                    renameText = conversation.title
+                                    renamingId = conversation.id
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Edit,
+                                    contentDescription = "重命名",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { onDelete(conversation.id) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Delete,
+                                    contentDescription = "删除",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
-                    HorizontalDivider()
                 }
             }
         },
@@ -748,7 +798,9 @@ private fun SettingsScreen(
             )
         } else {
             Text(
-                "MAX 模式会根据所选模型的上下文窗口，尽可能多地携带历史消息",
+                "MAX 模式会根据所选模型的上下文窗口，尽可能多地携带历史消息。" +
+                    "仅支持官方标准模型（如 gpt-4o、claude、deepseek、gemini 等）；" +
+                    "第三方中转的自定义模型名无法识别，建议改用「自定义长度」手动指定。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
