@@ -1,8 +1,10 @@
 # afyzhub
 
-一个简洁的 Android AI 聊天客户端，首版支持 **OpenAI Chat Completions 兼容接口**。界面基于 Jetpack Compose 与 Material 3，聊天数据只保存在设备本地。
+一个简洁的 Android AI 聊天客户端，支持 **OpenAI Chat Completions 兼容接口**。界面基于 Jetpack Compose 与 Material 3，聊天数据只保存在设备本地。
 
-> 版本 `0.1.0` · 包名 `com.afyzhub.aichat` · 最低 Android 8.0（API 26）
+> 版本 `0.2.0-dev` · 包名 `com.afyzhub.aichat` · 最低 Android 8.0（API 26）
+>
+> 注：`1.0.0` 正式版之前的版本均为开发版（版本号带 `-dev` 后缀）。
 
 ## 功能
 
@@ -13,6 +15,9 @@
 - 复制任意消息，代码块（含 ```）等宽显示
 - 可设置 System Prompt、Temperature、最大输出 Token
 - Material 3 界面，支持 Android 12+ 动态取色与深浅色跟随系统
+- 可选自定义主题色（多种预设种子色）
+- 模型列表自动识别：一键从 `/models` 拉取并下拉选择
+- 上下文长度模式：固定条数 / MAX（按所选模型上下文窗口自动携带历史）
 - API Key 使用 Android Keystore 的 AES/GCM 在本设备加密保存
 
 ## 配置步骤
