@@ -87,7 +87,8 @@ fun AfyzhubApp(viewModel: ChatViewModel) {
                 viewModel.selectConversation(it)
                 showConversations = false
             },
-            onDelete = viewModel::deleteConversation
+            onDelete = viewModel::deleteConversation,
+            onRename = viewModel::renameConversation
         )
     }
 
@@ -141,7 +142,8 @@ fun AfyzhubApp(viewModel: ChatViewModel) {
                         viewModel.saveConfig(config, key)
                         page = Page.CHAT
                     },
-                    onClear = viewModel::clearConversations
+                    onClear = viewModel::clearConversations,
+                    onClearAll = viewModel::clearAllData
                 )
             }
         }
@@ -153,6 +155,14 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
     var input by remember { mutableStateOf("") }
     val conversation = state.conversations.firstOrNull {
         it.id == state.selectedConversationId
+    }
+
+    // 请求失败时把输入回填到输入框，便于用户直接重发
+    LaunchedEffect(state.lastFailedInput) {
+        state.lastFailedInput?.let {
+            if (input.isBlank()) input = it
+            viewModel.consumeFailedInput()
+        }
     }
 
     Column(
@@ -298,8 +308,43 @@ private fun ConversationsDialog(
     onDismiss: () -> Unit,
     onNew: () -> Unit,
     onSelect: (String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onRename: (String, String) -> Unit
 ) {
+    // 正在重命名的会话 id 与临时输入
+    var renamingId by remember { mutableStateOf<String?>(null) }
+    var renameText by remember { mutableStateOf("") }
+
+    if (renamingId != null) {
+        AlertDialog(
+            onDismissRequest = { renamingId = null },
+            title = { Text("重命名会话") },
+            text = {
+                OutlinedTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        renamingId?.let { onRename(it, renameText) }
+                        renamingId = null
+                    }
+                ) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renamingId = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("会话") },
@@ -332,6 +377,14 @@ private fun ConversationsDialog(
                                 conversation.id == state.selectedConversationId
                             ) FontWeight.Bold else FontWeight.Normal
                         )
+                        TextButton(
+                            onClick = {
+                                renameText = conversation.title
+                                renamingId = conversation.id
+                            }
+                        ) {
+                            Text("重命名")
+                        }
                         TextButton(onClick = { onDelete(conversation.id) }) {
                             Text("删除")
                         }
@@ -352,7 +405,8 @@ private fun ConversationsDialog(
 private fun SettingsScreen(
     state: AppState,
     onSave: (ApiConfig, String) -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
+    onClearAll: () -> Unit
 ) {
     var baseUrl by remember(state.config) { mutableStateOf(state.config.baseUrl) }
     var model by remember(state.config) { mutableStateOf(state.config.model) }
@@ -366,8 +420,9 @@ private fun SettingsScreen(
     var maxTokens by remember(state.config) {
         mutableStateOf(state.config.maxTokens.toString())
     }
-        var useStream by remember(state.config) { mutableStateOf(state.config.useStream) }
+    var useStream by remember(state.config) { mutableStateOf(state.config.useStream) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showClearAllConfirm by remember { mutableStateOf(false) }
 
     if (showClearConfirm) {
         AlertDialog(
@@ -386,6 +441,29 @@ private fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    if (showClearAllConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearAllConfirm = false },
+            title = { Text("清除全部数据？") },
+            text = { Text("将删除所有会话以及本机加密保存的 API Key，此操作不可撤销。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClearAll()
+                        showClearAllConfirm = false
+                    }
+                ) {
+                    Text("确认清除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearAllConfirm = false }) {
                     Text("取消")
                 }
             }
@@ -457,12 +535,13 @@ private fun SettingsScreen(
             singleLine = true
         )
 
-                Row(
+        Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("流式输出（SSE）", modifier = Modifier.weight(1f))
-            Switch(checked = useStream, onCheckedChange = { useStream = it })}
+            Switch(checked = useStream, onCheckedChange = { useStream = it })
+        }
         Text(
             "关闭后使用普通请求，适合不支持 SSE 流式的第三方服务",
             style = MaterialTheme.typography.bodySmall,
@@ -496,6 +575,9 @@ private fun SettingsScreen(
         )
         OutlinedButton(onClick = { showClearConfirm = true }) {
             Text("清除本地会话")
+        }
+        OutlinedButton(onClick = { showClearAllConfirm = true }) {
+            Text("清除全部数据（含 API Key）")
         }
     }
 }
