@@ -124,6 +124,45 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * 拉取模型列表。使用当前已保存的配置与 API Key；
+     * 若传入 overrideConfig（如设置页尚未保存的临时配置），优先使用它。
+     */
+    fun loadModels(overrideConfig: ApiConfig? = null) {
+        if (_state.value.isLoadingModels) return
+        val apiKey = apiKeyStore.load()
+        if (apiKey.isBlank()) {
+            _state.value = _state.value.copy(notice = "请先配置并保存 API Key")
+            return
+        }
+        val config = (overrideConfig ?: _state.value.config).let {
+            var url = it.baseUrl.trim().trimEnd('/')
+            if (!url.matches(Regex(".*(/v\\d+)$"))) url += "/v1"
+            it.copy(baseUrl = url)
+        }
+        if (!config.baseUrl.startsWith("https://")) {
+            _state.value = _state.value.copy(notice = "为保护 API Key，仅允许使用 HTTPS 地址")
+            return
+        }
+
+        _state.value = _state.value.copy(isLoadingModels = true)
+        viewModelScope.launch {
+            try {
+                val models = openAiClient.fetchModels(config, apiKey)
+                _state.value = _state.value.copy(
+                    availableModels = models,
+                    notice = if (models.isEmpty()) "未获取到模型" else "已获取 ${models.size} 个模型"
+                )
+            } catch (error: Exception) {
+                _state.value = _state.value.copy(
+                    notice = "获取模型失败：${error.message ?: "网络异常"}"
+                )
+            } finally {
+                _state.value = _state.value.copy(isLoadingModels = false)
+            }
+        }
+    }
+
     fun stopGenerating() {
         openAiClient.cancel()
         // 清理仍为空的助手消息，避免留下空气泡
