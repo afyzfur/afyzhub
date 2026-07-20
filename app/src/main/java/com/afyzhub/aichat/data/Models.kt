@@ -16,7 +16,7 @@ data class Conversation(
 
 /** 上下文长度模式。 */
 enum class ContextMode {
-    /** 固定携带最近 N 条消息。 */
+    /** 自定义：按用户指定的 token 长度上限裁剪历史。 */
     LIMITED,
 
     /** MAX 模式：尽可能多地携带历史，由模型上下文窗口自动决定上限。 */
@@ -34,8 +34,8 @@ data class ApiConfig(
     val themeSeedColor: Long? = null,
     /** 上下文模式。 */
     val contextMode: ContextMode = ContextMode.LIMITED,
-    /** LIMITED 模式下携带的最近消息条数。 */
-    val contextLimit: Int = 20
+    /** LIMITED 模式下携带历史的 token 长度上限。 */
+    val contextLimit: Int = 32_768
 )
 
 /** 从 /models 接口获取的模型条目。 */
