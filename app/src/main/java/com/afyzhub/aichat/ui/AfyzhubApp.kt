@@ -450,15 +450,15 @@ private fun ConversationsDialog(
 }
 
 // 常用上下文长度预设（token）：32K / 64K / 128K / 256K / 512K / 1M
-private val CONTEXT_PRESETS = listOf(32_768, 65_536, 131_072, 262_144, 524_288, 1_000_000)
+private val CONTEXT_PRESETS = listOf(32_000, 64_000, 128_000, 256_000, 512_000, 1_000_000)
 
-// 上下文窗口友好显示：>=1M 显示为 M，否则显示为 K
+// 上下文窗口友好显示：四舍五入到最接近的 K / M，避免出现 65K、262K 之类的零头
 private fun formatContext(tokens: Int): String = when {
     tokens >= 1_000_000 -> {
         val m = tokens / 1_000_000.0
         if (m == m.toInt().toDouble()) "${m.toInt()}M" else "%.1fM".format(m)
     }
-    else -> "${tokens / 1000}K"
+    else -> "${Math.round(tokens / 1000.0).toInt()}K"
 }
 
 // 预设主题色（种子色）。null 表示跟随系统动态取色。
