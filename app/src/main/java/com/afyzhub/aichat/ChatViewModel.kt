@@ -103,12 +103,43 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    /** 清除全部数据：会话、配置与加密保存的 API Key。 */
+    fun clearAllData() {
+        openAiClient.cancel()
+        localStore.clearConversations()
+        apiKeyStore.clear()
+        _state.value = _state.value.copy(
+            conversations = emptyList(),
+            selectedConversationId = null,
+            isGenerating = false,
+            hasApiKey = false,
+            notice = "全部数据已清除"
+        )
+    }
+
+    /** 消费 lastFailedInput（供输入框回填后清空）。 */
+    fun consumeFailedInput() {
+        if (_state.value.lastFailedInput != null) {
+            _state.value = _state.value.copy(lastFailedInput = null)
+        }
+    }
+
     fun stopGenerating() {
         openAiClient.cancel()
+        // 清理仍为空的助手消息，避免留下空气泡
+        val cleaned = _state.value.conversations.map { conversation ->
+            conversation.copy(
+                messages = conversation.messages.filterNot {
+                    it.role == "assistant" && it.content.isBlank()
+                }
+            )
+        }
         _state.value = _state.value.copy(
+            conversations = cleaned,
             isGenerating = false,
             notice = "已停止生成"
         )
+        persist(cleaned)
     }
 
     fun sendMessage(input: String) {
@@ -121,12 +152,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        var conversationId = _state.value.selectedConversationId
-        if (conversationId == null) {
-            newConversation()
-            conversationId = _state.value.selectedConversationId
+        // 确保存在目标会话：若无则新建并直接使用其 id，避免读取状态的竞态
+        val targetId: String
+        val existingId = _state.value.selectedConversationId
+        if (existingId == null || _state.value.conversations.none { it.id == existingId }) {
+            val conversation = Conversation()
+            val updated = listOf(conversation) + _state.value.conversations
+            _state.value = _state.value.copy(
+                conversations = updated,
+                selectedConversationId = conversation.id
+            )
+            persist(updated)
+            targetId = conversation.id
+        } else {
+            targetId = existingId
         }
-        val targetId = conversationId ?: return
+
         val userMessage = ChatMessage(role = "user", content = prompt)
         val assistantMessage = ChatMessage(role = "assistant", content = "")
 
@@ -177,17 +218,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             } catch (_: CancellationException) {
                 // 用户主动停止时保留已经生成的内容。
             } catch (error: Exception) {
+                // 请求失败：移除空助手消息与本轮用户消息，并把输入还给输入框便于重发
                 val cleaned = _state.value.conversations.map { conversation ->
                     if (conversation.id != targetId) conversation
                     else conversation.copy(
                         messages = conversation.messages.filterNot {
-                            it.id == assistantMessage.id && it.content.isBlank()
+                            it.id == assistantMessage.id || it.id == userMessage.id
                         }
                     )
                 }
                 _state.value = _state.value.copy(
                     conversations = cleaned,
-                    notice = "请求失败：${error.message ?: "网络异常"}"
+                    notice = "请求失败：${error.message ?: "网络异常"}",
+                    lastFailedInput = prompt
                 )
                 persist(cleaned)
             } finally {
