@@ -24,7 +24,12 @@ class LocalStore(context: Context) {
             )
         }.getOrDefault(ContextMode.LIMITED),
         contextLimit = preferences.getInt("context_limit", 32_768)
-            .let { if (it < 1_000) 32_768 else it } // 迁移：旧版存的是条数，纠正为长度
+            .let { if (it < 1_000) 32_768 else it }, // 迁移：旧版存的是条数，纠正为长度
+        inputBarStyle = runCatching {
+            InputBarStyle.valueOf(
+                preferences.getString("input_bar_style", null) ?: InputBarStyle.SOLID.name
+            )
+        }.getOrDefault(InputBarStyle.SOLID)
     )
 
     fun saveConfig(config: ApiConfig) {
@@ -38,6 +43,7 @@ class LocalStore(context: Context) {
             .putLong("theme_seed_color", config.themeSeedColor ?: -1L)
             .putString("context_mode", config.contextMode.name)
             .putInt("context_limit", config.contextLimit)
+            .putString("input_bar_style", config.inputBarStyle.name)
             .apply()
     }
 
