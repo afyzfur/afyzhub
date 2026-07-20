@@ -258,10 +258,10 @@ class OpenAiClient {
     }
 
     /**
-     * 按上下文模式裁剪历史消息。
-     * - LIMITED：保留最近 contextLimit 条。
-     * - MAX：按模型上下文窗口的 token 预算，从最新往旧尽量多带。
-     * 始终保留最后一条（当前用户消息）。
+     * 按上下文模式裁剪历史消息，两种模式都按 token 预算从最新往旧尽量多带。
+     * - LIMITED：预算为用户指定的 contextLimit（token 长度）。
+     * - MAX：预算为所选模型的上下文窗口。
+     * 均预留 system prompt 与输出 token 的余量，且始终至少保留最后一条。
      */
     private fun trimHistory(
         config: ApiConfig,
@@ -269,27 +269,21 @@ class OpenAiClient {
     ): List<ChatMessage> {
         if (messages.isEmpty()) return messages
 
-        return when (config.contextMode) {
-            ContextMode.LIMITED -> {
-                val limit = config.contextLimit.coerceAtLeast(1)
-                messages.takeLast(limit)
-            }
-            ContextMode.MAX -> {
-                val window = ModelCatalog.contextWindowFor(config.model)
-                // 预留 system prompt 与输出 token 的余量
-                val systemTokens = ModelCatalog.estimateTokens(config.systemPrompt)
-                val budget = (window - config.maxTokens - systemTokens - 256)
-                    .coerceAtLeast(1_000)
-                val selected = ArrayList<ChatMessage>()
-                var used = 0
-                for (message in messages.asReversed()) {
-                    val cost = ModelCatalog.estimateTokens(message.content) + 8
-                    if (used + cost > budget && selected.isNotEmpty()) break
-                    selected.add(message)
-                    used += cost
-                }
-                selected.asReversed()
-            }
+        val window = when (config.contextMode) {
+            ContextMode.LIMITED -> config.contextLimit.coerceAtLeast(1_000)
+            ContextMode.MAX -> ModelCatalog.contextWindowFor(config.model)
         }
+        val systemTokens = ModelCatalog.estimateTokens(config.systemPrompt)
+        val budget = (window - config.maxTokens - systemTokens - 256).coerceAtLeast(1_000)
+
+        val selected = ArrayList<ChatMessage>()
+        var used = 0
+        for (message in messages.asReversed()) {
+            val cost = ModelCatalog.estimateTokens(message.content) + 8
+            if (used + cost > budget && selected.isNotEmpty()) break
+            selected.add(message)
+            used += cost
+        }
+        return selected.asReversed()
     }
 }
