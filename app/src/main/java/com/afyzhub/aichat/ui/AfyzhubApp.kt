@@ -193,7 +193,8 @@ fun AfyzhubApp(viewModel: ChatViewModel) {
                     },
                     onClear = viewModel::clearConversations,
                     onClearAll = viewModel::clearAllData,
-                    onLoadModels = { cfg, key -> viewModel.loadModels(cfg, key) }
+                    onLoadModels = { cfg, key -> viewModel.loadModels(cfg, key) },
+                    onAppearanceChange = { seed, style -> viewModel.updateAppearance(seed, style) }
                 )
             }
         }
@@ -261,17 +262,17 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
             }
         }
 
-        // 悬浮卡片式输入区（颜色/透明度随 inputBarStyle 变化）
+        // 悬浮卡片式输入区（透明度随 inputBarStyle 变化）
         val baseColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
         val barColor = when (state.config.inputBarStyle) {
             InputBarStyle.SOLID -> baseColor
-            InputBarStyle.TRANSLUCENT -> baseColor.copy(alpha = 0.82f)
-            InputBarStyle.FROSTED -> baseColor.copy(alpha = 0.6f)
+            InputBarStyle.TRANSLUCENT -> baseColor.copy(alpha = 0.55f)
+            InputBarStyle.FROSTED -> baseColor.copy(alpha = 0.3f)
         }
         Surface(
             shape = RoundedCornerShape(28.dp),
             color = barColor,
-            shadowElevation = if (state.config.inputBarStyle == InputBarStyle.SOLID) 6.dp else 10.dp,
+            shadowElevation = if (state.config.inputBarStyle == InputBarStyle.SOLID) 6.dp else 2.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -618,7 +619,8 @@ private fun SettingsScreen(
     onSave: (ApiConfig, String) -> Unit,
     onClear: () -> Unit,
     onClearAll: () -> Unit,
-    onLoadModels: (ApiConfig, String) -> Unit
+    onLoadModels: (ApiConfig, String) -> Unit,
+    onAppearanceChange: (Long?, InputBarStyle) -> Unit
 ) {
     var baseUrl by remember(state.config) { mutableStateOf(state.config.baseUrl) }
     var model by remember(state.config) { mutableStateOf(state.config.model) }
@@ -852,17 +854,26 @@ private fun SettingsScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = inputBarStyle == InputBarStyle.SOLID,
-                onClick = { inputBarStyle = InputBarStyle.SOLID },
+                onClick = {
+                    inputBarStyle = InputBarStyle.SOLID
+                    onAppearanceChange(seedColor, InputBarStyle.SOLID)
+                },
                 label = { Text("不透明") }
             )
             FilterChip(
                 selected = inputBarStyle == InputBarStyle.TRANSLUCENT,
-                onClick = { inputBarStyle = InputBarStyle.TRANSLUCENT },
+                onClick = {
+                    inputBarStyle = InputBarStyle.TRANSLUCENT
+                    onAppearanceChange(seedColor, InputBarStyle.TRANSLUCENT)
+                },
                 label = { Text("半透明") }
             )
             FilterChip(
                 selected = inputBarStyle == InputBarStyle.FROSTED,
-                onClick = { inputBarStyle = InputBarStyle.FROSTED },
+                onClick = {
+                    inputBarStyle = InputBarStyle.FROSTED
+                    onAppearanceChange(seedColor, InputBarStyle.FROSTED)
+                },
                 label = { Text("磨砂") }
             )
         }
@@ -943,7 +954,10 @@ private fun SettingsScreen(
                                 else MaterialTheme.colorScheme.outline,
                                 shape = CircleShape
                             )
-                            .clickable { seedColor = colorValue }
+                            .clickable {
+                                seedColor = colorValue
+                                onAppearanceChange(colorValue, inputBarStyle)
+                            }
                     )
                     Text(
                         name,
