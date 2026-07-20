@@ -183,10 +183,7 @@ class OpenAiClient {
                 .get()
                 .build()
 
-            OkHttpClient.Builder()
-                .connectTimeout(20, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .build()
+            httpClient
                 .newCall(request)
                 .execute()
                 .use { response ->
