@@ -449,6 +449,9 @@ private fun ConversationsDialog(
     )
 }
 
+// 常用上下文长度预设（token）
+private val CONTEXT_PRESETS = listOf(4_096, 8_192, 16_384, 32_768, 65_536, 131_072, 200_000, 1_000_000)
+
 // 上下文窗口友好显示：>=1M 显示为 M，否则显示为 K
 private fun formatContext(tokens: Int): String = when {
     tokens >= 1_000_000 -> {
@@ -511,7 +514,7 @@ private fun SettingsScreen(
         useStream = useStream,
         themeSeedColor = seedColor,
         contextMode = contextMode,
-        contextLimit = contextLimit.toIntOrNull() ?: 20
+        contextLimit = contextLimit.toIntOrNull() ?: 32_768
     )
 
     if (showClearConfirm) {
@@ -712,7 +715,7 @@ private fun SettingsScreen(
             FilterChip(
                 selected = contextMode == ContextMode.LIMITED,
                 onClick = { contextMode = ContextMode.LIMITED },
-                label = { Text("固定条数") }
+                label = { Text("自定义长度") }
             )
             FilterChip(
                 selected = contextMode == ContextMode.MAX,
@@ -721,10 +724,25 @@ private fun SettingsScreen(
             )
         }
         if (contextMode == ContextMode.LIMITED) {
+            // 常用长度预设
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CONTEXT_PRESETS.forEach { preset ->
+                    FilterChip(
+                        selected = contextLimit == preset.toString(),
+                        onClick = { contextLimit = preset.toString() },
+                        label = { Text(formatContext(preset)) }
+                    )
+                }
+            }
             OutlinedTextField(
                 value = contextLimit,
                 onValueChange = { contextLimit = it.filter(Char::isDigit) },
-                label = { Text("携带最近消息条数") },
+                label = { Text("上下文长度（token）") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
