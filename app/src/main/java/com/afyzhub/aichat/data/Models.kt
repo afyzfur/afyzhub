@@ -29,5 +29,6 @@ data class AppState(
     val config: ApiConfig = ApiConfig(),
     val isGenerating: Boolean = false,
     val notice: String? = null,
-    val hasApiKey: Boolean = false
+    val hasApiKey: Boolean = false,
+    val lastFailedInput: String? = null
 )
