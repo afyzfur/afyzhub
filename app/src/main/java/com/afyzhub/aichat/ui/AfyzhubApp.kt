@@ -155,7 +155,7 @@ fun AfyzhubApp(viewModel: ChatViewModel) {
                     },
                     onClear = viewModel::clearConversations,
                     onClearAll = viewModel::clearAllData,
-                    onLoadModels = { cfg -> viewModel.loadModels(cfg) }
+                    onLoadModels = { cfg, key -> viewModel.loadModels(cfg, key) }
                 )
             }
         }
@@ -449,6 +449,15 @@ private fun ConversationsDialog(
     )
 }
 
+// 上下文窗口友好显示：>=1M 显示为 M，否则显示为 K
+private fun formatContext(tokens: Int): String = when {
+    tokens >= 1_000_000 -> {
+        val m = tokens / 1_000_000.0
+        if (m == m.toInt().toDouble()) "${m.toInt()}M" else "%.1fM".format(m)
+    }
+    else -> "${tokens / 1000}K"
+}
+
 // 预设主题色（种子色）。null 表示跟随系统动态取色。
 private val PRESET_SEED_COLORS: List<Pair<String, Long?>> = listOf(
     "动态" to null,
@@ -468,7 +477,7 @@ private fun SettingsScreen(
     onSave: (ApiConfig, String) -> Unit,
     onClear: () -> Unit,
     onClearAll: () -> Unit,
-    onLoadModels: (ApiConfig) -> Unit
+    onLoadModels: (ApiConfig, String) -> Unit
 ) {
     var baseUrl by remember(state.config) { mutableStateOf(state.config.baseUrl) }
     var model by remember(state.config) { mutableStateOf(state.config.model) }
@@ -618,7 +627,7 @@ private fun SettingsScreen(
                                     Text(m.id)
                                     m.contextWindow?.let {
                                         Text(
-                                            "上下文 ${it / 1000}K",
+                                            "上下文 ${formatContext(it)}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -636,7 +645,7 @@ private fun SettingsScreen(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(
-                onClick = { onLoadModels(currentConfig()) },
+                onClick = { onLoadModels(currentConfig(), apiKey) },
                 enabled = !state.isLoadingModels
             ) {
                 if (state.isLoadingModels) {
