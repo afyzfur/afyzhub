@@ -63,7 +63,7 @@ class OpenAiClient {
 
         val accept = if (config.useStream) "text/event-stream" else "application/json"
         val request = Request.Builder()
-            .url(config.baseUrl.trim().trimEnd('/') + "/chat/completions")
+            .url(normalizeBaseUrl(config.baseUrl) + "/chat/completions")
             .header("Authorization", "Bearer $apiKey")
             .header("Accept", accept)
             .post(
@@ -177,7 +177,7 @@ class OpenAiClient {
                 "为保护 API Key，仅允许使用 HTTPS 地址"
             }
             val request = Request.Builder()
-                .url(config.baseUrl.trim().trimEnd('/') + "/models")
+                .url(normalizeBaseUrl(config.baseUrl) + "/models")
                 .header("Authorization", "Bearer $apiKey")
                 .header("Accept", "application/json")
                 .get()
@@ -232,6 +232,18 @@ class OpenAiClient {
             models.add(ModelInfo(id = id, contextWindow = ctx))
         }
         return models.sortedBy { it.id }
+    }
+
+    /**
+     * 规范化 Base URL：去尾部斜杠，并在缺少 /vN 版本段时补全 /v1。
+     * 兼容用户实时保存时只填域名（如 https://6i2.pw）的情况。
+     */
+    private fun normalizeBaseUrl(raw: String): String {
+        var url = raw.trim().trimEnd('/')
+        if (!url.matches(Regex(".*(/v\\d+)$"))) {
+            url += "/v1"
+        }
+        return url
     }
 
     fun cancel() {
