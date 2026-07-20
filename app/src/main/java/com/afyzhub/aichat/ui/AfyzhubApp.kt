@@ -17,11 +17,13 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,6 +39,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +58,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -69,6 +73,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -119,17 +124,26 @@ fun AfyzhubApp(viewModel: ChatViewModel) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
-                    Text(
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            if (page == Page.CHAT) "afyzhub" else "设置",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         if (page == Page.CHAT) {
-                            "afyzhub · ${state.config.model}"
-                        } else {
-                            "API 与生成设置"
-                        },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                            Text(
+                                state.config.model,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(
@@ -241,21 +255,40 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
             }
         }
 
-        Surface(tonalElevation = 3.dp) {
+        // 悬浮卡片式输入区
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
+            tonalElevation = 3.dp,
+            shadowElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.Bottom
+                modifier = Modifier.padding(start = 18.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
+                BasicTextField(
                     value = input,
                     onValueChange = { input = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("输入消息…") },
+                    enabled = !state.isGenerating,
                     maxLines = 5,
-                    shape = RoundedCornerShape(24.dp),
-                    enabled = !state.isGenerating
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    decorationBox = { inner ->
+                        if (input.isEmpty()) {
+                            Text(
+                                "输入消息…",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        inner()
+                    }
                 )
                 Spacer(Modifier.width(8.dp))
                 // 圆形发送/停止按钮
@@ -275,7 +308,7 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant
                     },
-                    modifier = Modifier.size(52.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (state.isGenerating) {
@@ -283,7 +316,7 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
                                 imageVector = Icons.Filled.Stop,
                                 contentDescription = "停止生成",
                                 tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                         } else {
                             Icon(
@@ -294,7 +327,7 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 },
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -309,65 +342,82 @@ private fun MessageBubble(message: ChatMessage) {
     val clipboard = LocalClipboardManager.current
     val isUser = message.role == "user"
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
+            .padding(vertical = 4.dp),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
-        // 角色标签
-        Text(
-            text = if (isUser) "你" else "afyzhub",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 3.dp)
-        )
-        // 气泡：用户右侧、AI 左侧，非对称圆角更贴近聊天观感
-        Surface(
-            color = if (isUser) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-            shape = if (isUser) {
-                RoundedCornerShape(topStart = 18.dp, topEnd = 4.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
-            } else {
-                RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
-            },
-            tonalElevation = 1.dp,
-            modifier = Modifier.fillMaxWidth(if (isUser) 0.9f else 1f)
-        ) {
-            SelectionContainer {
-                Text(
-                    text = message.content.ifBlank {
-                        if (isUser) "" else "正在生成…"
-                    },
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
-                    color = if (isUser) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    fontFamily = if (message.content.contains("```")) {
-                        FontFamily.Monospace
-                    } else {
-                        FontFamily.Default
-                    }
-                )
-            }
-        }
-        // 复制按钮：仅在有内容时显示，图标小按钮
-        if (message.content.isNotBlank()) {
-            IconButton(
-                onClick = { clipboard.setText(AnnotatedString(message.content)) },
-                modifier = Modifier.size(32.dp)
+        // AI 头像
+        if (!isUser) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(30.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.ContentCopy,
-                    contentDescription = "复制",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        "AI",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+        }
+
+        Column(
+            modifier = Modifier.widthIn(max = 320.dp),
+            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
+        ) {
+            // 气泡：更大圆角；用户 primary 实色，AI 用高层容器色
+            Surface(
+                color = if (isUser) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                },
+                shape = if (isUser) {
+                    RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 22.dp, bottomEnd = 6.dp)
+                } else {
+                    RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 6.dp, bottomEnd = 22.dp)
+                }
+            ) {
+                SelectionContainer {
+                    Text(
+                        text = message.content.ifBlank {
+                            if (isUser) "" else "正在思考…"
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        color = if (isUser) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        fontFamily = if (message.content.contains("```")) {
+                            FontFamily.Monospace
+                        } else {
+                            FontFamily.Default
+                        }
+                    )
+                }
+            }
+            // 复制按钮：仅 AI 消息且有内容时显示
+            if (!isUser && message.content.isNotBlank()) {
+                IconButton(
+                    onClick = { clipboard.setText(AnnotatedString(message.content)) },
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .size(30.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ContentCopy,
+                        contentDescription = "复制",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
             }
         }
     }
