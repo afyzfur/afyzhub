@@ -449,8 +449,8 @@ private fun ConversationsDialog(
     )
 }
 
-// 常用上下文长度预设（token）
-private val CONTEXT_PRESETS = listOf(4_096, 8_192, 16_384, 32_768, 65_536, 131_072, 200_000, 1_000_000)
+// 常用上下文长度预设（token）：32K / 64K / 128K / 256K / 512K / 1M
+private val CONTEXT_PRESETS = listOf(32_768, 65_536, 131_072, 262_144, 524_288, 1_000_000)
 
 // 上下文窗口友好显示：>=1M 显示为 M，否则显示为 K
 private fun formatContext(tokens: Int): String = when {
