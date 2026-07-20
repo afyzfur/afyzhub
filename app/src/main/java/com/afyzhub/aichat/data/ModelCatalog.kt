@@ -59,30 +59,21 @@ object ModelCatalog {
     const val DEFAULT_CONTEXT_WINDOW = 32_768
 
     /**
-     * 按模型 id 匹配上下文窗口，未知返回默认值。
-     * 兼容常见变体：
-     * - 厂商前缀：openai/gpt-4o、anthropic/claude-3-5-sonnet
-     * - 免费/量化后缀：...:free、...-8bit
-     * 匹配策略：先用完整 id，再用去掉厂商前缀（最后一个 '/' 之后）的部分，
-     * 取所有命中前缀中最长的一个（最长匹配更精确）。
+     * 按模型名称匹配上下文窗口，未知返回默认值。
+     * 不区分服务商：忽略厂商前缀（如 openai/、anthropic/），只看模型名本身。
+     * 采用「子串包含 + 最长上下文优先」策略——只要模型名包含某个已知模型关键字即命中，
+     * 命中多个时取其中上下文窗口最大的一个（即该模型支持的最长上下文）。
      */
     fun contextWindowFor(modelId: String): Int {
-        val raw = modelId.trim().lowercase()
-        val candidates = buildList {
-            add(raw)
-            if (raw.contains('/')) add(raw.substringAfterLast('/'))
-        }
-        var best: Pair<String, Int>? = null
-        for (id in candidates) {
-            for (entry in CONTEXT_WINDOWS) {
-                if (id.startsWith(entry.first)) {
-                    if (best == null || entry.first.length > best!!.first.length) {
-                        best = entry
-                    }
-                }
+        // 去掉厂商前缀，只保留模型名部分
+        val name = modelId.trim().lowercase().substringAfterLast('/')
+        var best = 0
+        for ((key, window) in CONTEXT_WINDOWS) {
+            if (name.contains(key) && window > best) {
+                best = window
             }
         }
-        return best?.second ?: DEFAULT_CONTEXT_WINDOW
+        return if (best > 0) best else DEFAULT_CONTEXT_WINDOW
     }
 
     /**
