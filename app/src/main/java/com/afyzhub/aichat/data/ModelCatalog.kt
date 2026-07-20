@@ -1,27 +1,34 @@
 package com.afyzhub.aichat.data
 
 /**
- * 常见模型的上下文窗口（token）对照表，用于 MAX 上下文模式自动匹配。
- * 采用前缀匹配：模型 id 以某个键开头即命中，便于兼容带日期后缀的变体。
+ * 官方厂商模型的上下文窗口（token）对照表。
+ * 仅收录 OpenAI、Anthropic、DeepSeek、Google、阿里、月之暗面、智谱等官方模型，
+ * 数值取自各厂商公开文档。第三方中转自定义命名不保证识别，未命中时回退默认值，
+ * 用户可在设置里手动指定上下文长度。
  */
 object ModelCatalog {
 
+    // 仅收录官方厂商模型，采用各厂商公开文档的上下文窗口（token）。
+    // 采用「子串包含 + 最长上下文优先」匹配，故更细分的型号写在前、通用兜底写在后。
     private val CONTEXT_WINDOWS: List<Pair<String, Int>> = listOf(
-        // OpenAI
-        "gpt-4o-mini" to 128_000,
-        "gpt-4o" to 128_000,
-        "gpt-4.1-mini" to 1_000_000,
-        "gpt-4.1" to 1_000_000,
+        // ── OpenAI ──
+        "gpt-4.1" to 1_000_000,          // gpt-4.1 / gpt-4.1-mini / gpt-4.1-nano
+        "gpt-4o" to 128_000,             // gpt-4o / gpt-4o-mini
         "gpt-4-turbo" to 128_000,
-        "gpt-4-32k" to 32_768,
-        "gpt-4" to 8_192,
-        "gpt-3.5-turbo-16k" to 16_385,
-        "gpt-3.5-turbo" to 16_385,
-        "o1-mini" to 128_000,
-        "o1" to 200_000,
+        "gpt-4-32k" to 32_000,
+        "gpt-4" to 8_000,
+        "gpt-3.5-turbo" to 16_000,
+        "chatgpt-4o" to 128_000,
+        "o4-mini" to 200_000,
         "o3-mini" to 200_000,
         "o3" to 200_000,
-        // Anthropic Claude
+        "o1-mini" to 128_000,
+        "o1" to 200_000,
+
+        // ── Anthropic Claude ──
+        "claude-opus-4" to 200_000,
+        "claude-sonnet-4" to 200_000,
+        "claude-3-7-sonnet" to 200_000,
         "claude-3-5-sonnet" to 200_000,
         "claude-3-5-haiku" to 200_000,
         "claude-3-opus" to 200_000,
@@ -29,35 +36,44 @@ object ModelCatalog {
         "claude-3-haiku" to 200_000,
         "claude-3" to 200_000,
         "claude-2" to 100_000,
-        // DeepSeek（含中转常见简称）
-        "deepseek-v3" to 128_000,
-        "deepseek-r1" to 128_000,
-        "deepseek-chat" to 128_000,
-        "deepseek-reasoner" to 128_000,
+        "claude" to 200_000,
+
+        // ── DeepSeek ──（官方 deepseek-chat / deepseek-reasoner 上下文 64K）
+        "deepseek-v3" to 64_000,
+        "deepseek-r1" to 64_000,
+        "deepseek-chat" to 64_000,
+        "deepseek-reasoner" to 64_000,
         "deepseek-coder" to 128_000,
-        "deepseek" to 128_000,
-        "ds4pro" to 1_000_000,
-        "ds4" to 1_000_000,
-        "dsv3" to 128_000,
-        "dsr1" to 128_000,
-        // Qwen 通义千问
-        "qwen-max" to 32_768,
-        "qwen-plus" to 131_072,
-        "qwen-turbo" to 1_000_000,
-        "qwen2.5" to 131_072,
-        "qwen" to 32_768,
-        // Google Gemini
+        "deepseek" to 64_000,
+
+        // ── Google Gemini ──
+        "gemini-2.5-pro" to 1_000_000,
+        "gemini-2.5-flash" to 1_000_000,
+        "gemini-2.0-flash" to 1_000_000,
         "gemini-1.5-pro" to 2_000_000,
         "gemini-1.5-flash" to 1_000_000,
-        "gemini-2.0-flash" to 1_000_000,
         "gemini" to 1_000_000,
-        // Moonshot Kimi
+
+        // ── 阿里 Qwen 通义千问 ──
+        "qwen-long" to 10_000_000,
+        "qwen-turbo" to 1_000_000,
+        "qwen-plus" to 131_000,
+        "qwen-max" to 32_000,
+        "qwen2.5" to 131_000,
+        "qwen" to 131_000,
+
+        // ── 月之暗面 Kimi / Moonshot ──
         "moonshot-v1-128k" to 128_000,
-        "moonshot-v1-32k" to 32_768,
-        "moonshot-v1-8k" to 8_192,
+        "moonshot-v1-32k" to 32_000,
+        "moonshot-v1-8k" to 8_000,
+        "kimi" to 128_000,
         "moonshot" to 128_000,
-        // GLM 智谱
+
+        // ── 智谱 GLM ──
         "glm-4-long" to 1_000_000,
+        "glm-4.6" to 200_000,
+        "glm-4.5" to 128_000,
+        "glm-4-plus" to 128_000,
         "glm-4" to 128_000,
         "glm" to 128_000
     )
