@@ -58,6 +58,10 @@ private fun schemeFromSeed(seed: Color, dark: Boolean): ColorScheme {
             secondaryContainer = adjust(seed, 0.45f),
             onSecondaryContainer = Color.White,
             tertiary = adjust(seed, 1.05f),
+            background = Color(0xFF121212),
+            onBackground = Color(0xFFECECEC),
+            surface = Color(0xFF121212),
+            onSurface = Color(0xFFECECEC),
             surfaceVariant = Color(0xFF2A2A2A),
             onSurfaceVariant = Color(0xFFDDDDDD)
         )
@@ -71,6 +75,10 @@ private fun schemeFromSeed(seed: Color, dark: Boolean): ColorScheme {
             secondaryContainer = adjust(seed, 1.45f),
             onSecondaryContainer = adjust(seed, 0.35f),
             tertiary = adjust(seed, 0.8f),
+            background = Color(0xFFFDFBFF),
+            onBackground = Color(0xFF1A1A1A),
+            surface = Color(0xFFFDFBFF),
+            onSurface = Color(0xFF1A1A1A),
             surfaceVariant = Color(0xFFF2ECEC),
             onSurfaceVariant = Color(0xFF4A4544)
         )
@@ -98,9 +106,11 @@ fun afyzhubTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            // edge-to-edge 下状态栏保持透明，让内容/背景延伸到状态栏后
+            window.statusBarColor = Color.Transparent.toArgb()
+            // 状态栏图标明暗跟随背景亮度（浅色背景用深色图标）
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars =
-                colorScheme.primary.luminance() > 0.5f
+                colorScheme.background.luminance() > 0.5f
         }
     }
     MaterialTheme(
