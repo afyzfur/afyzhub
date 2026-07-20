@@ -23,7 +23,8 @@ class LocalStore(context: Context) {
                 preferences.getString("context_mode", null) ?: ContextMode.LIMITED.name
             )
         }.getOrDefault(ContextMode.LIMITED),
-        contextLimit = preferences.getInt("context_limit", 20)
+        contextLimit = preferences.getInt("context_limit", 32_768)
+            .let { if (it < 1_000) 32_768 else it } // 迁移：旧版存的是条数，纠正为长度
     )
 
     fun saveConfig(config: ApiConfig) {
