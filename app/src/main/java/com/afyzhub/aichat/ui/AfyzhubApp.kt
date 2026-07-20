@@ -1,7 +1,9 @@
 package com.afyzhub.aichat.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -21,9 +24,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -46,6 +54,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -57,6 +67,7 @@ import com.afyzhub.aichat.ChatViewModel
 import com.afyzhub.aichat.data.ApiConfig
 import com.afyzhub.aichat.data.AppState
 import com.afyzhub.aichat.data.ChatMessage
+import com.afyzhub.aichat.data.ContextMode
 
 private enum class Page { CHAT, SETTINGS }
 
@@ -143,13 +154,15 @@ fun AfyzhubApp(viewModel: ChatViewModel) {
                         page = Page.CHAT
                     },
                     onClear = viewModel::clearConversations,
-                    onClearAll = viewModel::clearAllData
+                    onClearAll = viewModel::clearAllData,
+                    onLoadModels = { cfg -> viewModel.loadModels(cfg) }
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
     var input by remember { mutableStateOf("") }
@@ -214,19 +227,21 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
                 OutlinedTextField(
                     value = input,
                     onValueChange = { input = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("输入消息") },
+                    placeholder = { Text("输入消息…") },
                     maxLines = 5,
+                    shape = RoundedCornerShape(24.dp),
                     enabled = !state.isGenerating
                 )
                 Spacer(Modifier.width(8.dp))
-                Button(
+                // 圆形发送/停止按钮
+                Surface(
                     onClick = {
                         if (state.isGenerating) {
                             viewModel.stopGenerating()
@@ -235,17 +250,33 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
                             input = ""
                         }
                     },
-                    enabled = state.isGenerating || input.isNotBlank()
-                ) {
-                    if (state.isGenerating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text("停止")
+                    enabled = state.isGenerating || input.isNotBlank(),
+                    shape = CircleShape,
+                    color = if (state.isGenerating || input.isNotBlank()) {
+                        MaterialTheme.colorScheme.primary
                     } else {
-                        Text("发送")
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (state.isGenerating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text(
+                                "↑",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = if (input.isNotBlank()) {
+                                    MaterialTheme.colorScheme.onPrimary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -261,43 +292,60 @@ private fun MessageBubble(message: ChatMessage) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 5.dp),
+            .padding(vertical = 6.dp),
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
     ) {
+        // 角色标签
         Text(
-            text = if (isUser) "你" else "AI",
+            text = if (isUser) "你" else "afyzhub",
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 3.dp)
         )
-        SelectionContainer {
-            Text(
-                text = message.content.ifBlank {
-                    if (isUser) "" else "正在生成…"
-                },
-                modifier = Modifier
-                    .fillMaxWidth(if (isUser) 0.88f else 1f)
-                    .background(
-                        color = if (isUser) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        },
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .padding(12.dp),
-                fontFamily = if (message.content.contains("```")) {
-                    FontFamily.Monospace
-                } else {
-                    FontFamily.Default
-                }
-            )
-        }
-        TextButton(
-            onClick = {
-                clipboard.setText(AnnotatedString(message.content))
-            }
+        // 气泡：用户右侧、AI 左侧，非对称圆角更贴近聊天观感
+        Surface(
+            color = if (isUser) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+            shape = if (isUser) {
+                RoundedCornerShape(topStart = 18.dp, topEnd = 4.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
+            } else {
+                RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
+            },
+            tonalElevation = 1.dp,
+            modifier = Modifier.fillMaxWidth(if (isUser) 0.9f else 1f)
         ) {
-            Text("复制")
+            SelectionContainer {
+                Text(
+                    text = message.content.ifBlank {
+                        if (isUser) "" else "正在生成…"
+                    },
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+                    color = if (isUser) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    fontFamily = if (message.content.contains("```")) {
+                        FontFamily.Monospace
+                    } else {
+                        FontFamily.Default
+                    }
+                )
+            }
+        }
+        // 复制按钮：仅在有内容时显示，轻量小号
+        if (message.content.isNotBlank()) {
+            TextButton(
+                onClick = { clipboard.setText(AnnotatedString(message.content)) },
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 8.dp, vertical = 2.dp
+                )
+            ) {
+                Text("复制", style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }
@@ -401,12 +449,26 @@ private fun ConversationsDialog(
     )
 }
 
+// 预设主题色（种子色）。null 表示跟随系统动态取色。
+private val PRESET_SEED_COLORS: List<Pair<String, Long?>> = listOf(
+    "动态" to null,
+    "橙" to 0xFFF57C00,
+    "蓝" to 0xFF1976D2,
+    "绿" to 0xFF388E3C,
+    "紫" to 0xFF7B1FA2,
+    "红" to 0xFFD32F2F,
+    "青" to 0xFF00838F,
+    "粉" to 0xFFC2185B
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreen(
     state: AppState,
     onSave: (ApiConfig, String) -> Unit,
     onClear: () -> Unit,
-    onClearAll: () -> Unit
+    onClearAll: () -> Unit,
+    onLoadModels: (ApiConfig) -> Unit
 ) {
     var baseUrl by remember(state.config) { mutableStateOf(state.config.baseUrl) }
     var model by remember(state.config) { mutableStateOf(state.config.model) }
@@ -421,8 +483,27 @@ private fun SettingsScreen(
         mutableStateOf(state.config.maxTokens.toString())
     }
     var useStream by remember(state.config) { mutableStateOf(state.config.useStream) }
+    var seedColor by remember(state.config) { mutableStateOf(state.config.themeSeedColor) }
+    var contextMode by remember(state.config) { mutableStateOf(state.config.contextMode) }
+    var contextLimit by remember(state.config) {
+        mutableStateOf(state.config.contextLimit.toString())
+    }
+    var modelMenuExpanded by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showClearAllConfirm by remember { mutableStateOf(false) }
+
+    // 构造当前编辑中的临时配置，供拉取模型使用
+    fun currentConfig() = ApiConfig(
+        baseUrl = baseUrl,
+        model = model,
+        systemPrompt = systemPrompt,
+        temperature = temperature,
+        maxTokens = maxTokens.toIntOrNull() ?: 2048,
+        useStream = useStream,
+        themeSeedColor = seedColor,
+        contextMode = contextMode,
+        contextLimit = contextLimit.toIntOrNull() ?: 20
+    )
 
     if (showClearConfirm) {
         AlertDialog(
@@ -490,13 +571,6 @@ private fun SettingsScreen(
             singleLine = true
         )
         OutlinedTextField(
-            value = model,
-            onValueChange = { model = it },
-            label = { Text("模型 ID") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        OutlinedTextField(
             value = apiKey,
             onValueChange = { apiKey = it },
             label = {
@@ -512,6 +586,79 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
+
+        // 模型：可手动输入，也可从 /models 拉取后下拉选择
+        ExposedDropdownMenuBox(
+            expanded = modelMenuExpanded,
+            onExpandedChange = { modelMenuExpanded = !modelMenuExpanded }
+        ) {
+            OutlinedTextField(
+                value = model,
+                onValueChange = { model = it },
+                label = { Text("模型 ID") },
+                singleLine = true,
+                trailingIcon = {
+                    if (state.availableModels.isNotEmpty()) {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelMenuExpanded)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor()
+            )
+            if (state.availableModels.isNotEmpty()) {
+                ExposedDropdownMenu(
+                    expanded = modelMenuExpanded,
+                    onDismissRequest = { modelMenuExpanded = false }
+                ) {
+                    state.availableModels.forEach { m ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(m.id)
+                                    m.contextWindow?.let {
+                                        Text(
+                                            "上下文 ${it / 1000}K",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                model = m.id
+                                modelMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(
+                onClick = { onLoadModels(currentConfig()) },
+                enabled = !state.isLoadingModels
+            ) {
+                if (state.isLoadingModels) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("获取中")
+                } else {
+                    Text("获取模型列表")
+                }
+            }
+            if (state.availableModels.isNotEmpty()) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "共 ${state.availableModels.size} 个",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         OutlinedTextField(
             value = systemPrompt,
             onValueChange = { systemPrompt = it },
@@ -548,20 +695,81 @@ private fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+        // 上下文长度模式
+        Text("上下文长度", style = MaterialTheme.typography.titleMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = contextMode == ContextMode.LIMITED,
+                onClick = { contextMode = ContextMode.LIMITED },
+                label = { Text("固定条数") }
+            )
+            FilterChip(
+                selected = contextMode == ContextMode.MAX,
+                onClick = { contextMode = ContextMode.MAX },
+                label = { Text("MAX（按模型自动）") }
+            )
+        }
+        if (contextMode == ContextMode.LIMITED) {
+            OutlinedTextField(
+                value = contextLimit,
+                onValueChange = { contextLimit = it.filter(Char::isDigit) },
+                label = { Text("携带最近消息条数") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        } else {
+            Text(
+                "MAX 模式会根据所选模型的上下文窗口，尽可能多地携带历史消息",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+        // 主题色
+        Text("主题色", style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            PRESET_SEED_COLORS.forEach { (name, colorValue) ->
+                val selected = seedColor == colorValue
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .then(
+                                if (colorValue != null) {
+                                    Modifier.background(Color(colorValue))
+                                } else {
+                                    Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                                }
+                            )
+                            .border(
+                                width = if (selected) 3.dp else 1.dp,
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline,
+                                shape = CircleShape
+                            )
+                            .clickable { seedColor = colorValue }
+                    )
+                    Text(
+                        name,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+        }
+
         Button(
-            onClick = {
-                onSave(
-                    ApiConfig(
-                        baseUrl = baseUrl,
-                        model = model,
-                        systemPrompt = systemPrompt,
-                        temperature = temperature,
-                        maxTokens = maxTokens.toIntOrNull() ?: 2048,
-                        useStream = useStream
-                    ),
-                    apiKey
-                )
-            },
+            onClick = { onSave(currentConfig(), apiKey) },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("保存配置")
