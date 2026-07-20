@@ -79,6 +79,28 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(config = updated)
     }
 
+    /**
+     * 实时保存配置：设置页任一字段改动即调用，直接持久化，不弹提示。
+     * 仅做无害的裁剪，不做 HTTPS 校验（真正发送时才校验），以免打断输入。
+     */
+    fun updateConfig(config: ApiConfig) {
+        val normalized = config.copy(
+            model = config.model.trim(),
+            maxTokens = config.maxTokens.coerceAtLeast(1),
+            contextLimit = config.contextLimit.coerceAtLeast(1)
+        )
+        localStore.saveConfig(normalized)
+        _state.value = _state.value.copy(config = normalized)
+    }
+
+    /** 实时保存 API Key（输入框失焦或变更时调用）。 */
+    fun updateApiKey(newApiKey: String) {
+        if (newApiKey.isNotBlank()) {
+            apiKeyStore.save(newApiKey.trim())
+            _state.value = _state.value.copy(hasApiKey = true)
+        }
+    }
+
     fun saveConfig(config: ApiConfig, newApiKey: String) {
         var baseUrl = config.baseUrl.trim().trimEnd('/')
         // 自动补全版本路径：若末尾没有 /v1、/v2 等，自动追加 /v1
