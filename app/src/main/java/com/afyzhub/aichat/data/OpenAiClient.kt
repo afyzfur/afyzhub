@@ -35,6 +35,9 @@ class OpenAiClient {
         }
         require(config.model.isNotBlank()) { "模型 ID 不能为空" }
 
+        // 根据上下文模式裁剪历史消息
+        val trimmedHistory = trimHistory(config, messages)
+
         val requestMessages = JSONArray()
         if (config.systemPrompt.isNotBlank()) {
             requestMessages.put(
@@ -43,7 +46,7 @@ class OpenAiClient {
                     .put("content", config.systemPrompt)
             )
         }
-        messages.forEach { message ->
+        trimmedHistory.forEach { message ->
             requestMessages.put(
                 JSONObject()
                     .put("role", message.role)
@@ -164,6 +167,76 @@ class OpenAiClient {
         }
     }
 
+    /**
+     * 拉取 /models 模型列表。返回模型 id 列表（含可识别的上下文窗口）。
+     * 失败时抛出带可读信息的 IOException。
+     */
+    suspend fun fetchModels(config: ApiConfig, apiKey: String): List<ModelInfo> =
+        withContext(Dispatchers.IO) {
+            require(config.baseUrl.startsWith("https://")) {
+                "为保护 API Key，仅允许使用 HTTPS 地址"
+            }
+            val request = Request.Builder()
+                .url(config.baseUrl.trim().trimEnd('/') + "/models")
+                .header("Authorization", "Bearer $apiKey")
+                .header("Accept", "application/json")
+                .get()
+                .build()
+
+            OkHttpClient.Builder()
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build()
+                .newCall(request)
+                .execute()
+                .use { response ->
+                    if (!response.isSuccessful) {
+                        throw IOException(
+                            when (response.code) {
+                                401 -> "认证失败，请检查 API Key"
+                                403 -> "服务拒绝访问（403）"
+                                404 -> "该服务不支持 /models 接口"
+                                429 -> "请求过于频繁（429）"
+                                in 500..599 -> "服务暂时不可用（HTTP ${response.code}）"
+                                else -> "获取模型失败（HTTP ${response.code}）"
+                            }
+                        )
+                    }
+                    val body = response.body?.string()
+                        ?: throw IOException("服务返回了空响应")
+                    parseModels(body)
+                }
+        }
+
+    /** 解析 /models 响应，兼容 {data:[{id,...}]} 与直接数组两种格式。 */
+    private fun parseModels(body: String): List<ModelInfo> {
+        val trimmed = body.trimStart()
+        val array: JSONArray = try {
+            if (trimmed.startsWith("[")) {
+                JSONArray(trimmed)
+            } else {
+                JSONObject(trimmed).optJSONArray("data") ?: JSONArray()
+            }
+        } catch (e: Exception) {
+            throw IOException("模型列表解析失败：${e.message}")
+        }
+
+        val models = ArrayList<ModelInfo>(array.length())
+        for (i in 0 until array.length()) {
+            val item = array.optJSONObject(i) ?: continue
+            val id = item.optString("id").takeIf { it.isNotBlank() }
+                ?: item.optString("model").takeIf { it.isNotBlank() }
+                ?: continue
+            // 部分服务会直接给出 context_length / context_window 字段
+            val ctx = item.optInt("context_length", 0)
+                .takeIf { it > 0 }
+                ?: item.optInt("context_window", 0).takeIf { it > 0 }
+                ?: ModelCatalog.contextWindowFor(id)
+            models.add(ModelInfo(id = id, contextWindow = ctx))
+        }
+        return models.sortedBy { it.id }
+    }
+
     fun cancel() {
         activeCall?.cancel()
         activeCall = null
@@ -185,5 +258,41 @@ class OpenAiClient {
         choice?.optJSONObject("message")?.optString("content")
             ?.takeIf { it.isNotBlank() && it != "null" }?.let { return it }
         return choice?.optString("text").orEmpty()
+    }
+
+    /**
+     * 按上下文模式裁剪历史消息。
+     * - LIMITED：保留最近 contextLimit 条。
+     * - MAX：按模型上下文窗口的 token 预算，从最新往旧尽量多带。
+     * 始终保留最后一条（当前用户消息）。
+     */
+    private fun trimHistory(
+        config: ApiConfig,
+        messages: List<ChatMessage>
+    ): List<ChatMessage> {
+        if (messages.isEmpty()) return messages
+
+        return when (config.contextMode) {
+            ContextMode.LIMITED -> {
+                val limit = config.contextLimit.coerceAtLeast(1)
+                messages.takeLast(limit)
+            }
+            ContextMode.MAX -> {
+                val window = ModelCatalog.contextWindowFor(config.model)
+                // 预留 system prompt 与输出 token 的余量
+                val systemTokens = ModelCatalog.estimateTokens(config.systemPrompt)
+                val budget = (window - config.maxTokens - systemTokens - 256)
+                    .coerceAtLeast(1_000)
+                val selected = ArrayList<ChatMessage>()
+                var used = 0
+                for (message in messages.asReversed()) {
+                    val cost = ModelCatalog.estimateTokens(message.content) + 8
+                    if (used + cost > budget && selected.isNotEmpty()) break
+                    selected.add(message)
+                    used += cost
+                }
+                selected.asReversed()
+            }
+        }
     }
 }
