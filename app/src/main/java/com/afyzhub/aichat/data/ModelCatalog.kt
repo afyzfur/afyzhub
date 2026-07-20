@@ -29,10 +29,17 @@ object ModelCatalog {
         "claude-3-haiku" to 200_000,
         "claude-3" to 200_000,
         "claude-2" to 100_000,
-        // DeepSeek
-        "deepseek-chat" to 64_000,
-        "deepseek-reasoner" to 64_000,
-        "deepseek" to 64_000,
+        // DeepSeek（含中转常见简称）
+        "deepseek-v3" to 128_000,
+        "deepseek-r1" to 128_000,
+        "deepseek-chat" to 128_000,
+        "deepseek-reasoner" to 128_000,
+        "deepseek-coder" to 128_000,
+        "deepseek" to 128_000,
+        "ds4pro" to 1_000_000,
+        "ds4" to 1_000_000,
+        "dsv3" to 128_000,
+        "dsr1" to 128_000,
         // Qwen 通义千问
         "qwen-max" to 32_768,
         "qwen-plus" to 131_072,
