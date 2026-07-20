@@ -15,7 +15,15 @@ class LocalStore(context: Context) {
         systemPrompt = preferences.getString("system_prompt", null) ?: "",
         temperature = preferences.getFloat("temperature", 0.7f),
         maxTokens = preferences.getInt("max_tokens", 2048),
-        useStream = preferences.getBoolean("use_stream", true)
+        useStream = preferences.getBoolean("use_stream", true),
+        themeSeedColor = preferences.getLong("theme_seed_color", -1L)
+            .takeIf { it != -1L },
+        contextMode = runCatching {
+            ContextMode.valueOf(
+                preferences.getString("context_mode", null) ?: ContextMode.LIMITED.name
+            )
+        }.getOrDefault(ContextMode.LIMITED),
+        contextLimit = preferences.getInt("context_limit", 20)
     )
 
     fun saveConfig(config: ApiConfig) {
@@ -26,6 +34,9 @@ class LocalStore(context: Context) {
             .putFloat("temperature", config.temperature)
             .putInt("max_tokens", config.maxTokens)
             .putBoolean("use_stream", config.useStream)
+            .putLong("theme_seed_color", config.themeSeedColor ?: -1L)
+            .putString("context_mode", config.contextMode.name)
+            .putInt("context_limit", config.contextLimit)
             .apply()
     }
 
