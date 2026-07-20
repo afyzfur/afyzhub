@@ -187,10 +187,8 @@ fun AfyzhubApp(viewModel: ChatViewModel) {
                 Page.CHAT -> ChatScreen(state, viewModel)
                 Page.SETTINGS -> SettingsScreen(
                     state = state,
-                    onSave = { config, key ->
-                        viewModel.saveConfig(config, key)
-                        page = Page.CHAT
-                    },
+                    onUpdateConfig = { cfg -> viewModel.updateConfig(cfg) },
+                    onUpdateApiKey = { key -> viewModel.updateApiKey(key) },
                     onClear = viewModel::clearConversations,
                     onClearAll = viewModel::clearAllData,
                     onLoadModels = { cfg, key -> viewModel.loadModels(cfg, key) },
@@ -616,7 +614,8 @@ private val PRESET_SEED_COLORS: List<Pair<String, Long?>> = listOf(
 @Composable
 private fun SettingsScreen(
     state: AppState,
-    onSave: (ApiConfig, String) -> Unit,
+    onUpdateConfig: (ApiConfig) -> Unit,
+    onUpdateApiKey: (String) -> Unit,
     onClear: () -> Unit,
     onClearAll: () -> Unit,
     onLoadModels: (ApiConfig, String) -> Unit,
@@ -645,7 +644,7 @@ private fun SettingsScreen(
     var showClearConfirm by remember { mutableStateOf(false) }
     var showClearAllConfirm by remember { mutableStateOf(false) }
 
-    // 构造当前编辑中的临时配置，供拉取模型使用
+    // 构造当前编辑中的临时配置
     fun currentConfig() = ApiConfig(
         baseUrl = baseUrl,
         model = model,
@@ -658,6 +657,9 @@ private fun SettingsScreen(
         contextLimit = contextLimit.toIntOrNull() ?: 32_768,
         inputBarStyle = inputBarStyle
     )
+
+    // 实时保存：任一字段改动后调用
+    fun save() = onUpdateConfig(currentConfig())
 
     if (showClearConfirm) {
         AlertDialog(
@@ -714,18 +716,18 @@ private fun SettingsScreen(
       SettingsGroup(title = "API 服务") {
         OutlinedTextField(
             value = baseUrl,
-            onValueChange = { baseUrl = it },
-            label = { Text("Base URL（仅 HTTPS）") },
+            onValueChange = { baseUrl = it; save() },
+            label = { Text("Base URL（仅 HTTPS，可省略 /v1）") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
         OutlinedTextField(
             value = apiKey,
-            onValueChange = { apiKey = it },
+            onValueChange = { apiKey = it; onUpdateApiKey(it) },
             label = {
                 Text(
                     if (state.hasApiKey) {
-                        "API Key（留空则保持不变）"
+                        "API Key（已保存，可覆盖）"
                     } else {
                         "API Key"
                     }
@@ -743,7 +745,7 @@ private fun SettingsScreen(
         ) {
             OutlinedTextField(
                 value = model,
-                onValueChange = { model = it },
+                onValueChange = { model = it; save() },
                 label = { Text("模型 ID") },
                 singleLine = true,
                 trailingIcon = {
@@ -777,6 +779,7 @@ private fun SettingsScreen(
                             onClick = {
                                 model = m.id
                                 modelMenuExpanded = false
+                                save()
                             }
                         )
                     }
@@ -813,7 +816,7 @@ private fun SettingsScreen(
       SettingsGroup(title = "生成参数") {
         OutlinedTextField(
             value = systemPrompt,
-            onValueChange = { systemPrompt = it },
+            onValueChange = { systemPrompt = it; save() },
             label = { Text("System Prompt") },
             modifier = Modifier.fillMaxWidth(),
             minLines = 2
@@ -823,12 +826,13 @@ private fun SettingsScreen(
         Slider(
             value = temperature,
             onValueChange = { temperature = it },
+            onValueChangeFinished = { save() },
             valueRange = 0f..2f
         )
 
         OutlinedTextField(
             value = maxTokens,
-            onValueChange = { maxTokens = it.filter(Char::isDigit) },
+            onValueChange = { maxTokens = it.filter(Char::isDigit); save() },
             label = { Text("最大输出 Token") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
@@ -839,7 +843,7 @@ private fun SettingsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("流式输出（SSE）", modifier = Modifier.weight(1f))
-            Switch(checked = useStream, onCheckedChange = { useStream = it })
+            Switch(checked = useStream, onCheckedChange = { useStream = it; save() })
         }
         Text(
             "关闭后使用普通请求，适合不支持 SSE 流式的第三方服务",
@@ -884,12 +888,12 @@ private fun SettingsScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = contextMode == ContextMode.LIMITED,
-                onClick = { contextMode = ContextMode.LIMITED },
+                onClick = { contextMode = ContextMode.LIMITED; save() },
                 label = { Text("自定义长度") }
             )
             FilterChip(
                 selected = contextMode == ContextMode.MAX,
-                onClick = { contextMode = ContextMode.MAX },
+                onClick = { contextMode = ContextMode.MAX; save() },
                 label = { Text("MAX（按模型自动）") }
             )
         }
@@ -904,14 +908,14 @@ private fun SettingsScreen(
                 CONTEXT_PRESETS.forEach { preset ->
                     FilterChip(
                         selected = contextLimit == preset.toString(),
-                        onClick = { contextLimit = preset.toString() },
+                        onClick = { contextLimit = preset.toString(); save() },
                         label = { Text(formatContext(preset)) }
                     )
                 }
             }
             OutlinedTextField(
                 value = contextLimit,
-                onValueChange = { contextLimit = it.filter(Char::isDigit) },
+                onValueChange = { contextLimit = it.filter(Char::isDigit); save() },
                 label = { Text("上下文长度（token）") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -969,15 +973,7 @@ private fun SettingsScreen(
         }
       }
 
-      Button(
-          onClick = { onSave(currentConfig(), apiKey) },
-          modifier = Modifier.fillMaxWidth()
-      ) {
-          Text("保存配置")
-      }
-      Spacer(Modifier.height(18.dp))
-
-      SettingsGroup(title = "数据与隐私") {
+       SettingsGroup(title = "数据与隐私") {
         Text(
             "API Key 使用 Android Keystore 加密并仅保存在本设备。会话记录保存在应用私有存储中。",
             style = MaterialTheme.typography.bodySmall,
