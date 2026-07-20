@@ -58,11 +58,31 @@ object ModelCatalog {
     /** 默认上下文窗口：无法识别的模型采用一个保守但通用的值。 */
     const val DEFAULT_CONTEXT_WINDOW = 32_768
 
-    /** 按模型 id 前缀匹配上下文窗口，未知返回默认值。 */
+    /**
+     * 按模型 id 匹配上下文窗口，未知返回默认值。
+     * 兼容常见变体：
+     * - 厂商前缀：openai/gpt-4o、anthropic/claude-3-5-sonnet
+     * - 免费/量化后缀：...:free、...-8bit
+     * 匹配策略：先用完整 id，再用去掉厂商前缀（最后一个 '/' 之后）的部分，
+     * 取所有命中前缀中最长的一个（最长匹配更精确）。
+     */
     fun contextWindowFor(modelId: String): Int {
-        val id = modelId.trim().lowercase()
-        return CONTEXT_WINDOWS.firstOrNull { (prefix, _) -> id.startsWith(prefix) }?.second
-            ?: DEFAULT_CONTEXT_WINDOW
+        val raw = modelId.trim().lowercase()
+        val candidates = buildList {
+            add(raw)
+            if (raw.contains('/')) add(raw.substringAfterLast('/'))
+        }
+        var best: Pair<String, Int>? = null
+        for (id in candidates) {
+            for (entry in CONTEXT_WINDOWS) {
+                if (id.startsWith(entry.first)) {
+                    if (best == null || entry.first.length > best!!.first.length) {
+                        best = entry
+                    }
+                }
+            }
+        }
+        return best?.second ?: DEFAULT_CONTEXT_WINDOW
     }
 
     /**
