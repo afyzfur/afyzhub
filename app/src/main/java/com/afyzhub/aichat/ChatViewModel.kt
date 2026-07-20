@@ -125,14 +125,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * 拉取模型列表。使用当前已保存的配置与 API Key；
-     * 若传入 overrideConfig（如设置页尚未保存的临时配置），优先使用它。
+     * 拉取模型列表。无需先保存配置：
+     * overrideConfig 传入设置页当前编辑中的配置，overrideApiKey 传入当前输入框的 key。
+     * 若输入框 key 为空，则回退到已保存的 key。
      */
-    fun loadModels(overrideConfig: ApiConfig? = null) {
+    fun loadModels(overrideConfig: ApiConfig? = null, overrideApiKey: String = "") {
         if (_state.value.isLoadingModels) return
-        val apiKey = apiKeyStore.load()
+        val apiKey = overrideApiKey.trim().ifBlank { apiKeyStore.load() }
         if (apiKey.isBlank()) {
-            _state.value = _state.value.copy(notice = "请先配置并保存 API Key")
+            _state.value = _state.value.copy(notice = "请先填写 API Key")
             return
         }
         val config = (overrideConfig ?: _state.value.config).let {
