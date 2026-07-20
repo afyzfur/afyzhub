@@ -66,6 +66,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         persist(updated)
     }
 
+    /**
+     * 即时更新外观相关配置（主题色 / 输入栏样式），无需点保存、不做 URL 校验。
+     * 用于设置页里切换选项时的实时预览与持久化。
+     */
+    fun updateAppearance(themeSeedColor: Long?, inputBarStyle: com.afyzhub.aichat.data.InputBarStyle) {
+        val updated = _state.value.config.copy(
+            themeSeedColor = themeSeedColor,
+            inputBarStyle = inputBarStyle
+        )
+        localStore.saveConfig(updated)
+        _state.value = _state.value.copy(config = updated)
+    }
+
     fun saveConfig(config: ApiConfig, newApiKey: String) {
         var baseUrl = config.baseUrl.trim().trimEnd('/')
         // 自动补全版本路径：若末尾没有 /v1、/v2 等，自动追加 /v1
