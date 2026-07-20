@@ -23,6 +23,18 @@ enum class ContextMode {
     MAX
 }
 
+/** 底部输入栏外观样式。 */
+enum class InputBarStyle {
+    /** 不透明：实色背景。 */
+    SOLID,
+
+    /** 半透明：带一定透明度的背景。 */
+    TRANSLUCENT,
+
+    /** 磨砂：半透明 + 高斯模糊（Android 12+ 生效，低版本回退为半透明）。 */
+    FROSTED
+}
+
 data class ApiConfig(
     val baseUrl: String = "https://api.openai.com/v1",
     val model: String = "gpt-4o-mini",
@@ -35,7 +47,9 @@ data class ApiConfig(
     /** 上下文模式。 */
     val contextMode: ContextMode = ContextMode.LIMITED,
     /** LIMITED 模式下携带历史的 token 长度上限。 */
-    val contextLimit: Int = 32_768
+    val contextLimit: Int = 32_768,
+    /** 底部输入栏外观样式。 */
+    val inputBarStyle: InputBarStyle = InputBarStyle.SOLID
 )
 
 /** 从 /models 接口获取的模型条目。 */
