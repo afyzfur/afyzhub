@@ -101,32 +101,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun saveConfig(config: ApiConfig, newApiKey: String) {
-        var baseUrl = config.baseUrl.trim().trimEnd('/')
-        // 自动补全版本路径：若末尾没有 /v1、/v2 等，自动追加 /v1
-        if (!baseUrl.matches(Regex(".*(/v\\d+)$"))) {
-            baseUrl += "/v1"
-        }
-        val normalized = config.copy(
-            baseUrl = baseUrl,
-            model = config.model.trim(),
-            maxTokens = config.maxTokens.coerceAtLeast(1)
-        )
-        if (!normalized.baseUrl.startsWith("https://")) {
-            _state.value = _state.value.copy(
-                notice = "为保护 API Key，仅允许使用 HTTPS 地址"
-            )
-            return
-        }
-        localStore.saveConfig(normalized)
-        if (newApiKey.isNotBlank()) apiKeyStore.save(newApiKey.trim())
-        _state.value = _state.value.copy(
-            config = normalized,
-            hasApiKey = apiKeyStore.load().isNotBlank(),
-            notice = "配置已保存"
-        )
-    }
-
     fun clearConversations() {
         openAiClient.cancel()
         localStore.clearConversations()
