@@ -62,6 +62,7 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -86,6 +87,7 @@ import com.afyzhub.aichat.data.ApiConfig
 import com.afyzhub.aichat.data.AppState
 import com.afyzhub.aichat.data.ChatMessage
 import com.afyzhub.aichat.data.ContextMode
+import com.afyzhub.aichat.data.InputBarStyle
 
 private enum class Page { CHAT, SETTINGS }
 
@@ -125,6 +127,10 @@ fun AfyzhubApp(viewModel: ChatViewModel) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
                 title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
@@ -255,12 +261,17 @@ private fun ChatScreen(state: AppState, viewModel: ChatViewModel) {
             }
         }
 
-        // 悬浮卡片式输入区
+        // 悬浮卡片式输入区（颜色/透明度随 inputBarStyle 变化）
+        val baseColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+        val barColor = when (state.config.inputBarStyle) {
+            InputBarStyle.SOLID -> baseColor
+            InputBarStyle.TRANSLUCENT -> baseColor.copy(alpha = 0.82f)
+            InputBarStyle.FROSTED -> baseColor.copy(alpha = 0.6f)
+        }
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
-            tonalElevation = 3.dp,
-            shadowElevation = 6.dp,
+            color = barColor,
+            shadowElevation = if (state.config.inputBarStyle == InputBarStyle.SOLID) 6.dp else 10.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -549,6 +560,33 @@ private fun ConversationsDialog(
     )
 }
 
+// 设置分组卡片：标题 + 圆角容器包裹内容
+@Composable
+private fun SettingsGroup(
+    title: String,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) {
+    Text(
+        title,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp, top = 4.dp)
+    )
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content
+        )
+    }
+    Spacer(Modifier.height(18.dp))
+}
+
 // 常用上下文长度预设（token）：32K / 64K / 128K / 256K / 512K / 1M
 private val CONTEXT_PRESETS = listOf(32_000, 64_000, 128_000, 256_000, 512_000, 1_000_000)
 
@@ -600,6 +638,7 @@ private fun SettingsScreen(
     var contextLimit by remember(state.config) {
         mutableStateOf(state.config.contextLimit.toString())
     }
+    var inputBarStyle by remember(state.config) { mutableStateOf(state.config.inputBarStyle) }
     var modelMenuExpanded by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showClearAllConfirm by remember { mutableStateOf(false) }
@@ -614,7 +653,8 @@ private fun SettingsScreen(
         useStream = useStream,
         themeSeedColor = seedColor,
         contextMode = contextMode,
-        contextLimit = contextLimit.toIntOrNull() ?: 32_768
+        contextLimit = contextLimit.toIntOrNull() ?: 32_768,
+        inputBarStyle = inputBarStyle
     )
 
     if (showClearConfirm) {
@@ -667,14 +707,9 @@ private fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(16.dp)
     ) {
-        Text(
-            "OpenAI-compatible 服务",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
+      SettingsGroup(title = "API 服务") {
         OutlinedTextField(
             value = baseUrl,
             onValueChange = { baseUrl = it },
@@ -771,6 +806,9 @@ private fun SettingsScreen(
                 )
             }
         }
+      }
+
+      SettingsGroup(title = "生成参数") {
         OutlinedTextField(
             value = systemPrompt,
             onValueChange = { systemPrompt = it },
@@ -806,11 +844,32 @@ private fun SettingsScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+      }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+      SettingsGroup(title = "外观") {
+        // 输入栏外观
+        Text("输入栏样式", style = MaterialTheme.typography.bodyMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = inputBarStyle == InputBarStyle.SOLID,
+                onClick = { inputBarStyle = InputBarStyle.SOLID },
+                label = { Text("不透明") }
+            )
+            FilterChip(
+                selected = inputBarStyle == InputBarStyle.TRANSLUCENT,
+                onClick = { inputBarStyle = InputBarStyle.TRANSLUCENT },
+                label = { Text("半透明") }
+            )
+            FilterChip(
+                selected = inputBarStyle == InputBarStyle.FROSTED,
+                onClick = { inputBarStyle = InputBarStyle.FROSTED },
+                label = { Text("磨砂") }
+            )
+        }
+      }
 
-        // 上下文长度模式
-        Text("上下文长度", style = MaterialTheme.typography.titleMedium)
+      SettingsGroup(title = "上下文") {
+        Text("上下文长度", style = MaterialTheme.typography.bodyMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = contextMode == ContextMode.LIMITED,
@@ -855,11 +914,9 @@ private fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+      }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // 主题色
-        Text("主题色", style = MaterialTheme.typography.titleMedium)
+      SettingsGroup(title = "主题色") {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -896,25 +953,34 @@ private fun SettingsScreen(
                 }
             }
         }
+      }
 
-        Button(
-            onClick = { onSave(currentConfig(), apiKey) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("保存配置")
-        }
+      Button(
+          onClick = { onSave(currentConfig(), apiKey) },
+          modifier = Modifier.fillMaxWidth()
+      ) {
+          Text("保存配置")
+      }
+      Spacer(Modifier.height(18.dp))
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text("数据与隐私", style = MaterialTheme.typography.titleMedium)
+      SettingsGroup(title = "数据与隐私") {
         Text(
             "API Key 使用 Android Keystore 加密并仅保存在本设备。会话记录保存在应用私有存储中。",
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        OutlinedButton(onClick = { showClearConfirm = true }) {
+        OutlinedButton(
+            onClick = { showClearConfirm = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("清除本地会话")
         }
-        OutlinedButton(onClick = { showClearAllConfirm = true }) {
+        OutlinedButton(
+            onClick = { showClearAllConfirm = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("清除全部数据（含 API Key）")
         }
+      }
     }
 }
