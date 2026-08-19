@@ -12,12 +12,12 @@ data class ChatResponse(
 @Serializable
 data class Choice(
     val index: Int,
-    val message: ChatMessage,
+    val message: ResponseMessage,
     val finish_reason: String? = null
 )
 
 @Serializable
-data class ChatMessage(
+data class ResponseMessage(
     val role: String,
     val content: String
 )
