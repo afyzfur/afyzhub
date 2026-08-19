@@ -6,6 +6,7 @@ import com.afyzfur.afyzhub.data.local.entity.ConversationEntity
 import com.afyzfur.afyzhub.data.local.entity.MessageEntity
 import com.afyzfur.afyzhub.data.remote.OpenAIApi
 import com.afyzfur.afyzhub.data.remote.dto.ChatRequest
+import com.afyzfur.afyzhub.data.remote.dto.RequestMessage
 import com.afyzfur.afyzhub.domain.model.Conversation
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.util.Constants
@@ -50,13 +51,9 @@ class ChatRepositoryImpl(
             )
             messageDao.insertMessage(userMessage)
 
-            // Get conversation history
-            val messages = messageDao.getMessagesByConversationId(conversationId)
-            val chatMessages = mutableListOf<com.afyzfur.afyzhub.data.remote.dto.ChatMessage>()
-            
-            // Build request with history (simplified)
-            chatMessages.add(
-                com.afyzfur.afyzhub.data.remote.dto.ChatMessage(
+            // Build request
+            val chatMessages = listOf(
+                RequestMessage(
                     role = "user",
                     content = content
                 )
