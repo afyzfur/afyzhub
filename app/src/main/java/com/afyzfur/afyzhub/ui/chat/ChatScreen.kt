@@ -15,12 +15,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.Message
-import com.halilibo.richtext.markdown.Markdown
-import com.halilibo.richtext.ui.material3.RichText
 import org.koin.androidx.compose.koinViewModel
-import org.koin.core.parameter.parametersOf
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api*:class)
 @Composable
 fun ChatScreen(
     conversationId: Long,
@@ -46,7 +43,7 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("对话") },
+                title = { Text("对觞") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -168,19 +165,12 @@ fun MessageItem(message: Message) {
             },
             modifier = Modifier.widthIn(max = 300.dp)
         ) {
-            Box(modifier = Modifier.padding(12.dp)) {
-                if (isUser) {
-                    Text(
-                        text = message.content,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                } else {
-                    RichText {
-                        Markdown(content = message.content)
-                    }
-                }
-            }
+            Text(
+                text = message.content,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(12.dp)
+            )
         }
     }
 }
