@@ -91,6 +91,4 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
 
-    // Markdown
-    implementation(libs.richtext.commonmark)
 }
