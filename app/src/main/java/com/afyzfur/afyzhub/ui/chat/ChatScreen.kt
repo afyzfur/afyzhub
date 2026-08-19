@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.Message
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api*:class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     conversationId: Long,
