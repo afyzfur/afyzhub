@@ -53,38 +53,47 @@ jobs:
         name: app-release-unsigned
         path: app/build/outputs/apk/release/app-release-unsigned.apk
         
+    - name: Delete old release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      continue-on-error: true
+      run: |
+        gh release delete 0.1.0-dev --yes || true
+        git push origin :refs/tags/0.1.0-dev || true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v0.1.0-dev.${{ github.run_number }}
-        name: AfyzHub v0.1.0-dev.${{ github.run_number }}
-        prerelease: true
-        body: |
-          ## AfyzHub 开发版 v0.1.0-dev.${{ github.run_number }}
-          
-          **⚠️ 这是一个开发预览版本，可能包含未完成的功能和已知问题。**
-          
-          ### 📦 下载
-          - **Debug APK**: 包含调试信息，体积较大
-          - **Release APK**: 未签名的发布版本，需要自行签名
-          
-          ### 🔧 当前功能
-          - 基础聊天界面
-          - OpenAI API 集成
-          - 对话历史保存
-          - 设置页面（API Key 配置）
-          
-          ### 📝 开发计划
-          - [ ] Markdown 渲染
-          - [ ] 流式响应
-          - [ ] 多 AI 提供商支持
-          - [ ] 对话历史管理
-          
-          **构建时间**: ${{ github.event.head_commit.timestamp }}
-          **Commit**: ${{ github.sha }}
-        files: |
-          app/build/outputs/apk/debug/app-debug.apk
-          app/build/outputs/apk/release/app-release-unsigned.apk
+      run: |
+        gh release create 0.1.0-dev           --title "AfyzHub 0.1.0-dev"           --notes "## AfyzHub 开发版 0.1.0-dev
+
+**⚠️ 这是一个开发预览版本，可能包含未完成的功能和已知问题。**
+
+### 📦 下载
+- **Debug APK**: 包含调试信息，体积较大，适合开发调试
+- **Release APK**: 未签名的发布版本，需要自行签名后安装
+
+### 🔧 当前功能
+- ✅ 基础聊天界面
+- ✅ OpenAI API 集成
+- ✅ 对话历史保存
+- ✅ 设置页面（API Key 配置）
+
+### 📝 开发计划
+- [ ] Markdown 渲染支持
+- [ ] 流式响应（SSE）
+- [ ] 多 AI 提供商支持
+- [ ] 对话历史管理
+- [ ] 主题切换
+
+### 📊 技术栈
+- Kotlin + Jetpack Compose
+- Koin（依赖注入）
+- Retrofit + OkHttp（网络请求）
+- Room（本地数据库）
+- DataStore（配置存储）
+
+**构建时间**: ${{ github.event.head_commit.timestamp }}
+**Commit**: ${{ github.sha }}"           --prerelease           app/build/outputs/apk/debug/app-debug.apk           app/build/outputs/apk/release/app-release-unsigned.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
