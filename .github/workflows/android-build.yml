@@ -25,10 +25,6 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         
-    - name: Download Gradle Wrapper JAR
-      run: |
-        curl -L -o gradle/wrapper/gradle-wrapper.jar           https://raw.githubusercontent.com/gradle/gradle/v8.7.0/gradle/wrapper/gradle-wrapper.jar
-      
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
@@ -36,10 +32,10 @@ jobs:
       uses: gradle/actions/setup-gradle@v3
       
     - name: Build Debug APK
-      run: sh gradlew assembleDebug --stacktrace
+      run: ./gradlew assembleDebug --stacktrace
       
     - name: Build Release APK
-      run: sh gradlew assembleRelease --stacktrace
+      run: ./gradlew assembleRelease --stacktrace
       
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
@@ -65,7 +61,9 @@ jobs:
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        gh release create v0.1.0-dev           --title "AfyzHub v0.1.0-dev"           --notes "## AfyzHub 开发版 v0.1.0-dev
+        gh release create v0.1.0-dev \
+          --title "AfyzHub v0.1.0-dev" \
+          --notes "## AfyzHub 开发版 v0.1.0-dev
 
 **⚠️ 这是一个开发预览版本，可能包含未完成的功能和已知问题。**
 
@@ -94,6 +92,9 @@ jobs:
 - DataStore（配置存储）
 
 **构建时间**: ${{ github.event.head_commit.timestamp }}
-**Commit**: ${{ github.sha }}"           --prerelease           app/build/outputs/apk/debug/app-debug.apk           app/build/outputs/apk/release/app-release-unsigned.apk
+**Commit**: ${{ github.sha }}" \
+          --prerelease \
+          app/build/outputs/apk/debug/app-debug.apk \
+          app/build/outputs/apk/release/app-release-unsigned.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
