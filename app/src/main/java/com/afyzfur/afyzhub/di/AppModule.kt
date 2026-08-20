@@ -18,6 +18,6 @@ val appModule = module {
     
     // ViewModels
     viewModel { HomeViewModel(get()) }
-    viewModel { ChatViewModel(get(), get()) }
+    viewModel { ChatViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get()) }
 }
