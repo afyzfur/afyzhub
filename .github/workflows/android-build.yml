@@ -57,15 +57,15 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       continue-on-error: true
       run: |
-        gh release delete 0.1.0-dev --yes || true
-        git push origin :refs/tags/0.1.0-dev || true
+        gh release delete v0.1.0-dev --yes || true
+        git push origin :refs/tags/v0.1.0-dev || true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        gh release create 0.1.0-dev           --title "AfyzHub 0.1.0-dev"           --notes "## AfyzHub 开发版 0.1.0-dev
+        gh release create v0.1.0-dev           --title "AfyzHub v0.1.0-dev"           --notes "## AfyzHub 开发版 v0.1.0-dev
 
 **⚠️ 这是一个开发预览版本，可能包含未完成的功能和已知问题。**
 
