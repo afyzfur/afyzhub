@@ -76,12 +76,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AFYZFUR_PAT }}
         run: |
+          # 发行说明写入文件再引用，避免在 YAML 中内嵌多行字符串破坏缩进。
+          {
+            printf 'AfyzHub 开发预览版 %s。此版本用于测试，可能存在未完成的功能。\n\n' "$APP_VERSION"
+            printf '本次更新内容见 [CHANGELOG.md](%s)。\n' \
+              "https://github.com/afyzfur/afyzhub/blob/main/CHANGELOG.md"
+          } > release-notes.md
           gh release delete "$APP_VERSION" --yes --cleanup-tag || true
           gh release create "$APP_VERSION" \
             --title "$APP_VERSION" \
-            --notes "AfyzHub 开发预览版 $APP_VERSION。此版本用于测试，可能存在未完成的功能。
-
-本次更新内容见 [CHANGELOG.md](https://github.com/afyzfur/afyzhub/blob/main/CHANGELOG.md)。" \
+            --notes-file release-notes.md \
             --prerelease \
             --target main \
             "AfyzHub-${APP_VERSION}.apk"
