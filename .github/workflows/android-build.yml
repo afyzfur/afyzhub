@@ -36,6 +36,17 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --stacktrace
 
+      - name: Show failing test details
+        if: failure()
+        run: |
+          # 直接打印 XML 报告里的失败原因，避免另外下载报告。
+          find app/build/test-results -name '*.xml' -print0 |
+            xargs -0 grep -l '<failure' |
+            while read -r f; do
+              echo "===== $f ====="
+              sed -n 's/.*<testcase name="\([^"]*\)".*/CASE: \1/p;/<failure/,/<\/failure>/p' "$f" | head -40
+            done
+
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}

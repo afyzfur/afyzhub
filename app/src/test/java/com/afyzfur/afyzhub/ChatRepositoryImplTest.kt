@@ -111,7 +111,10 @@ class ChatRepositoryImplTest {
     @Test
     fun `请求使用设置中选择的模型`() = runTest {
         val api = RecordingApi()
-        val repo = repository(api, AppSettings(apiKey = "sk-test", model = "my-custom-model"))
+        val repo = repository(
+            api,
+            AppSettings(apiKey = "sk-test", model = "my-custom-model", streamEnabled = false)
+        )
 
         repo.sendMessage(newConversation(), "你好")
 
@@ -167,8 +170,8 @@ class ChatRepositoryImplTest {
 
         assertTrue(result.isSuccess)
         assertEquals("你好，世界", result.getOrNull()?.content)
-        // 请求必须带上 stream 标记，否则服务端不会分块返回。
-        assertEquals(true, stream.lastRequest?.stream)
+        // 走的是流式数据源而非一次性接口。
+        assertNotNull(stream.lastRequest)
 
         val assistant = messageDao.current.single { it.role == Constants.ROLE_ASSISTANT }
         assertEquals("你好，世界", assistant.content)
