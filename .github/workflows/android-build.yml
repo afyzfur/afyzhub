@@ -15,49 +15,40 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-
+          java-version: "17"
       - name: Set executable permission
         run: chmod +x ./gradlew
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
-
       - name: Build release APK
         run: ./gradlew assembleRelease --stacktrace
-
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
-
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
-
       - name: Replace development release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
-          GH_TOKEN: ${{ secrets.AFYZFUR_PAT || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AFYZFUR_PAT }}
         run: |
           gh release delete v0.1.0-dev --yes || true
           gh release create v0.1.0-dev \
-            --title "AfyzHub v0.1.0-dev" \
+            --title "v0.1.0-dev" \
             --prerelease \
             --notes "AfyzHub 开发预览版 v0.1.0-dev。此版本用于测试，可能存在未完成的功能。" \
             app/build/outputs/apk/debug/app-debug.apk \
