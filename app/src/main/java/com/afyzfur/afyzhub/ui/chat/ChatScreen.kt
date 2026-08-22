@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.Message
+import com.afyzfur.afyzhub.ui.components.MarkdownText
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -189,23 +190,31 @@ fun MessageItem(
                 isUser -> MaterialTheme.colorScheme.primaryContainer
                 else -> MaterialTheme.colorScheme.surfaceVariant
             },
-            modifier = Modifier.widthIn(max = 300.dp)
+            // 助手消息可能含代码块，给更宽的上限以减少横向滚动。
+            modifier = Modifier.widthIn(max = if (isUser) 300.dp else 340.dp)
         ) {
-            Text(
-                // 流式生成中的空回复先显示光标，避免出现空白气泡。
-                text = if (!isUser && message.isSending) {
-                    message.content.ifEmpty { "▍" }
-                } else {
-                    message.content
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = when {
-                    message.isFailed -> MaterialTheme.colorScheme.onErrorContainer
-                    isUser -> MaterialTheme.colorScheme.onPrimaryContainer
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.padding(12.dp)
-            )
+            val contentColor = when {
+                message.isFailed -> MaterialTheme.colorScheme.onErrorContainer
+                isUser -> MaterialTheme.colorScheme.onPrimaryContainer
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+
+            if (isUser || message.isFailed) {
+                // 用户输入按原样显示，不解析 Markdown。
+                Text(
+                    text = message.content,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = contentColor,
+                    modifier = Modifier.padding(12.dp)
+                )
+            } else {
+                MarkdownText(
+                    // 流式生成中的空回复先显示光标，避免出现空白气泡。
+                    text = message.content.ifEmpty { if (message.isSending) "▍" else "" },
+                    color = contentColor,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
         }
 
         // 失败的消息提供重试入口，避免留下无法处理的孤立消息。

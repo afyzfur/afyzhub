@@ -18,7 +18,9 @@
 
 AfyzHub 是一个开源的 Android AI 聊天应用，采用 Kotlin + Jetpack Compose 构建，遵循 Material Design 3 设计规范。
 
-**当前状态**：v0.1.2-dev 开发预览版
+**当前状态**：v0.1.3-dev 开发预览版
+
+各版本的详细变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
@@ -35,10 +37,10 @@ AfyzHub 是一个开源的 Android AI 聊天应用，采用 Kotlin + Jetpack Com
 - ✅ 流式响应（SSE，可在设置中关闭）
 - ✅ 自定义 API 地址与模型
 - ✅ 发送失败重试
+- ✅ Markdown 渲染（代码块、列表、标题、链接等）
 
 ### 开发中
 
-- 🚧 Markdown 渲染
 - 🚧 多 AI 提供商支持
 - 🚧 对话管理
 - 🚧 主题定制
