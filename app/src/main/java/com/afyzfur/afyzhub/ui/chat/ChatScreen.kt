@@ -34,7 +34,9 @@ fun ChatScreen(
         viewModel.loadMessages(conversationId)
     }
 
-    LaunchedEffect(messages.size) {
+    // 流式输出时最后一条消息内容会持续变化，需要一并作为滚动触发条件。
+    val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
+    LaunchedEffect(messages.size, lastContentLength) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
         }
@@ -86,7 +88,10 @@ fun ChatScreen(
                             onRetry = { viewModel.retryMessage(message.id) }
                         )
                     }
-                    if (isLoading) {
+                    // 流式回复已在气泡内逐字呈现，无需额外的等待指示。
+                    val streaming = messages.lastOrNull()
+                        ?.let { !it.isFromUser && it.isSending } == true
+                    if (isLoading && !streaming) {
                         item {
                             Box(
                                 modifier = Modifier.fillMaxWidth(),
@@ -187,7 +192,12 @@ fun MessageItem(
             modifier = Modifier.widthIn(max = 300.dp)
         ) {
             Text(
-                text = message.content,
+                // 流式生成中的空回复先显示光标，避免出现空白气泡。
+                text = if (!isUser && message.isSending) {
+                    message.content.ifEmpty { "▍" }
+                } else {
+                    message.content
+                },
                 style = MaterialTheme.typography.bodyLarge,
                 color = when {
                     message.isFailed -> MaterialTheme.colorScheme.onErrorContainer
@@ -210,7 +220,8 @@ fun MessageItem(
                     Text("重试")
                 }
             }
-        } else if (message.isSending) {
+        } else if (message.isSending && isUser) {
+            // 仅用户消息需要“发送中”提示；助手消息的进度由光标体现。
             Text(
                 text = "发送中…",
                 style = MaterialTheme.typography.labelSmall,

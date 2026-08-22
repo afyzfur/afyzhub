@@ -14,6 +14,7 @@ object Constants {
     const val KEY_API_KEY = "openai_api_key"
     const val KEY_MODEL = "selected_model"
     const val KEY_BASE_URL = "api_base_url"
+    const val KEY_STREAM_ENABLED = "stream_enabled"
 
     /** 消息发送状态 */
     const val STATUS_SENDING = "sending"

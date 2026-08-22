@@ -11,8 +11,8 @@ import org.koin.dsl.module
 
 val appModule = module {
 
-    // Repository：conversationDao, messageDao, openAIApi, settingsRepository
-    single<ChatRepository> { ChatRepositoryImpl(get(), get(), get(), get()) }
+    // Repository：conversationDao, messageDao, openAIApi, streamSource, settingsProvider
+    single<ChatRepository> { ChatRepositoryImpl(get(), get(), get(), get(), get()) }
 
     // UseCases
     single { SendMessageUseCase(get()) }

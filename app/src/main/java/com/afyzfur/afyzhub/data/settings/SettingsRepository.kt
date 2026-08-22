@@ -2,6 +2,7 @@ package com.afyzfur.afyzhub.data.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.afyzfur.afyzhub.util.Constants
@@ -17,7 +18,9 @@ import kotlinx.coroutines.flow.stateIn
 data class AppSettings(
     val apiKey: String = "",
     val model: String = Constants.DEFAULT_MODEL,
-    val baseUrl: String = Constants.DEFAULT_BASE_URL
+    val baseUrl: String = Constants.DEFAULT_BASE_URL,
+    /** 是否使用 SSE 流式输出，默认开启。 */
+    val streamEnabled: Boolean = true
 )
 
 /**
@@ -33,12 +36,14 @@ class SettingsRepository(
     private val apiKeyKey = stringPreferencesKey(Constants.KEY_API_KEY)
     private val modelKey = stringPreferencesKey(Constants.KEY_MODEL)
     private val baseUrlKey = stringPreferencesKey(Constants.KEY_BASE_URL)
+    private val streamKey = booleanPreferencesKey(Constants.KEY_STREAM_ENABLED)
 
     val settingsFlow: Flow<AppSettings> = dataStore.data.map { prefs ->
         AppSettings(
             apiKey = prefs[apiKeyKey].orEmpty(),
             model = prefs[modelKey]?.takeIf { it.isNotBlank() } ?: Constants.DEFAULT_MODEL,
-            baseUrl = prefs[baseUrlKey]?.takeIf { it.isNotBlank() } ?: Constants.DEFAULT_BASE_URL
+            baseUrl = prefs[baseUrlKey]?.takeIf { it.isNotBlank() } ?: Constants.DEFAULT_BASE_URL,
+            streamEnabled = prefs[streamKey] ?: true
         )
     }
 
@@ -51,11 +56,17 @@ class SettingsRepository(
 
     override suspend fun current(): AppSettings = settingsFlow.first()
 
-    suspend fun save(apiKey: String, model: String, baseUrl: String) {
+    suspend fun save(
+        apiKey: String,
+        model: String,
+        baseUrl: String,
+        streamEnabled: Boolean
+    ) {
         dataStore.edit { prefs ->
             prefs[apiKeyKey] = apiKey.trim()
             prefs[modelKey] = model.trim().ifBlank { Constants.DEFAULT_MODEL }
             prefs[baseUrlKey] = normalizeBaseUrl(baseUrl)
+            prefs[streamKey] = streamEnabled
         }
     }
 

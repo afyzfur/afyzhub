@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -21,6 +22,7 @@ fun SettingsScreen(
     val apiKey by viewModel.apiKey.collectAsState()
     val selectedModel by viewModel.selectedModel.collectAsState()
     val baseUrl by viewModel.baseUrl.collectAsState()
+    val streamEnabled by viewModel.streamEnabled.collectAsState()
     val saveSuccess by viewModel.saveSuccess.collectAsState()
 
     val presetModels = listOf(
@@ -106,6 +108,29 @@ fun SettingsScreen(
                 selected = selectedModel,
                 onSelect = viewModel::updateModel
             )
+
+            HorizontalDivider()
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "流式输出",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "逐字显示回复。部分中转服务不支持，可关闭后重试。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = streamEnabled,
+                    onCheckedChange = viewModel::updateStreamEnabled
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 

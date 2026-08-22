@@ -23,6 +23,9 @@ class SettingsViewModel(
     private val _baseUrl = MutableStateFlow(Constants.DEFAULT_BASE_URL)
     val baseUrl: StateFlow<String> = _baseUrl.asStateFlow()
 
+    private val _streamEnabled = MutableStateFlow(true)
+    val streamEnabled: StateFlow<Boolean> = _streamEnabled.asStateFlow()
+
     private val _saveSuccess = MutableStateFlow(false)
     val saveSuccess: StateFlow<Boolean> = _saveSuccess.asStateFlow()
 
@@ -32,7 +35,12 @@ class SettingsViewModel(
             _apiKey.value = settings.apiKey
             _selectedModel.value = settings.model
             _baseUrl.value = settings.baseUrl
+            _streamEnabled.value = settings.streamEnabled
         }
+    }
+
+    fun updateStreamEnabled(value: Boolean) {
+        _streamEnabled.value = value
     }
 
     fun updateApiKey(value: String) {
@@ -57,7 +65,8 @@ class SettingsViewModel(
             settingsRepository.save(
                 apiKey = _apiKey.value,
                 model = _selectedModel.value,
-                baseUrl = _baseUrl.value
+                baseUrl = _baseUrl.value,
+                streamEnabled = _streamEnabled.value
             )
             // 保存时会规范化地址，回读以保持界面与实际生效值一致。
             _baseUrl.value = settingsRepository.settingsFlow.first().baseUrl

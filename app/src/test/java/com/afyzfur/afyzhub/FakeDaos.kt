@@ -38,6 +38,18 @@ class FakeMessageDao : MessageDao {
         }
     }
 
+    override suspend fun updateContent(id: Long, content: String) {
+        state.value = state.value.map {
+            if (it.id == id) it.copy(content = content) else it
+        }
+    }
+
+    override suspend fun updateContentAndStatus(id: Long, content: String, status: String) {
+        state.value = state.value.map {
+            if (it.id == id) it.copy(content = content, status = status) else it
+        }
+    }
+
     override suspend fun deleteMessageById(id: Long) {
         state.value = state.value.filterNot { it.id == id }
     }

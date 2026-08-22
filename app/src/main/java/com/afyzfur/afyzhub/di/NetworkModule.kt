@@ -6,13 +6,15 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.afyzfur.afyzhub.BuildConfig
 import com.afyzfur.afyzhub.data.remote.AuthInterceptor
+import com.afyzfur.afyzhub.data.remote.ChatStreamSource
+import com.afyzfur.afyzhub.data.remote.OkHttpChatStreamSource
 import com.afyzfur.afyzhub.data.remote.OpenAIApi
 import com.afyzfur.afyzhub.data.settings.SettingsProvider
 import com.afyzfur.afyzhub.data.settings.SettingsRepository
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -41,7 +43,9 @@ val networkModule = module {
         Json {
             ignoreUnknownKeys = true
             coerceInputValues = true
-            encodeDefaults = false
+            // stream 等布尔字段必须随请求发出，因此保留默认值。
+            encodeDefaults = true
+            explicitNulls = false
         }
     }
 
@@ -56,14 +60,18 @@ val networkModule = module {
         }
     }
 
-    single { AuthInterceptor(get()) }
+    single {
+        val repository: SettingsRepository = get()
+        AuthInterceptor { repository.settings.value }
+    }
 
     single {
         OkHttpClient.Builder()
             .addInterceptor(get<AuthInterceptor>())
             .addInterceptor(get<HttpLoggingInterceptor>())
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
+            // 流式响应期间连接会长时间保持，读超时不能过短。
+            .readTimeout(5, TimeUnit.MINUTES)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
@@ -79,4 +87,6 @@ val networkModule = module {
     }
 
     single { get<Retrofit>().create(OpenAIApi::class.java) }
+
+    single<ChatStreamSource> { OkHttpChatStreamSource(get(), get()) }
 }

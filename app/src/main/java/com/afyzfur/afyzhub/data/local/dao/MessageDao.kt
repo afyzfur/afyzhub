@@ -26,6 +26,13 @@ interface MessageDao {
     @Query("UPDATE messages SET status = :status, errorMessage = :errorMessage WHERE id = :id")
     suspend fun updateStatus(id: Long, status: String, errorMessage: String?)
 
+    /** 流式回复过程中逐步写入已接收的内容。 */
+    @Query("UPDATE messages SET content = :content WHERE id = :id")
+    suspend fun updateContent(id: Long, content: String)
+
+    @Query("UPDATE messages SET content = :content, status = :status WHERE id = :id")
+    suspend fun updateContentAndStatus(id: Long, content: String, status: String)
+
     @Query("DELETE FROM messages WHERE id = :id")
     suspend fun deleteMessageById(id: Long)
 

@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 env:
-  APP_VERSION: v0.1.1-dev
+  APP_VERSION: v0.1.2-dev
 
 jobs:
   build:
