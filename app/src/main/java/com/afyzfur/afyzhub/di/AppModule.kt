@@ -10,14 +10,15 @@ import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 val appModule = module {
-    // Repository
-    single<ChatRepository> { ChatRepositoryImpl(get(), get(), get()) }
-    
+
+    // Repository：conversationDao, messageDao, openAIApi, settingsRepository
+    single<ChatRepository> { ChatRepositoryImpl(get(), get(), get(), get()) }
+
     // UseCases
     single { SendMessageUseCase(get()) }
-    
+
     // ViewModels
     viewModel { HomeViewModel(get()) }
-    viewModel { ChatViewModel(get(), get(), get()) }
+    viewModel { ChatViewModel(get(), get()) }
     viewModel { SettingsViewModel(get()) }
 }

@@ -2,10 +2,7 @@ package com.afyzfur.afyzhub.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
+import com.afyzfur.afyzhub.data.settings.SettingsRepository
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
-    private val dataStore: DataStore<Preferences>
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _apiKey = MutableStateFlow("")
@@ -23,35 +20,47 @@ class SettingsViewModel(
     private val _selectedModel = MutableStateFlow(Constants.DEFAULT_MODEL)
     val selectedModel: StateFlow<String> = _selectedModel.asStateFlow()
 
+    private val _baseUrl = MutableStateFlow(Constants.DEFAULT_BASE_URL)
+    val baseUrl: StateFlow<String> = _baseUrl.asStateFlow()
+
     private val _saveSuccess = MutableStateFlow(false)
     val saveSuccess: StateFlow<Boolean> = _saveSuccess.asStateFlow()
 
     init {
-        loadSettings()
-    }
-
-    private fun loadSettings() {
         viewModelScope.launch {
-            val prefs = dataStore.data.first()
-            _apiKey.value = prefs[stringPreferencesKey(Constants.KEY_API_KEY)] ?: ""
-            _selectedModel.value = prefs[stringPreferencesKey(Constants.KEY_MODEL)] ?: Constants.DEFAULT_MODEL
+            val settings = settingsRepository.settingsFlow.first()
+            _apiKey.value = settings.apiKey
+            _selectedModel.value = settings.model
+            _baseUrl.value = settings.baseUrl
         }
     }
 
-    fun updateApiKey(newKey: String) {
-        _apiKey.value = newKey
+    fun updateApiKey(value: String) {
+        _apiKey.value = value
     }
 
-    fun updateModel(newModel: String) {
-        _selectedModel.value = newModel
+    fun updateModel(value: String) {
+        _selectedModel.value = value
+    }
+
+    fun updateBaseUrl(value: String) {
+        _baseUrl.value = value
+    }
+
+    /** 恢复默认 API 地址。 */
+    fun resetBaseUrl() {
+        _baseUrl.value = Constants.DEFAULT_BASE_URL
     }
 
     fun saveSettings() {
         viewModelScope.launch {
-            dataStore.edit { prefs ->
-                prefs[stringPreferencesKey(Constants.KEY_API_KEY)] = _apiKey.value
-                prefs[stringPreferencesKey(Constants.KEY_MODEL)] = _selectedModel.value
-            }
+            settingsRepository.save(
+                apiKey = _apiKey.value,
+                model = _selectedModel.value,
+                baseUrl = _baseUrl.value
+            )
+            // 保存时会规范化地址，回读以保持界面与实际生效值一致。
+            _baseUrl.value = settingsRepository.settingsFlow.first().baseUrl
             _saveSuccess.value = true
         }
     }

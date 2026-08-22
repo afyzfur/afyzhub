@@ -4,13 +4,16 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.datastore.preferences.core.stringPreferencesKey
+import com.afyzfur.afyzhub.BuildConfig
+import com.afyzfur.afyzhub.data.remote.AuthInterceptor
 import com.afyzfur.afyzhub.data.remote.OpenAIApi
+import com.afyzfur.afyzhub.data.settings.SettingsProvider
+import com.afyzfur.afyzhub.data.settings.SettingsRepository
 import com.afyzfur.afyzhub.util.Constants
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
-import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -23,57 +26,57 @@ import java.util.concurrent.TimeUnit
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = Constants.PREFS_NAME)
 
 val networkModule = module {
+
     single { androidContext().dataStore }
-    
+
+    /** 应用级作用域，用于常驻缓存设置。 */
+    single { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
+
+    single { SettingsRepository(get(), get()) }
+
+    // 数据层依赖的是只读接口，这里把同一个实例按接口再暴露一次。
+    single<SettingsProvider> { get<SettingsRepository>() }
+
     single {
-        val json = Json {
+        Json {
             ignoreUnknownKeys = true
             coerceInputValues = true
+            encodeDefaults = false
         }
-        json
     }
-    
+
     single {
         HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-    }
-    
-    single {
-        val dataStore: DataStore<Preferences> = get()
-        Interceptor { chain ->
-            val apiKey = runBlocking {
-                val key = stringPreferencesKey(Constants.KEY_API_KEY)
-                dataStore.data.first()[key] ?: ""
+            // Release 包必须关闭，否则 Authorization 头与对话内容会写入系统日志。
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BASIC
+            } else {
+                HttpLoggingInterceptor.Level.NONE
             }
-            
-            val request = chain.request().newBuilder()
-                .addHeader("Authorization", "Bearer $apiKey")
-                .build()
-            chain.proceed(request)
         }
     }
-    
+
+    single { AuthInterceptor(get()) }
+
     single {
         OkHttpClient.Builder()
-            .addInterceptor(get<Interceptor>())
+            .addInterceptor(get<AuthInterceptor>())
             .addInterceptor(get<HttpLoggingInterceptor>())
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
-    
+
     single {
         val json: Json = get()
         Retrofit.Builder()
-            .baseUrl(Constants.OPENAI_BASE_URL)
+            // 实际地址由 AuthInterceptor 按用户设置改写，这里仅作占位。
+            .baseUrl(Constants.DEFAULT_BASE_URL)
             .client(get())
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }
-    
-    single {
-        get<Retrofit>().create(OpenAIApi::class.java)
-    }
+
+    single { get<Retrofit>().create(OpenAIApi::class.java) }
 }

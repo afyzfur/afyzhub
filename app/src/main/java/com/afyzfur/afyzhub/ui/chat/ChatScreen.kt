@@ -1,6 +1,5 @@
 package com.afyzfur.afyzhub.ui.chat
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.Message
 import org.koin.androidx.compose.koinViewModel
@@ -43,7 +43,7 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("对觞") },
+                title = { Text("对话") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -57,32 +57,48 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Messages list
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                state = listState,
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(messages, key = { it.id }) { message ->
-                    MessageItem(message = message)
+            if (messages.isEmpty() && !isLoading) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "发送一条消息开始对话",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
-
-                if (isLoading) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    state = listState,
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(messages, key = { it.id }) { message ->
+                        MessageItem(
+                            message = message,
+                            onRetry = { viewModel.retryMessage(message.id) }
+                        )
+                    }
+                    if (isLoading) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            }
                         }
                     }
                 }
             }
 
-            // Error message
             error?.let { errorMessage ->
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -106,7 +122,6 @@ fun ChatScreen(
                 }
             }
 
-            // Input bar
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shadowElevation = 8.dp
@@ -128,8 +143,11 @@ fun ChatScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     FloatingActionButton(
                         onClick = {
-                            viewModel.sendMessage(conversationId, inputText)
-                            inputText = ""
+                            val text = inputText
+                            if (text.isNotBlank() && !isLoading) {
+                                viewModel.sendMessage(conversationId, text)
+                                inputText = ""
+                            }
                         },
                         modifier = Modifier.size(56.dp),
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -144,12 +162,15 @@ fun ChatScreen(
 }
 
 @Composable
-fun MessageItem(message: Message) {
-    val isUser = message.role == "user"
-    
-    Row(
+fun MessageItem(
+    message: Message,
+    onRetry: () -> Unit = {}
+) {
+    val isUser = message.isFromUser
+
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
     ) {
         Surface(
             shape = RoundedCornerShape(
@@ -158,18 +179,43 @@ fun MessageItem(message: Message) {
                 bottomStart = if (isUser) 16.dp else 4.dp,
                 bottomEnd = if (isUser) 4.dp else 16.dp
             ),
-            color = if (isUser) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
+            color = when {
+                message.isFailed -> MaterialTheme.colorScheme.errorContainer
+                isUser -> MaterialTheme.colorScheme.primaryContainer
+                else -> MaterialTheme.colorScheme.surfaceVariant
             },
             modifier = Modifier.widthIn(max = 300.dp)
         ) {
             Text(
                 text = message.content,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = when {
+                    message.isFailed -> MaterialTheme.colorScheme.onErrorContainer
+                    isUser -> MaterialTheme.colorScheme.onPrimaryContainer
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
                 modifier = Modifier.padding(12.dp)
+            )
+        }
+
+        // 失败的消息提供重试入口，避免留下无法处理的孤立消息。
+        if (message.isFailed) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = message.errorMessage ?: "发送失败",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                TextButton(onClick = onRetry) {
+                    Text("重试")
+                }
+            }
+        } else if (message.isSending) {
+            Text(
+                text = "发送中…",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp)
             )
         }
     }

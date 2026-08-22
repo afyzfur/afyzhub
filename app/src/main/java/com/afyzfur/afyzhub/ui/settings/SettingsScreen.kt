@@ -1,6 +1,8 @@
 package com.afyzfur.afyzhub.ui.settings
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -18,21 +20,16 @@ fun SettingsScreen(
 ) {
     val apiKey by viewModel.apiKey.collectAsState()
     val selectedModel by viewModel.selectedModel.collectAsState()
+    val baseUrl by viewModel.baseUrl.collectAsState()
     val saveSuccess by viewModel.saveSuccess.collectAsState()
 
-    val models = listOf(
+    val presetModels = listOf(
         "gpt-3.5-turbo",
         "gpt-4",
         "gpt-4-turbo",
         "gpt-4o",
         "gpt-4o-mini"
     )
-
-    LaunchedEffect(saveSuccess) {
-        if (saveSuccess) {
-            viewModel.clearSaveSuccess()
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -50,17 +47,18 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "OpenAI 配置",
+                text = "接口配置",
                 style = MaterialTheme.typography.titleLarge
             )
 
             OutlinedTextField(
                 value = apiKey,
-                onValueChange = { viewModel.updateApiKey(it) },
+                onValueChange = viewModel::updateApiKey,
                 label = { Text("API Key") },
                 placeholder = { Text("sk-...") },
                 modifier = Modifier.fillMaxWidth(),
@@ -68,49 +66,51 @@ fun SettingsScreen(
                 singleLine = true
             )
 
+            OutlinedTextField(
+                value = baseUrl,
+                onValueChange = viewModel::updateBaseUrl,
+                label = { Text("API 地址") },
+                placeholder = { Text("https://api.openai.com/") },
+                supportingText = { Text("使用中转服务时填入对应地址") },
+                trailingIcon = {
+                    TextButton(onClick = viewModel::resetBaseUrl) {
+                        Text("默认")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
             Text(
-                text = "模型选择",
+                text = "模型",
                 style = MaterialTheme.typography.titleMedium
             )
 
-            var expanded by remember { mutableStateOf(false) }
-            
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = it }
-            ) {
-                OutlinedTextField(
-                    value = selectedModel,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("模型") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                )
-                
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    models.forEach { model ->
-                        DropdownMenuItem(
-                            text = { Text(model) },
-                            onClick = {
-                                viewModel.updateModel(model)
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
+            // 允许直接输入模型名，以支持中转服务提供的非官方模型。
+            OutlinedTextField(
+                value = selectedModel,
+                onValueChange = viewModel::updateModel,
+                label = { Text("模型名称") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "常用模型",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            FlowRowModels(
+                models = presetModels,
+                selected = selectedModel,
+                onSelect = viewModel::updateModel
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Button(
-                onClick = { viewModel.saveSettings() },
+                onClick = viewModel::saveSettings,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = apiKey.isNotBlank()
             ) {
@@ -119,16 +119,41 @@ fun SettingsScreen(
 
             if (saveSuccess) {
                 Text(
-                    text = "✓ 设置已保存",
+                    text = "设置已保存",
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyMedium
                 )
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(2000)
+                    viewModel.clearSaveSuccess()
+                }
             }
 
             Text(
-                text = "提示：API Key 将被安全存储在本地，不会上传到任何服务器",
+                text = "API Key 仅保存在本机，不会上传到任何第三方服务器。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FlowRowModels(
+    models: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        models.forEach { model ->
+            FilterChip(
+                selected = model == selected,
+                onClick = { onSelect(model) },
+                label = { Text(model) }
             )
         }
     }

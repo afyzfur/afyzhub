@@ -10,6 +10,9 @@ on:
 permissions:
   contents: write
 
+env:
+  APP_VERSION: v0.1.1-dev
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,34 +33,46 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
 
-      - name: Build release APK
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/afyzhub.jks"
+
+      - name: Build signed release APK
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/afyzhub.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease --stacktrace
 
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Rename APK
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk "AfyzHub-${APP_VERSION}.apk"
 
-      - name: Upload release APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          name: afyzhub-release
+          path: AfyzHub-${{ env.APP_VERSION }}.apk
 
       - name: Publish prerelease
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.AFYZFUR_PAT }}
         run: |
-          gh release delete v0.1.0-dev --yes --cleanup-tag || true
-          gh release create v0.1.0-dev \
-            --title v0.1.0-dev \
-            --notes "AfyzHub 开发预览版 v0.1.0-dev。此版本用于测试，可能存在未完成的功能。" \
+          gh release delete "$APP_VERSION" --yes --cleanup-tag || true
+          gh release create "$APP_VERSION" \
+            --title "$APP_VERSION" \
+            --notes "AfyzHub 开发预览版 $APP_VERSION。此版本用于测试，可能存在未完成的功能。" \
             --prerelease \
             --target main \
-            app/build/outputs/apk/debug/app-debug.apk \
-            app/build/outputs/apk/release/app-release-unsigned.apk
+            "AfyzHub-${APP_VERSION}.apk"
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/afyzhub.jks"
