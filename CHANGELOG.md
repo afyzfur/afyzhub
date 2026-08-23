@@ -33,6 +33,10 @@
 - 删除 `OpenAIApi`、`AuthInterceptor`、`ChatStreamSource`，职责已由 provider 层接管
 - 默认地址与默认模型不再定义在 `Constants`，改由 `AiProvider` 按提供商给出
 
+### 修复
+
+- OpenAI 兼容响应中缺少 `id`、`index` 或 `usage` 字段时不再抛出反序列化异常导致整条回复丢失，现在只要存在正文即可正常取用（部分中转服务会省略这些字段）
+
 ### 升级注意
 
 - 原有的 OpenAI API Key、模型与地址会自动迁移到新的存储结构，无需重新填写

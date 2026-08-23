@@ -105,7 +105,7 @@ class OpenAiChatClientTest {
     fun `一次性请求解析回复内容`() = runTest {
         val transport = FakeTransport(
             response = """
-                {"choices":[{"index":0,"message":{"role":"assistant","content":"你好"}}]}
+                {"id":"chatcmpl-1","choices":[{"index":0,"message":{"role":"assistant","content":"你好"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":2,"total_tokens":3}}
             """.trimIndent()
         )
         val client = OpenAiChatClient(transport, json)
@@ -115,6 +115,17 @@ class OpenAiChatClientTest {
         assertEquals("你好", reply)
         assertEquals("v1/chat/completions", transport.lastPath)
         assertEquals("Bearer sk-test", transport.lastHeaders["Authorization"])
+    }
+
+    @Test
+    fun `响应缺少非必要字段时仍能取到正文`() = runTest {
+        // 部分中转服务会省略 id 与 usage，不应因此整条回复丢失。
+        val transport = FakeTransport(
+            response = """{"choices":[{"message":{"role":"assistant","content":"精简响应"}}]}"""
+        )
+        val client = OpenAiChatClient(transport, json)
+
+        assertEquals("精简响应", client.complete(listOf(ChatTurn("user", "hi")), settings))
     }
 
     @Test
