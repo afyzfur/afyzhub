@@ -5,6 +5,48 @@
 
 ---
 
+## v0.1.4-dev
+
+### 新增
+
+- **多 AI 提供商支持**：可在设置中切换 OpenAI、Anthropic Claude、Google Gemini
+  - OpenAI：`POST v1/chat/completions`，鉴权 `Authorization: Bearer`
+  - Claude：`POST v1/messages`，鉴权 `x-api-key` 并附带 `anthropic-version: 2023-06-01`；system 提示提取到顶层 `system` 字段；`max_tokens` 为必填项，固定发送 4096
+  - Gemini：`POST v1beta/models/{模型}:generateContent`，模型名写在 URL 路径而非请求体；消息结构为 `contents[].parts[].text`，助手角色映射为 `model`；system 提示走 `systemInstruction` 字段；鉴权使用 `x-goog-api-key` 请求头而非 `?key=` 查询参数，避免密钥出现在 URL 与日志中
+- **各提供商配置独立存储**：API Key、模型名、API 地址按提供商分别保存，切换提供商时自动回填该提供商自己的配置，不会互相覆盖
+- **模型列表动态获取**：设置页新增「获取模型列表」按钮，从各家接口实时拉取，不再使用应用内硬编码的模型名单
+  - OpenAI 读 `GET v1/models`，Claude 读 `GET v1/models`，Gemini 读 `GET v1beta/models`
+  - Gemini 结果会去掉 `models/` 前缀，并过滤掉不支持 `generateContent` 的模型（如嵌入模型）
+  - 结果按名称排序后平铺展示在页面内，点击即填入
+  - 结果缓存到本地，重进设置页或重启应用后列表仍在，只在主动点击刷新时重新拉取
+  - 拉取使用输入框中的当前 Key 与地址，改完无需先保存即可验证
+- 模型名输入框保持可自由输入，以支持中转服务提供的非官方模型名
+- 设置页按当前提供商显示对应的 Key 格式示例与默认地址
+- 新增 13 个 provider 协议单元测试，覆盖三家的鉴权头、请求体结构、SSE 事件解析与模型列表解析；新增 4 个 Repository 用例，覆盖按提供商分发客户端与缺失实现时的报错。测试总数由 9 个增至 22 个
+
+### 变更
+
+- **应用图标**：替换为新图标，同步生成 mdpi 至 xxxhdpi 各密度的传统图标、圆形图标与自适应图标前景层；自适应图标背景色由深色 `#0F131C` 改为取自图标的暖橙色 `#FCA43C`
+- **网络层重构**：移除 Retrofit 依赖，改由 OkHttp 直接构造请求。原因是三家的请求路径、鉴权方式与响应结构差异过大，Retrofit 的接口声明方式反而增加了适配成本
+- 新增统一的 `ChatClient` 接口与 `Transport` 传输抽象，各提供商实现自己的请求构造与响应解析；`ChatRepositoryImpl` 不再包含任何单一服务商的协议细节，只负责组装对话内容、选择当前提供商与处理失败状态
+- 鉴权头注入与地址拼接从 OkHttp 拦截器移入各 provider 客户端
+- 删除 `OpenAIApi`、`AuthInterceptor`、`ChatStreamSource`，职责已由 provider 层接管
+- 默认地址与默认模型不再定义在 `Constants`，改由 `AiProvider` 按提供商给出
+
+### 升级注意
+
+- 原有的 OpenAI API Key、模型与地址会自动迁移到新的存储结构，无需重新填写
+- 对话记录不受影响，数据库结构未变动（仍为版本 2）
+- 首次使用 Claude 或 Gemini 需分别填写各自的 API Key
+
+### 已知限制
+
+- 尚无界面入口设置系统提示（system prompt），但协议层已支持，三家的处理方式均已实现
+- Claude 的 `max_tokens` 固定为 4096，暂不可配置
+- Gemini 使用 `v1beta` 接口版本，后续可能需跟随官方调整
+
+---
+
 ## v0.1.3-dev
 
 ### 新增

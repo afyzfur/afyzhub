@@ -5,49 +5,64 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.afyzfur.afyzhub.domain.model.AiProvider
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-/** 应用设置。 */
+/** 当前生效的设置。 */
 data class AppSettings(
+    val provider: AiProvider = AiProvider.DEFAULT,
     val apiKey: String = "",
-    val model: String = Constants.DEFAULT_MODEL,
-    val baseUrl: String = Constants.DEFAULT_BASE_URL,
-    /** 是否使用 SSE 流式输出，默认开启。 */
+    val model: String = AiProvider.DEFAULT.fallbackModel,
+    val baseUrl: String = AiProvider.DEFAULT.defaultBaseUrl,
+    /** 是否使用流式输出，默认开启。 */
     val streamEnabled: Boolean = true
 )
 
 /**
  * 设置的统一读写入口。
  *
- * 对外暴露一个热流 [settings]，请求拦截器可以直接读取内存中的最新值，
- * 不必在 OkHttp 线程上阻塞读磁盘。
+ * API Key、模型和地址按提供商分别存储，切换提供商不会互相覆盖。
+ * 对外暴露热流 [settings]，供网络层同步读取，避免在请求线程上读磁盘。
  */
 class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
     scope: CoroutineScope
 ) : SettingsProvider {
-    private val apiKeyKey = stringPreferencesKey(Constants.KEY_API_KEY)
-    private val modelKey = stringPreferencesKey(Constants.KEY_MODEL)
-    private val baseUrlKey = stringPreferencesKey(Constants.KEY_BASE_URL)
+
+    private val providerKey = stringPreferencesKey(Constants.KEY_PROVIDER)
     private val streamKey = booleanPreferencesKey(Constants.KEY_STREAM_ENABLED)
 
+    private fun apiKeyKey(p: AiProvider) =
+        stringPreferencesKey("${Constants.KEY_PREFIX_API_KEY}_${p.id}")
+
+    private fun modelKey(p: AiProvider) =
+        stringPreferencesKey("${Constants.KEY_PREFIX_MODEL}_${p.id}")
+
+    private fun baseUrlKey(p: AiProvider) =
+        stringPreferencesKey("${Constants.KEY_PREFIX_BASE_URL}_${p.id}")
+
+    private fun modelListKey(p: AiProvider) =
+        stringPreferencesKey("${Constants.KEY_PREFIX_MODEL_LIST}_${p.id}")
+
     val settingsFlow: Flow<AppSettings> = dataStore.data.map { prefs ->
+        val provider = AiProvider.fromId(prefs[providerKey])
         AppSettings(
-            apiKey = prefs[apiKeyKey].orEmpty(),
-            model = prefs[modelKey]?.takeIf { it.isNotBlank() } ?: Constants.DEFAULT_MODEL,
-            baseUrl = prefs[baseUrlKey]?.takeIf { it.isNotBlank() } ?: Constants.DEFAULT_BASE_URL,
+            provider = provider,
+            apiKey = readApiKey(prefs, provider),
+            model = readModel(prefs, provider),
+            baseUrl = readBaseUrl(prefs, provider),
             streamEnabled = prefs[streamKey] ?: true
         )
     }
 
-    /** 常驻缓存，供拦截器同步读取，避免每次请求都落盘。 */
+    /** 常驻缓存，供拦截器与传输层同步取值。 */
     val settings: StateFlow<AppSettings> = settingsFlow.stateIn(
         scope = scope,
         started = SharingStarted.Eagerly,
@@ -56,24 +71,87 @@ class SettingsRepository(
 
     override suspend fun current(): AppSettings = settingsFlow.first()
 
+    /** 读取指定提供商的配置，用于设置页在切换时回填。 */
+    suspend fun configFor(provider: AiProvider): AppSettings {
+        val prefs = dataStore.data.first()
+        return AppSettings(
+            provider = provider,
+            apiKey = readApiKey(prefs, provider),
+            model = readModel(prefs, provider),
+            baseUrl = readBaseUrl(prefs, provider),
+            streamEnabled = prefs[streamKey] ?: true
+        )
+    }
+
     suspend fun save(
+        provider: AiProvider,
         apiKey: String,
         model: String,
         baseUrl: String,
         streamEnabled: Boolean
     ) {
         dataStore.edit { prefs ->
-            prefs[apiKeyKey] = apiKey.trim()
-            prefs[modelKey] = model.trim().ifBlank { Constants.DEFAULT_MODEL }
-            prefs[baseUrlKey] = normalizeBaseUrl(baseUrl)
+            prefs[providerKey] = provider.id
+            prefs[apiKeyKey(provider)] = apiKey.trim()
+            prefs[modelKey(provider)] = model.trim().ifBlank { provider.fallbackModel }
+            prefs[baseUrlKey(provider)] = normalizeBaseUrl(baseUrl, provider)
             prefs[streamKey] = streamEnabled
         }
     }
 
-    /** Retrofit 要求 baseUrl 以 "/" 结尾，这里统一补齐。 */
-    private fun normalizeBaseUrl(raw: String): String {
+    /** 读取缓存的模型列表；没有缓存时返回空列表。 */
+    suspend fun cachedModels(provider: AiProvider): List<String> {
+        val raw = dataStore.data.first()[modelListKey(provider)].orEmpty()
+        return raw.split('\n').filter { it.isNotBlank() }
+    }
+
+    /** 保存拉取到的模型列表，供下次进入设置页直接展示。 */
+    suspend fun saveModels(provider: AiProvider, models: List<String>) {
+        dataStore.edit { prefs ->
+            prefs[modelListKey(provider)] = models.joinToString("\n")
+        }
+    }
+
+    /**
+     * 读取 API Key。
+     *
+     * v0.1.3 及之前只有单份 OpenAI 配置，若新键名为空则回退到旧键，
+     * 使升级用户不必重新填写。
+     */
+    private fun readApiKey(prefs: Preferences, provider: AiProvider): String {
+        prefs[apiKeyKey(provider)]?.takeIf { it.isNotBlank() }?.let { return it }
+        if (provider == AiProvider.OPENAI) {
+            prefs[stringPreferencesKey(Constants.LEGACY_KEY_API_KEY)]
+                ?.takeIf { it.isNotBlank() }
+                ?.let { return it }
+        }
+        return ""
+    }
+
+    private fun readModel(prefs: Preferences, provider: AiProvider): String {
+        prefs[modelKey(provider)]?.takeIf { it.isNotBlank() }?.let { return it }
+        if (provider == AiProvider.OPENAI) {
+            prefs[stringPreferencesKey(Constants.LEGACY_KEY_MODEL)]
+                ?.takeIf { it.isNotBlank() }
+                ?.let { return it }
+        }
+        return provider.fallbackModel
+    }
+
+    private fun readBaseUrl(prefs: Preferences, provider: AiProvider): String {
+        prefs[baseUrlKey(provider)]?.takeIf { it.isNotBlank() }?.let { return it }
+        if (provider == AiProvider.OPENAI) {
+            prefs[stringPreferencesKey(Constants.LEGACY_KEY_BASE_URL)]
+                ?.takeIf { it.isNotBlank() }
+                ?.let { return it }
+        }
+        return provider.defaultBaseUrl
+    }
+
+    /** 地址必须以 "/" 结尾，便于后续拼接路径。 */
+    private fun normalizeBaseUrl(raw: String, provider: AiProvider): String {
         val trimmed = raw.trim()
-        if (trimmed.isBlank()) return Constants.DEFAULT_BASE_URL
+        if (trimmed.isBlank()) return provider.defaultBaseUrl
         return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
     }
 }

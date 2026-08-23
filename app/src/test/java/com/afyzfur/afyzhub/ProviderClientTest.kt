@@ -1,0 +1,355 @@
+package com.afyzfur.afyzhub
+
+import com.afyzfur.afyzhub.data.remote.provider.AnthropicChatClient
+import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
+import com.afyzfur.afyzhub.data.remote.provider.GeminiChatClient
+import com.afyzfur.afyzhub.data.remote.provider.OpenAiChatClient
+import com.afyzfur.afyzhub.data.remote.provider.Transport
+import com.afyzfur.afyzhub.data.settings.AppSettings
+import com.afyzfur.afyzhub.domain.model.AiProvider
+import com.afyzfur.afyzhub.util.Constants
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * 记录请求参数并回放预设响应的假传输层。
+ *
+ * 用它可以在 JVM 上验证请求体结构、鉴权头和 SSE 解析，无需真实网络。
+ */
+private class FakeTransport(
+    private val response: String = "{}",
+    private val sseLines: List<String> = emptyList()
+) : Transport {
+
+    var lastPath: String? = null
+    var lastBody: String? = null
+    var lastHeaders: Map<String, String> = emptyMap()
+    var lastQuery: Map<String, String> = emptyMap()
+    var lastBaseUrl: String? = null
+
+    override suspend fun getForText(
+        baseUrl: String,
+        path: String,
+        headers: Map<String, String>,
+        query: Map<String, String>
+    ): String {
+        lastBaseUrl = baseUrl
+        lastPath = path
+        lastHeaders = headers
+        lastQuery = query
+        return response
+    }
+
+    override suspend fun postForText(
+        baseUrl: String,
+        path: String,
+        headers: Map<String, String>,
+        body: String,
+        query: Map<String, String>
+    ): String {
+        lastBaseUrl = baseUrl
+        lastPath = path
+        lastHeaders = headers
+        lastBody = body
+        lastQuery = query
+        return response
+    }
+
+    override fun postForSse(
+        baseUrl: String,
+        path: String,
+        headers: Map<String, String>,
+        body: String,
+        query: Map<String, String>
+    ): Flow<String> {
+        lastBaseUrl = baseUrl
+        lastPath = path
+        lastHeaders = headers
+        lastBody = body
+        lastQuery = query
+        return sseLines.asFlow()
+    }
+}
+
+private val json = Json {
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+    encodeDefaults = true
+    explicitNulls = false
+}
+
+private fun body(transport: FakeTransport): JsonObject =
+    json.parseToJsonElement(transport.lastBody!!).jsonObject
+
+class OpenAiChatClientTest {
+
+    private val settings = AppSettings(
+        provider = AiProvider.OPENAI,
+        apiKey = "sk-test",
+        model = "gpt-4o",
+        baseUrl = "https://api.openai.com/"
+    )
+
+    @Test
+    fun `一次性请求解析回复内容`() = runTest {
+        val transport = FakeTransport(
+            response = """
+                {"choices":[{"index":0,"message":{"role":"assistant","content":"你好"}}]}
+            """.trimIndent()
+        )
+        val client = OpenAiChatClient(transport, json)
+
+        val reply = client.complete(listOf(ChatTurn("user", "hi")), settings)
+
+        assertEquals("你好", reply)
+        assertEquals("v1/chat/completions", transport.lastPath)
+        assertEquals("Bearer sk-test", transport.lastHeaders["Authorization"])
+    }
+
+    @Test
+    fun `流式请求带上 stream 标记并拼接增量`() = runTest {
+        val transport = FakeTransport(
+            sseLines = listOf(
+                """{"choices":[{"delta":{"content":"你"}}]}""",
+                """{"choices":[{"delta":{"content":"好"}}]}""",
+                // 结束块没有 content，应被跳过而不是产出空串。
+                """{"choices":[{"delta":{},"finish_reason":"stop"}]}"""
+            )
+        )
+        val client = OpenAiChatClient(transport, json)
+
+        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).toList()
+
+        assertEquals(listOf("你", "好"), deltas)
+        assertEquals(true, body(transport)["stream"]!!.jsonPrimitive.content.toBoolean())
+    }
+
+    @Test
+    fun `模型列表按名称排序`() = runTest {
+        val transport = FakeTransport(
+            response = """{"data":[{"id":"gpt-4o"},{"id":"gpt-3.5-turbo"},{"id":""}]}"""
+        )
+        val client = OpenAiChatClient(transport, json)
+
+        val models = client.listModels(settings)
+
+        assertEquals(listOf("gpt-3.5-turbo", "gpt-4o"), models)
+        assertEquals("v1/models", transport.lastPath)
+    }
+
+    @Test
+    fun `无法解析的数据块被跳过而不中断整段回复`() = runTest {
+        val transport = FakeTransport(
+            sseLines = listOf(
+                """{"choices":[{"delta":{"content":"前"}}]}""",
+                "不是合法 JSON",
+                """{"choices":[{"delta":{"content":"后"}}]}"""
+            )
+        )
+        val client = OpenAiChatClient(transport, json)
+
+        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).toList()
+
+        assertEquals(listOf("前", "后"), deltas)
+    }
+}
+
+class AnthropicChatClientTest {
+
+    private val settings = AppSettings(
+        provider = AiProvider.ANTHROPIC,
+        apiKey = "sk-ant-test",
+        model = "claude-sonnet-4",
+        baseUrl = "https://api.anthropic.com/"
+    )
+
+    @Test
+    fun `鉴权使用 x-api-key 且带版本头`() = runTest {
+        val transport = FakeTransport(response = """{"content":[{"type":"text","text":"ok"}]}""")
+        val client = AnthropicChatClient(transport, json)
+
+        client.complete(listOf(ChatTurn("user", "hi")), settings)
+
+        assertEquals("sk-ant-test", transport.lastHeaders["x-api-key"])
+        assertEquals("2023-06-01", transport.lastHeaders["anthropic-version"])
+        // 不应误用 OpenAI 的 Bearer 方式。
+        assertNull(transport.lastHeaders["Authorization"])
+        assertEquals("v1/messages", transport.lastPath)
+    }
+
+    @Test
+    fun `system 提示提取到顶层字段而非留在消息列表`() = runTest {
+        val transport = FakeTransport(response = """{"content":[{"type":"text","text":"ok"}]}""")
+        val client = AnthropicChatClient(transport, json)
+
+        client.complete(
+            listOf(
+                ChatTurn(Constants.ROLE_SYSTEM, "你是助手"),
+                ChatTurn("user", "hi")
+            ),
+            settings
+        )
+
+        val payload = body(transport)
+        assertEquals("你是助手", payload["system"]!!.jsonPrimitive.content)
+        val messages = payload["messages"]!!.jsonArray
+        assertEquals(1, messages.size)
+        assertEquals("user", messages[0].jsonObject["role"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `max_tokens 必须存在否则接口报错`() = runTest {
+        val transport = FakeTransport(response = """{"content":[{"type":"text","text":"ok"}]}""")
+        val client = AnthropicChatClient(transport, json)
+
+        client.complete(listOf(ChatTurn("user", "hi")), settings)
+
+        assertTrue(body(transport).containsKey("max_tokens"))
+    }
+
+    @Test
+    fun `只取 content_block_delta 事件的增量`() = runTest {
+        val transport = FakeTransport(
+            sseLines = listOf(
+                """{"type":"message_start","message":{"id":"x"}}""",
+                """{"type":"content_block_delta","delta":{"type":"text_delta","text":"你"}}""",
+                """{"type":"ping"}""",
+                """{"type":"content_block_delta","delta":{"type":"text_delta","text":"好"}}""",
+                """{"type":"message_stop"}"""
+            )
+        )
+        val client = AnthropicChatClient(transport, json)
+
+        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).toList()
+
+        assertEquals(listOf("你", "好"), deltas)
+    }
+
+    @Test
+    fun `多个文本块拼接为完整回复`() = runTest {
+        val transport = FakeTransport(
+            response = """{"content":[{"type":"text","text":"前"},{"type":"text","text":"后"}]}"""
+        )
+        val client = AnthropicChatClient(transport, json)
+
+        assertEquals("前后", client.complete(listOf(ChatTurn("user", "hi")), settings))
+    }
+}
+
+class GeminiChatClientTest {
+
+    private val settings = AppSettings(
+        provider = AiProvider.GEMINI,
+        apiKey = "AIza-test",
+        model = "gemini-2.0-flash",
+        baseUrl = "https://generativelanguage.googleapis.com/"
+    )
+
+    @Test
+    fun `模型名写入路径且密钥走请求头`() = runTest {
+        val transport = FakeTransport(
+            response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}"""
+        )
+        val client = GeminiChatClient(transport, json)
+
+        client.complete(listOf(ChatTurn("user", "hi")), settings)
+
+        assertEquals("v1beta/models/gemini-2.0-flash:generateContent", transport.lastPath)
+        assertEquals("AIza-test", transport.lastHeaders["x-goog-api-key"])
+        // 密钥不应出现在查询参数里，避免写入日志。
+        assertNull(transport.lastQuery["key"])
+    }
+
+    @Test
+    fun `助手角色映射为 model`() = runTest {
+        val transport = FakeTransport(
+            response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}"""
+        )
+        val client = GeminiChatClient(transport, json)
+
+        client.complete(
+            listOf(
+                ChatTurn("user", "问题"),
+                ChatTurn(Constants.ROLE_ASSISTANT, "回答"),
+                ChatTurn("user", "追问")
+            ),
+            settings
+        )
+
+        val contents = body(transport)["contents"]!!.jsonArray
+        assertEquals("user", contents[0].jsonObject["role"]!!.jsonPrimitive.content)
+        assertEquals("model", contents[1].jsonObject["role"]!!.jsonPrimitive.content)
+        assertEquals("user", contents[2].jsonObject["role"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `system 提示走 systemInstruction 字段`() = runTest {
+        val transport = FakeTransport(
+            response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}"""
+        )
+        val client = GeminiChatClient(transport, json)
+
+        client.complete(
+            listOf(
+                ChatTurn(Constants.ROLE_SYSTEM, "你是助手"),
+                ChatTurn("user", "hi")
+            ),
+            settings
+        )
+
+        val payload = body(transport)
+        val instruction = payload["systemInstruction"]!!.jsonObject
+        assertEquals(
+            "你是助手",
+            instruction["parts"]!!.jsonArray[0].jsonObject["text"]!!.jsonPrimitive.content
+        )
+        // system 不应重复出现在 contents 中。
+        assertEquals(1, payload["contents"]!!.jsonArray.size)
+    }
+
+    @Test
+    fun `流式请求显式要求 sse 格式`() = runTest {
+        val transport = FakeTransport(
+            sseLines = listOf(
+                """{"candidates":[{"content":{"parts":[{"text":"你"}]}}]}""",
+                """{"candidates":[{"content":{"parts":[{"text":"好"}]}}]}"""
+            )
+        )
+        val client = GeminiChatClient(transport, json)
+
+        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).toList()
+
+        assertEquals(listOf("你", "好"), deltas)
+        assertEquals("sse", transport.lastQuery["alt"])
+        assertEquals("v1beta/models/gemini-2.0-flash:streamGenerateContent", transport.lastPath)
+    }
+
+    @Test
+    fun `模型列表去掉前缀并过滤不支持对话的模型`() = runTest {
+        val transport = FakeTransport(
+            response = """
+                {"models":[
+                  {"name":"models/gemini-2.0-flash","supportedGenerationMethods":["generateContent"]},
+                  {"name":"models/text-embedding-004","supportedGenerationMethods":["embedContent"]},
+                  {"name":"models/gemini-1.5-pro","supportedGenerationMethods":["generateContent"]}
+                ]}
+            """.trimIndent()
+        )
+        val client = GeminiChatClient(transport, json)
+
+        val models = client.listModels(settings)
+
+        assertEquals(listOf("gemini-1.5-pro", "gemini-2.0-flash"), models)
+    }
+}

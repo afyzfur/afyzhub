@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.afyzfur.afyzhub.domain.model.AiProvider
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -19,19 +20,15 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     viewModel: SettingsViewModel = koinViewModel()
 ) {
+    val provider by viewModel.provider.collectAsState()
     val apiKey by viewModel.apiKey.collectAsState()
     val selectedModel by viewModel.selectedModel.collectAsState()
     val baseUrl by viewModel.baseUrl.collectAsState()
     val streamEnabled by viewModel.streamEnabled.collectAsState()
+    val availableModels by viewModel.availableModels.collectAsState()
+    val loadingModels by viewModel.loadingModels.collectAsState()
+    val modelsError by viewModel.modelsError.collectAsState()
     val saveSuccess by viewModel.saveSuccess.collectAsState()
-
-    val presetModels = listOf(
-        "gpt-3.5-turbo",
-        "gpt-4",
-        "gpt-4-turbo",
-        "gpt-4o",
-        "gpt-4o-mini"
-    )
 
     Scaffold(
         topBar = {
@@ -54,6 +51,24 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
+                text = "服务提供商",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            ProviderSelector(
+                current = provider,
+                onSelect = viewModel::selectProvider
+            )
+
+            Text(
+                text = "各提供商的 Key、地址和模型分别保存，切换时不会互相覆盖。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            HorizontalDivider()
+
+            Text(
                 text = "接口配置",
                 style = MaterialTheme.typography.titleLarge
             )
@@ -62,7 +77,7 @@ fun SettingsScreen(
                 value = apiKey,
                 onValueChange = viewModel::updateApiKey,
                 label = { Text("API Key") },
-                placeholder = { Text("sk-...") },
+                placeholder = { Text(apiKeyPlaceholder(provider)) },
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true
@@ -72,7 +87,7 @@ fun SettingsScreen(
                 value = baseUrl,
                 onValueChange = viewModel::updateBaseUrl,
                 label = { Text("API 地址") },
-                placeholder = { Text("https://api.openai.com/") },
+                placeholder = { Text(provider.defaultBaseUrl) },
                 supportingText = { Text("使用中转服务时填入对应地址") },
                 trailingIcon = {
                     TextButton(onClick = viewModel::resetBaseUrl) {
@@ -97,17 +112,43 @@ fun SettingsScreen(
                 singleLine = true
             )
 
-            Text(
-                text = "常用模型",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = viewModel::refreshModels,
+                    enabled = !loadingModels
+                ) {
+                    Text(if (availableModels.isEmpty()) "获取模型列表" else "刷新列表")
+                }
+                if (loadingModels) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                }
+            }
 
-            FlowRowModels(
-                models = presetModels,
-                selected = selectedModel,
-                onSelect = viewModel::updateModel
-            )
+            modelsError?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            // 列表直接平铺在此处并持久缓存，避免离开页面后需要重新获取。
+            if (availableModels.isNotEmpty()) {
+                Text(
+                    text = "可用模型（${availableModels.size}）",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                FlowRowModels(
+                    models = availableModels,
+                    selected = selectedModel,
+                    onSelect = viewModel::updateModel
+                )
+            }
 
             HorizontalDivider()
 
@@ -161,6 +202,33 @@ fun SettingsScreen(
             )
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProviderSelector(
+    current: AiProvider,
+    onSelect: (AiProvider) -> Unit
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        AiProvider.entries.forEach { provider ->
+            FilterChip(
+                selected = provider == current,
+                onClick = { onSelect(provider) },
+                label = { Text(provider.displayName) }
+            )
+        }
+    }
+}
+
+/** 各家 Key 的格式差别较大，占位符给出对应示例。 */
+private fun apiKeyPlaceholder(provider: AiProvider): String = when (provider) {
+    AiProvider.OPENAI -> "sk-..."
+    AiProvider.ANTHROPIC -> "sk-ant-..."
+    AiProvider.GEMINI -> "AIza..."
 }
 
 @OptIn(ExperimentalLayoutApi::class)

@@ -14,8 +14,8 @@ android {
         applicationId = "com.afyzhub.chat"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.1.3-dev"
+        versionCode = 5
+        versionName = "0.1.4-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -93,8 +93,8 @@ dependencies {
     implementation(libs.io.insert.koin.compose)
 
     // Networking
-    implementation(libs.squareup.retrofit)
-    implementation(libs.squareup.retrofit.converter.kotlinx.serialization)
+    // Retrofit 已移除：各 provider 的请求路径与鉴权差异过大，
+    // 统一改由 OkHttp 直接构造（见 data/remote/provider）。
     implementation(libs.squareup.okhttp)
     implementation(libs.squareup.okhttp.logging.interceptor)
     implementation(libs.kotlinx.serialization.json)

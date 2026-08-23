@@ -4,10 +4,10 @@ import com.afyzfur.afyzhub.data.local.dao.ConversationDao
 import com.afyzfur.afyzhub.data.local.dao.MessageDao
 import com.afyzfur.afyzhub.data.local.entity.ConversationEntity
 import com.afyzfur.afyzhub.data.local.entity.MessageEntity
-import com.afyzfur.afyzhub.data.remote.ChatStreamSource
-import com.afyzfur.afyzhub.data.remote.OpenAIApi
-import com.afyzfur.afyzhub.data.remote.dto.ChatRequest
-import com.afyzfur.afyzhub.data.remote.dto.RequestMessage
+import com.afyzfur.afyzhub.data.remote.provider.ChatClient
+import com.afyzfur.afyzhub.data.remote.provider.ChatClientRegistry
+import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
+import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsProvider
 import com.afyzfur.afyzhub.domain.model.Conversation
 import com.afyzfur.afyzhub.domain.model.Message
@@ -18,8 +18,7 @@ import kotlinx.coroutines.flow.map
 class ChatRepositoryImpl(
     private val conversationDao: ConversationDao,
     private val messageDao: MessageDao,
-    private val openAIApi: OpenAIApi,
-    private val streamSource: ChatStreamSource,
+    private val clientRegistry: ChatClientRegistry,
     private val settingsProvider: SettingsProvider
 ) : ChatRepository {
 
@@ -72,11 +71,9 @@ class ChatRepositoryImpl(
                 throw IllegalStateException("请先在设置中配置 API Key")
             }
 
-            val request = ChatRequest(
-                model = settings.model,
-                messages = buildContext(conversationId, userMessageId)
-            )
-
+            // 具体协议差异由对应 provider 的客户端处理，此处只关心对话内容。
+            val client = clientRegistry.clientFor(settings.provider)
+            val turns = buildContext(conversationId, userMessageId)
             val reply = if (settings.streamEnabled) {
                 // 先占位再逐段填充，界面即可实时看到增量文本。
                 val placeholderId = messageDao.insertMessage(
@@ -88,10 +85,9 @@ class ChatRepositoryImpl(
                     )
                 )
                 assistantId = placeholderId
-                collectStream(request, placeholderId)
+                collectStream(client, turns, settings, placeholderId)
             } else {
-                val response = openAIApi.createChatCompletion(request)
-                response.choices.firstOrNull()?.message?.content.orEmpty()
+                client.complete(turns, settings)
             }
 
             if (reply.isBlank()) {
@@ -131,10 +127,15 @@ class ChatRepositoryImpl(
         }
     }
 
-    /** 消费 SSE 流，边写库边累积完整文本。 */
-    private suspend fun collectStream(request: ChatRequest, placeholderId: Long): String {
+    /** 消费流式增量，边写库边累积完整文本。 */
+    private suspend fun collectStream(
+        client: ChatClient,
+        turns: List<ChatTurn>,
+        settings: AppSettings,
+        placeholderId: Long
+    ): String {
         val builder = StringBuilder()
-        streamSource.streamCompletion(request).collect { delta ->
+        client.stream(turns, settings).collect { delta ->
             builder.append(delta)
             messageDao.updateContent(placeholderId, builder.toString())
         }
@@ -150,14 +151,14 @@ class ChatRepositoryImpl(
     private suspend fun buildContext(
         conversationId: Long,
         currentMessageId: Long
-    ): List<RequestMessage> {
+    ): List<ChatTurn> {
         val history = messageDao.getMessagesOnce(conversationId)
         val usable = history.filter {
             it.id == currentMessageId || it.status == Constants.STATUS_SUCCESS
         }
         return usable
             .takeLast(Constants.MAX_CONTEXT_MESSAGES)
-            .map { RequestMessage(role = it.role, content = it.content) }
+            .map { ChatTurn(role = it.role, content = it.content) }
     }
 
     private suspend fun touchConversation(conversationId: Long) {

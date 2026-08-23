@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#0F131C</color>
+    <!-- 取自图标本体的暖橙色，作为自适应图标的背景层 -->
+    <color name="ic_launcher_background">#FCA43C</color>
     <color name="primary">#38BDF8</color>
     <color name="secondary">#6EE7B7</color>
     <color name="background">#05070C</color>
