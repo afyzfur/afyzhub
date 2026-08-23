@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.AiProvider
 import org.koin.androidx.compose.koinViewModel
@@ -35,7 +34,13 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("设置") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = {
+                            // 防抖窗口内可能还有未落盘的改动，先刷盘再返回。
+                            viewModel.flushPendingChanges()
+                            onNavigateBack()
+                        }
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }
@@ -73,13 +78,13 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.titleLarge
             )
 
+            // 明文显示：便于核对与修改，Key 只存在本机。
             OutlinedTextField(
                 value = apiKey,
                 onValueChange = viewModel::updateApiKey,
                 label = { Text("API Key") },
                 placeholder = { Text(apiKeyPlaceholder(provider)) },
                 modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation(),
                 singleLine = true
             )
 
@@ -175,21 +180,19 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Button(
-                onClick = viewModel::saveSettings,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = apiKey.isNotBlank()
-            ) {
-                Text("保存设置")
-            }
+            // 设置改动自动保存，不再需要手动确认。
+            Text(
+                text = if (saveSuccess) "设置已自动保存" else "改动会自动保存",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (saveSuccess) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
 
             if (saveSuccess) {
-                Text(
-                    text = "设置已保存",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                LaunchedEffect(Unit) {
+                LaunchedEffect(saveSuccess) {
                     kotlinx.coroutines.delay(2000)
                     viewModel.clearSaveSuccess()
                 }

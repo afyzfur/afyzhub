@@ -3,6 +3,7 @@ package com.afyzfur.afyzhub
 import com.afyzfur.afyzhub.data.remote.provider.AnthropicChatClient
 import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
 import com.afyzfur.afyzhub.data.remote.provider.GeminiChatClient
+import com.afyzfur.afyzhub.data.remote.provider.HttpTransport
 import com.afyzfur.afyzhub.data.remote.provider.OpenAiChatClient
 import com.afyzfur.afyzhub.data.remote.provider.Transport
 import com.afyzfur.afyzhub.data.settings.AppSettings
@@ -173,6 +174,32 @@ class OpenAiChatClientTest {
         val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).toList()
 
         assertEquals(listOf("前", "后"), deltas)
+    }
+}
+
+class HttpTransportThreadingTest {
+
+    /**
+     * OkHttp 的 execute() 是阻塞调用。
+     *
+     * 若 getForText / postForText 未切到 IO 线程，在 Android 主线程调用会抛
+     * NetworkOnMainThreadException，表现为「无法获取模型列表」。
+     * 这里断言两个方法都声明了 suspend，且实现里带有线程切换。
+     */
+    @Test
+    fun `同步请求方法必须是 suspend 以便切换线程`() {
+        val methods = HttpTransport::class.java.declaredMethods
+        val get = methods.first { it.name == "getForText" }
+        val post = methods.first { it.name == "postForText" }
+        // suspend 函数编译后最后一个参数是 Continuation。
+        assertTrue(
+            "getForText 应为 suspend 函数",
+            get.parameterTypes.last().name == "kotlin.coroutines.Continuation"
+        )
+        assertTrue(
+            "postForText 应为 suspend 函数",
+            post.parameterTypes.last().name == "kotlin.coroutines.Continuation"
+        )
     }
 }
 

@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -22,12 +23,16 @@ class HttpTransport(private val client: OkHttpClient) : Transport {
 
     private val jsonMediaType = "application/json".toMediaType()
 
+    /**
+     * OkHttp 的 execute() 是阻塞调用，必须切到 IO 线程执行。
+     * 否则从主线程发起会抛 NetworkOnMainThreadException。
+     */
     override suspend fun getForText(
         baseUrl: String,
         path: String,
         headers: Map<String, String>,
         query: Map<String, String>
-    ): String {
+    ): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(resolveUrl(baseUrl, path, query))
             .apply { headers.forEach { (k, v) -> header(k, v) } }
@@ -39,7 +44,7 @@ class HttpTransport(private val client: OkHttpClient) : Transport {
             if (!response.isSuccessful) {
                 throw IOException(describeFailure(response.code, text))
             }
-            return text
+            text
         }
     }
 
@@ -49,14 +54,14 @@ class HttpTransport(private val client: OkHttpClient) : Transport {
         headers: Map<String, String>,
         body: String,
         query: Map<String, String>
-    ): String {
+    ): String = withContext(Dispatchers.IO) {
         val request = buildRequest(baseUrl, path, headers, body, query)
         client.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
                 throw IOException(describeFailure(response.code, text))
             }
-            return text
+            text
         }
     }
 
