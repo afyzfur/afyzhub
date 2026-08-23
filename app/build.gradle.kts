@@ -14,8 +14,10 @@ android {
         applicationId = "com.afyzhub.chat"
         minSdk = 26
         targetSdk = 35
+        // versionCode 只增不减：4 已随上一个 v0.1.3-dev 包发布，
+        // 这里补充内容后仍用 5，以保证已安装设备能覆盖升级。
         versionCode = 5
-        versionName = "0.1.4-dev"
+        versionName = "0.1.3-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

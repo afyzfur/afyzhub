@@ -35,7 +35,7 @@ io-insert-koin-android = { group = "io.insert-koin", name = "koin-android", vers
 io-insert-koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin" }
 
 # Networking
-# Retrofit 自 v0.1.4-dev 起不再使用，改为 OkHttp 直接构造请求。
+# Retrofit 自 v0.1.3-dev 起不再使用，改为 OkHttp 直接构造请求。
 squareup-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 squareup-okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.7.3" }
