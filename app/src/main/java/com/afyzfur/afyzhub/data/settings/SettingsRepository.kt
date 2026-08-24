@@ -49,6 +49,7 @@ class SettingsRepository(
     private val showActionsKey = booleanPreferencesKey(Constants.KEY_SHOW_ACTIONS)
     private val showModelNameKey = booleanPreferencesKey(Constants.KEY_SHOW_MODEL_NAME)
     private val quickPromptsKey = stringPreferencesKey(Constants.KEY_QUICK_PROMPTS)
+    private val shufflePromptsKey = booleanPreferencesKey(Constants.KEY_SHUFFLE_PROMPTS)
 
     private fun apiKeyKey(p: AiProvider) =
         stringPreferencesKey("${Constants.KEY_PREFIX_API_KEY}_${p.id}")
@@ -96,7 +97,8 @@ class SettingsRepository(
             quickPrompts = prefs[quickPromptsKey]
                 ?.split('\n')
                 ?.filter { it.isNotBlank() }
-                ?: DefaultQuickPrompts
+                ?: DefaultQuickPrompts,
+            shufflePrompts = prefs[shufflePromptsKey] ?: true
         )
     }
 
@@ -137,6 +139,10 @@ class SettingsRepository(
                 .filter { it.isNotEmpty() }
                 .joinToString("\n")
         }
+    }
+
+    suspend fun setShufflePrompts(enabled: Boolean) {
+        dataStore.edit { it[shufflePromptsKey] = enabled }
     }
 
     override suspend fun current(): AppSettings = settingsFlow.first()

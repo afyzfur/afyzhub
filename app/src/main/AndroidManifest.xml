@@ -16,7 +16,9 @@
         <activity
             android:name="com.afyzfur.afyzhub.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.AfyzHub">
+            android:theme="@style/Theme.AfyzHub"
+            android:configChanges="uiMode"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

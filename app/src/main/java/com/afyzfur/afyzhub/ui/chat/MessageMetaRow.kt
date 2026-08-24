@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
@@ -36,7 +37,12 @@ fun MessageMetaRow(
     if (parts.isEmpty()) return
 
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        // 用户消息靠右，与其气泡对齐；助手消息全宽靠左
+        horizontalArrangement = if (message.isFromUser) {
+            Arrangement.spacedBy(12.dp, Alignment.End)
+        } else {
+            Arrangement.spacedBy(12.dp)
+        },
         verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = modifier.fillMaxWidth()
     ) {

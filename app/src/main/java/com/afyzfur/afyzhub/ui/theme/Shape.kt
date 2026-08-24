@@ -33,8 +33,13 @@ val AppShapes = Shapes(
  */
 object AppShapeTokens {
 
-    /** 输入区外层容器。28dp 与胶囊感接近，同时容得下多行文本 */
-    val InputContainer = RoundedCornerShape(28.dp)
+    /**
+     * 输入区外层容器。
+     *
+     * 只圆上方两角：容器铺满宽度并贴住屏幕底边，下方圆角会露出页面背景，
+     * 形成视觉上多余的缺口。
+     */
+    val InputContainer = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
     /** 助手消息块。全宽，四角统一 */
     val AssistantMessage = RoundedCornerShape(20.dp)

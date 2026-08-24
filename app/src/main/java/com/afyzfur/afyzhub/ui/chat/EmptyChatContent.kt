@@ -18,7 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.afyzfur.afyzhub.data.settings.QUICK_PROMPT_DISPLAY_COUNT
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 import java.util.Calendar
 
@@ -34,11 +36,22 @@ import java.util.Calendar
 @Composable
 fun EmptyChatContent(
     prompts: List<String>,
+    shufflePrompts: Boolean,
     onPromptClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 时段只在进入首屏时判定一次，避免每次重组都读系统时间
     val greetingText = remember { greeting() }
+
+    // 抽取结果必须 remember：否则每次重组（含输入框每敲一个字）都会重新洗牌，
+    // chip 内容不断跳变。key 取配置本身，配置变化时才重新抽
+    val shownPrompts = remember(prompts, shufflePrompts) {
+        if (shufflePrompts) {
+            prompts.shuffled().take(QUICK_PROMPT_DISPLAY_COUNT)
+        } else {
+            prompts.take(QUICK_PROMPT_DISPLAY_COUNT)
+        }
+    }
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -47,15 +60,20 @@ fun EmptyChatContent(
         // 上下 0.4 : 0.6 分配，使问候语落在视觉重心而非正中
         Spacer(Modifier.weight(0.4f))
 
+        // displaySmall 而非 headlineSmall：首屏大面积留白，
+        // 问候语是唯一的主体元素，需要足够体量撑住版面。
+        // 字重提到 Medium——displaySmall 默认 Normal，三个汉字在 34sp 下显得偏轻
         Text(
             text = greetingText,
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.displaySmall.copy(
+                fontWeight = FontWeight.Medium
+            ),
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        if (prompts.isNotEmpty()) {
-            Spacer(Modifier.height(28.dp))
-            PromptRow(prompts = prompts, onPromptClick = onPromptClick)
+        if (shownPrompts.isNotEmpty()) {
+            Spacer(Modifier.height(32.dp))
+            PromptRow(prompts = shownPrompts, onPromptClick = onPromptClick)
         }
 
         Spacer(Modifier.weight(0.6f))

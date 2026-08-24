@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.data.settings.DefaultQuickPrompts
+import com.afyzfur.afyzhub.data.settings.QUICK_PROMPT_DISPLAY_COUNT
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -65,13 +67,28 @@ fun QuickPromptsSettingsScreen(
             ) {
                 Text(
                     text = "空会话首屏会把这些显示为可点击的 chip，" +
-                        "点击后填入输入框。",
+                        "点击后填入输入框。首屏一次显示 $QUICK_PROMPT_DISPLAY_COUNT 条。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
                 )
 
-                SettingsCategoryTitle("当前提示词（${prefs.quickPrompts.size}）")
+                SettingsCategoryTitle("显示方式")
+                SettingsGroup {
+                    SettingsSwitchItem(
+                        icon = Icons.Default.Refresh,
+                        title = "每次随机显示",
+                        subtitle = if (prefs.shufflePrompts) {
+                            "每次进入空会话时从下方列表随机抽取"
+                        } else {
+                            "按下方列表顺序显示前 $QUICK_PROMPT_DISPLAY_COUNT 条"
+                        },
+                        checked = prefs.shufflePrompts,
+                        onCheckedChange = viewModel::setShufflePrompts
+                    )
+                }
+
+                SettingsCategoryTitle("提示词库（${prefs.quickPrompts.size}）")
 
                 if (prefs.quickPrompts.isEmpty()) {
                     Text(

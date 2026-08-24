@@ -29,6 +29,7 @@ object Constants {
 
     /** 首屏提示词，换行分隔 */
     const val KEY_QUICK_PROMPTS = "quick_prompts"
+    const val KEY_SHUFFLE_PROMPTS = "shuffle_prompts"
 
     /**
      * 以下三项按提供商分别存储，键名格式为 `前缀_提供商id`。

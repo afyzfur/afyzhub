@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
@@ -28,8 +29,12 @@ import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
  * 输入区。
  *
  * 与改版前的差别：原实现是 OutlinedTextField + 独立 FAB 并排，外层 Surface 带 8dp 阴影，
- * 是 Material 2 的语言。现在整体收进一个 28dp 圆角容器，内部上下分层——
- * 上层文本输入，下层功能行。阴影去掉，靠 surfaceContainerHigh 与页面背景区分。
+ * 是 Material 2 的语言。现在整体收进一个圆角容器，内部上下分层——
+ * 上层文本输入，下层功能行。阴影去掉，靠色阶与页面背景区分。
+ *
+ * 容器铺满宽度、只圆上方两角、贴住屏幕底边。此前四周留 12dp 外边距做悬浮效果，
+ * 但容器色（surfaceContainerHigh）与页面色（surfaceContainer）相近，
+ * 四周露出的页面背景在视觉上成了一圈多余的浅色描边。铺满则没有这个问题。
  *
  * 功能行当前只放提供商标识与发送按钮。联网搜索、思考模式、附件等按钮
  * 需要对应功能落地后再加，先不放不可用的占位图标。
@@ -48,11 +53,15 @@ fun ChatInputBar(
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = AppShapeTokens.InputContainer,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(4.dp)) {
+        // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
+        // 而内容不被系统手势区域压住
+        Column(
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .navigationBarsPadding()
+        ) {
 
             // 上层：文本输入。用 BasicTextField 而非 TextField，
             // 后者自带的 label / indicator / 内边距无法与容器化布局对齐
@@ -70,7 +79,7 @@ fun ChatInputBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 44.dp)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 decorationBox = { innerTextField ->
                     if (value.isEmpty()) {
                         Text(
@@ -88,7 +97,7 @@ fun ChatInputBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 4.dp, bottom = 4.dp)
+                    .padding(start = 20.dp, end = 8.dp, bottom = 8.dp)
             ) {
                 // 当前提供商暴露在此处，使"这条消息以何配置发出"一眼可见
                 Text(

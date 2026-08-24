@@ -40,6 +40,10 @@ class UiPreferencesViewModel(
         viewModelScope.launch { repository.setMessageDisplay(options) }
     }
 
+    fun setShufflePrompts(enabled: Boolean) {
+        viewModelScope.launch { repository.setShufflePrompts(enabled) }
+    }
+
     fun setQuickPrompts(prompts: List<String>) {
         viewModelScope.launch { repository.setQuickPrompts(prompts) }
     }

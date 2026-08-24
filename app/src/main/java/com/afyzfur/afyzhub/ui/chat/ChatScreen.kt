@@ -103,6 +103,7 @@ fun ChatScreen(
             modelLabel = "${settings.model} · ${settings.provider.displayName}",
             providerLabel = settings.provider.displayName,
             quickPrompts = uiPreferences.quickPrompts,
+            shufflePrompts = uiPreferences.shufflePrompts,
             displayOptions = uiPreferences.messageDisplay,
             messages = messages,
             isLoading = isLoading,
@@ -144,6 +145,7 @@ private fun ChatContent(
     modelLabel: String,
     providerLabel: String,
     quickPrompts: List<String>,
+    shufflePrompts: Boolean,
     displayOptions: MessageDisplayOptions,
     messages: List<Message>,
     isLoading: Boolean,
@@ -159,6 +161,15 @@ private fun ChatContent(
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        // 键盘弹出时整体上移，使输入框始终可见。
+        // 需配合 manifest 的 windowSoftInputMode="adjustResize"，
+        // 否则窗口不重新布局，内容会被整体顶到状态栏下方
+        modifier = Modifier.imePadding(),
+        // 底部 inset 交给输入框自己处理，使其背景能延伸到屏幕底边。
+        // 若保留默认值，Scaffold 与输入框会各加一次导航栏内边距
+        contentWindowInsets = WindowInsets.safeDrawing.only(
+            WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+        ),
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -200,6 +211,7 @@ private fun ChatContent(
             if (messages.isEmpty() && !isLoading) {
                 EmptyChatContent(
                     prompts = quickPrompts,
+                    shufflePrompts = shufflePrompts,
                     onPromptClick = onPromptClick,
                     modifier = Modifier.weight(1f)
                 )

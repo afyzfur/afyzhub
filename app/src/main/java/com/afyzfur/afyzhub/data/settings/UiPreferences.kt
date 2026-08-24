@@ -46,14 +46,37 @@ data class UiPreferences(
     /** Android 12+ 生效，取系统壁纸配色 */
     val dynamicColor: Boolean = true,
     val messageDisplay: MessageDisplayOptions = MessageDisplayOptions(),
-    /** 空会话首屏的提示词 chip */
-    val quickPrompts: List<String> = DefaultQuickPrompts
+    /** 空会话首屏的提示词候选池 */
+    val quickPrompts: List<String> = DefaultQuickPrompts,
+    /**
+     * 是否每次进入空会话时随机抽取一批提示词。
+     *
+     * 关闭时按配置顺序取前若干条，行为可预期；开启时同一份配置
+     * 每次展示不同组合，适合候选池较大的情况。
+     */
+    val shufflePrompts: Boolean = true
 )
 
-/** 首次安装时的内置提示词。 */
+/**
+ * 首次安装时的内置提示词。
+ *
+ * 数量明显多于首屏一次展示的条数（[QUICK_PROMPT_DISPLAY_COUNT]），
+ * 使随机抽取有实际意义——若候选与展示数相同，"每次进入换一批"等于没换。
+ */
 val DefaultQuickPrompts = listOf(
     "帮我总结一段文字",
     "解释一个概念",
     "润色这段话",
-    "写一段代码"
+    "写一段代码",
+    "翻译成英文",
+    "列个提纲",
+    "找出这段代码的问题",
+    "换种说法",
+    "帮我起个名字",
+    "拆解一个问题",
+    "写条提交信息",
+    "对比两个方案"
 )
+
+/** 首屏一次展示的提示词条数。 */
+const val QUICK_PROMPT_DISPLAY_COUNT = 4
