@@ -95,11 +95,24 @@ jobs:
           GH_TOKEN: ${{ secrets.AFYZFUR_PAT }}
         run: |
           # 发行说明写入文件再引用，避免在 YAML 中内嵌多行字符串破坏缩进。
+          # 正文取自 CHANGELOG.md 中该版本的段落，使详情页能直接看到更新内容。
+          printf 'AfyzHub 开发预览版 %s。此版本用于测试，可能存在未完成的功能。\n\n' \
+            "$APP_VERSION" > release-notes.md
+
+          if python3 scripts/extract_changelog.py "$APP_VERSION" >> release-notes.md; then
+            echo "已写入 $APP_VERSION 的更新内容"
+          else
+            # 缺少对应段落时不阻断发布，但要在说明中留下痕迹。
+            echo "警告：CHANGELOG.md 中缺少 $APP_VERSION 段落"
+            printf '本版本的更新内容尚未记录。\n' >> release-notes.md
+          fi
+
+          # 完整历史记录的链接放在最后。
           {
-            printf 'AfyzHub 开发预览版 %s。此版本用于测试，可能存在未完成的功能。\n\n' "$APP_VERSION"
-            printf '本次更新内容见 [CHANGELOG.md](%s)。\n' \
+            printf '\n---\n\n'
+            printf '全部版本的更新记录见 [CHANGELOG.md](%s)。\n' \
               "https://github.com/afyzfur/afyzhub/blob/main/CHANGELOG.md"
-          } > release-notes.md
+          } >> release-notes.md
           # 同名发行版存在时只覆盖附件与说明，不删除发行版和标签，
           # 避免历史版本连同标签一起丢失。
           if gh release view "$APP_VERSION" >/dev/null 2>&1; then

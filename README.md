@@ -135,30 +135,9 @@ APK 位于 `app/build/outputs/apk/` 目录。
 ## 📝 更新日志
 
 1.0.0 正式版之前的所有版本均为开发版，带 `-dev` 后缀并以预发行版形式发布。
-完整记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-### v0.1.4-dev
-
-修复模型列表无法获取的问题，根因是同步请求未切换到 IO 线程。
-API Key 改为明文显示，设置改为自动保存。
-
-### v0.1.3-dev
-
-新增多 AI 提供商支持，可在 OpenAI、Claude、Gemini 之间切换，三家的密钥与配置独立保存。
-模型列表改为从服务端动态获取并缓存。网络层由 Retrofit 换成 OkHttp 直接构造请求。更换应用图标。
-
-### v0.1.2-dev
-
-实现 SSE 流式响应，回复逐字显示，可在设置中关闭。
-
-### v0.1.1-dev
-
-修复多轮上下文丢失、模型设置不生效、API 地址写死等问题。
-新增失败重试、会话自动命名，并改用正式签名发布。
-
-### v0.1.0-dev
-
-首个开发预览版，完成基础聊天闭环。
+各版本的具体更新内容见 [CHANGELOG.md](CHANGELOG.md)，也可在对应的
+[Release 详情页](https://github.com/afyzfur/afyzhub/releases)直接查看。
 
 ---
 
