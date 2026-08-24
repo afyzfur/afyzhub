@@ -65,6 +65,7 @@ fun ChatScreen(
     }
 
     val settings by hostViewModel.settings.collectAsState()
+    val uiPreferences by hostViewModel.uiPreferences.collectAsState()
     val currentTitle = conversations.firstOrNull { it.id == currentConversationId }?.title
 
     ModalNavigationDrawer(
@@ -100,6 +101,7 @@ fun ChatScreen(
             title = currentTitle,
             modelLabel = "${settings.model} · ${settings.provider.displayName}",
             providerLabel = settings.provider.displayName,
+            quickPrompts = uiPreferences.quickPrompts,
             messages = messages,
             isLoading = isLoading,
             error = error,
@@ -139,6 +141,7 @@ private fun ChatContent(
     title: String?,
     modelLabel: String,
     providerLabel: String,
+    quickPrompts: List<String>,
     messages: List<Message>,
     isLoading: Boolean,
     error: String?,
@@ -193,7 +196,7 @@ private fun ChatContent(
         ) {
             if (messages.isEmpty() && !isLoading) {
                 EmptyChatContent(
-                    prompts = DefaultPrompts,
+                    prompts = quickPrompts,
                     onPromptClick = onPromptClick,
                     modifier = Modifier.weight(1f)
                 )

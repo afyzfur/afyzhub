@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.afyzfur.afyzhub.data.repository.ChatRepository
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsRepository
+import com.afyzfur.afyzhub.data.settings.UiPreferences
 import com.afyzfur.afyzhub.domain.model.ConversationItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +39,9 @@ class ChatHostViewModel(
      * 设置页改动后顶栏需要立即反映。
      */
     val settings: StateFlow<AppSettings> = settingsRepository.settings
+
+    /** 界面偏好，当前用于首屏提示词与消息元信息显示 */
+    val uiPreferences: StateFlow<UiPreferences> = settingsRepository.uiPreferences
 
     /** null 表示当前是尚未落库的空白新会话 */
     private val _currentConversationId = MutableStateFlow<Long?>(null)

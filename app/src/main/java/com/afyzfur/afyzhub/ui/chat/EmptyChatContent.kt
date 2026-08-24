@@ -108,14 +108,5 @@ private fun greeting(): String {
     }
 }
 
-/**
- * 首屏提示词的内置默认值。
- *
- * 阶段 5 会把这些移入设置项，允许用户自行编辑。
- */
-val DefaultPrompts = listOf(
-    "帮我总结一段文字",
-    "解释一个概念",
-    "润色这段话",
-    "写一段代码"
-)
+// 提示词默认值已移至 data/settings/UiPreferences.kt 的 DefaultQuickPrompts，
+// 由设置页管理，此处不再硬编码。

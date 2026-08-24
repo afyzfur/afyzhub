@@ -39,6 +39,17 @@ class SettingsRepository(
     private val providerKey = stringPreferencesKey(Constants.KEY_PROVIDER)
     private val streamKey = booleanPreferencesKey(Constants.KEY_STREAM_ENABLED)
 
+    // 界面偏好，全局项
+    private val colorModeKey = stringPreferencesKey(Constants.KEY_COLOR_MODE)
+    private val dynamicColorKey = booleanPreferencesKey(Constants.KEY_DYNAMIC_COLOR)
+    private val showTimestampKey = booleanPreferencesKey(Constants.KEY_SHOW_TIMESTAMP)
+    private val showTokenUsageKey = booleanPreferencesKey(Constants.KEY_SHOW_TOKEN_USAGE)
+    private val showSpeedKey = booleanPreferencesKey(Constants.KEY_SHOW_SPEED)
+    private val showLatencyKey = booleanPreferencesKey(Constants.KEY_SHOW_LATENCY)
+    private val showActionsKey = booleanPreferencesKey(Constants.KEY_SHOW_ACTIONS)
+    private val showModelNameKey = booleanPreferencesKey(Constants.KEY_SHOW_MODEL_NAME)
+    private val quickPromptsKey = stringPreferencesKey(Constants.KEY_QUICK_PROMPTS)
+
     private fun apiKeyKey(p: AiProvider) =
         stringPreferencesKey("${Constants.KEY_PREFIX_API_KEY}_${p.id}")
 
@@ -68,6 +79,65 @@ class SettingsRepository(
         started = SharingStarted.Eagerly,
         initialValue = AppSettings()
     )
+
+    val uiPreferencesFlow: Flow<UiPreferences> = dataStore.data.map { prefs ->
+        UiPreferences(
+            colorMode = ColorMode.fromId(prefs[colorModeKey]),
+            dynamicColor = prefs[dynamicColorKey] ?: true,
+            messageDisplay = MessageDisplayOptions(
+                showTimestamp = prefs[showTimestampKey] ?: true,
+                showActions = prefs[showActionsKey] ?: true,
+                showModelName = prefs[showModelNameKey] ?: false,
+                showTokenUsage = prefs[showTokenUsageKey] ?: false,
+                showSpeed = prefs[showSpeedKey] ?: false,
+                showLatency = prefs[showLatencyKey] ?: false
+            ),
+            // 未设置过时给内置默认值；用户清空后存入空串，此时应保持为空
+            quickPrompts = prefs[quickPromptsKey]
+                ?.split('\n')
+                ?.filter { it.isNotBlank() }
+                ?: DefaultQuickPrompts
+        )
+    }
+
+    /**
+     * 界面偏好的常驻缓存。
+     *
+     * 主题需要在 Activity 内容组装前就拿到值，因此同样用 Eagerly。
+     */
+    val uiPreferences: StateFlow<UiPreferences> = uiPreferencesFlow.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = UiPreferences()
+    )
+
+    suspend fun setColorMode(mode: ColorMode) {
+        dataStore.edit { it[colorModeKey] = mode.id }
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        dataStore.edit { it[dynamicColorKey] = enabled }
+    }
+
+    suspend fun setMessageDisplay(options: MessageDisplayOptions) {
+        dataStore.edit { prefs ->
+            prefs[showTimestampKey] = options.showTimestamp
+            prefs[showActionsKey] = options.showActions
+            prefs[showModelNameKey] = options.showModelName
+            prefs[showTokenUsageKey] = options.showTokenUsage
+            prefs[showSpeedKey] = options.showSpeed
+            prefs[showLatencyKey] = options.showLatency
+        }
+    }
+
+    suspend fun setQuickPrompts(prompts: List<String>) {
+        dataStore.edit { prefs ->
+            prefs[quickPromptsKey] = prompts
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .joinToString("\n")
+        }
+    }
 
     override suspend fun current(): AppSettings = settingsFlow.first()
 

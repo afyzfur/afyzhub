@@ -3,8 +3,6 @@ package com.afyzfur.afyzhub.ui.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,9 +11,15 @@ import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.AiProvider
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 提供商配置子页面。
+ *
+ * 由改版前的单页设置整体转化而来——那时它就是整个设置页，现在成为
+ * 「模型与服务 → 提供商」下的一个子页面。内容与交互逻辑未改动，
+ * 只替换了页面头部并套用新的分组容器。
+ */
 @Composable
-fun SettingsScreen(
+fun ProviderSettingsScreen(
     onNavigateBack: () -> Unit,
     viewModel: SettingsViewModel = koinViewModel()
 ) {
@@ -29,35 +33,35 @@ fun SettingsScreen(
     val modelsError by viewModel.modelsError.collectAsState()
     val saveSuccess by viewModel.saveSuccess.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("设置") },
-                navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            // 防抖窗口内可能还有未落盘的改动，先刷盘再返回。
-                            viewModel.flushPendingChanges()
-                            onNavigateBack()
-                        }
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxSize()
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .statusBarsPadding()
         ) {
+            SettingsPageHeader(
+                title = "提供商",
+                onNavigateBack = {
+                    // 防抖窗口内可能还有未落盘的改动，先刷盘再返回。
+                    viewModel.flushPendingChanges()
+                    onNavigateBack()
+                }
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             Text(
                 text = "服务提供商",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleMedium
             )
 
             ProviderSelector(
@@ -203,6 +207,7 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            }
         }
     }
 }

@@ -21,4 +21,5 @@ val appModule = module {
     viewModel { ChatHostViewModel(get(), get()) }
     viewModel { ChatViewModel(get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
+    viewModel { UiPreferencesViewModel(get()) }
 }

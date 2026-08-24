@@ -14,6 +14,22 @@ object Constants {
     const val KEY_PROVIDER = "selected_provider"
     const val KEY_STREAM_ENABLED = "stream_enabled"
 
+    // 外观。全局项，不按提供商区分
+    const val KEY_COLOR_MODE = "color_mode"
+    const val KEY_DYNAMIC_COLOR = "dynamic_color"
+
+    // 消息元信息显示开关。分项控制而非一个总开关，
+    // 使轻度用户保持界面安静、重度用户可开出完整调试视图
+    const val KEY_SHOW_TIMESTAMP = "show_timestamp"
+    const val KEY_SHOW_TOKEN_USAGE = "show_token_usage"
+    const val KEY_SHOW_SPEED = "show_speed"
+    const val KEY_SHOW_LATENCY = "show_latency"
+    const val KEY_SHOW_ACTIONS = "show_actions"
+    const val KEY_SHOW_MODEL_NAME = "show_model_name"
+
+    /** 首屏提示词，换行分隔 */
+    const val KEY_QUICK_PROMPTS = "quick_prompts"
+
     /**
      * 以下三项按提供商分别存储，键名格式为 `前缀_提供商id`。
      * 切换提供商时不会互相覆盖凭证与地址。

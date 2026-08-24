@@ -5,21 +5,30 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.afyzfur.afyzhub.ui.chat.ChatScreen
-import com.afyzfur.afyzhub.ui.settings.SettingsScreen
+import com.afyzfur.afyzhub.ui.settings.AboutSettingsScreen
+import com.afyzfur.afyzhub.ui.settings.AppearanceSettingsScreen
+import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
+import com.afyzfur.afyzhub.ui.settings.ProviderSettingsScreen
+import com.afyzfur.afyzhub.ui.settings.QuickPromptsSettingsScreen
+import com.afyzfur.afyzhub.ui.settings.SettingsHomeScreen
 
 /**
  * 导航目的地。
  *
- * 阶段 2 变更：移除 Home。会话列表改由聊天页的抽屉承载，
- * 聊天页成为启动目标，因此不再需要 conversationId 路由参数——
- * 当前会话由 ChatHostViewModel 持有。
+ * 阶段 2 移除了 Home（会话列表改由聊天页抽屉承载）。
+ * 阶段 5 把设置由单页拆为一级导航页 + 五个子页面。
  *
- * 改版前：Home（列表）→ Chat/{conversationId} → Settings
- * 改版后：Chat（根，内含抽屉）→ Settings
+ * 改版前：Home（列表）→ Chat/{conversationId} → Settings（单页）
+ * 改版后：Chat（根，含抽屉）→ Settings（导航页）→ 各子页面
  */
 sealed class Screen(val route: String) {
     object Chat : Screen("chat")
     object Settings : Screen("settings")
+    object ProviderSettings : Screen("settings/provider")
+    object AppearanceSettings : Screen("settings/appearance")
+    object MessageDisplaySettings : Screen("settings/message_display")
+    object QuickPromptsSettings : Screen("settings/quick_prompts")
+    object AboutSettings : Screen("settings/about")
 }
 
 @Composable
@@ -39,9 +48,44 @@ fun NavGraph() {
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
+            SettingsHomeScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProvider = {
+                    navController.navigate(Screen.ProviderSettings.route)
+                },
+                onNavigateToAppearance = {
+                    navController.navigate(Screen.AppearanceSettings.route)
+                },
+                onNavigateToMessageDisplay = {
+                    navController.navigate(Screen.MessageDisplaySettings.route)
+                },
+                onNavigateToQuickPrompts = {
+                    navController.navigate(Screen.QuickPromptsSettings.route)
+                },
+                onNavigateToAbout = {
+                    navController.navigate(Screen.AboutSettings.route)
+                }
             )
+        }
+
+        composable(Screen.ProviderSettings.route) {
+            ProviderSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.AppearanceSettings.route) {
+            AppearanceSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.MessageDisplaySettings.route) {
+            MessageDisplaySettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.QuickPromptsSettings.route) {
+            QuickPromptsSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.AboutSettings.route) {
+            AboutSettingsScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }
