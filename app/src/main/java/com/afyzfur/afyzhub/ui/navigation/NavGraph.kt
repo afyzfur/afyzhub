@@ -1,55 +1,43 @@
 package com.afyzfur.afyzhub.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.afyzfur.afyzhub.ui.chat.ChatScreen
-import com.afyzfur.afyzhub.ui.home.HomeScreen
 import com.afyzfur.afyzhub.ui.settings.SettingsScreen
 
+/**
+ * 导航目的地。
+ *
+ * 阶段 2 变更：移除 Home。会话列表改由聊天页的抽屉承载，
+ * 聊天页成为启动目标，因此不再需要 conversationId 路由参数——
+ * 当前会话由 ChatHostViewModel 持有。
+ *
+ * 改版前：Home（列表）→ Chat/{conversationId} → Settings
+ * 改版后：Chat（根，内含抽屉）→ Settings
+ */
 sealed class Screen(val route: String) {
-    object Home : Screen("home")
-    object Chat : Screen("chat/{conversationId}") {
-        fun createRoute(conversationId: Long) = "chat/$conversationId"
-    }
+    object Chat : Screen("chat")
     object Settings : Screen("settings")
 }
 
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
-    
+
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Chat.route
     ) {
-        composable(Screen.Home.route) {
-            HomeScreen(
-                onNavigateToChat = { conversationId ->
-                    navController.navigate(Screen.Chat.createRoute(conversationId))
-                },
+        composable(Screen.Chat.route) {
+            ChatScreen(
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
                 }
             )
         }
-        
-        composable(
-            route = Screen.Chat.route,
-            arguments = listOf(
-                navArgument("conversationId") { type = NavType.LongType }
-            )
-        ) { backStackEntry ->
-            val conversationId = backStackEntry.arguments?.getLong("conversationId") ?: 0L
-            ChatScreen(
-                conversationId = conversationId,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-        
+
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() }

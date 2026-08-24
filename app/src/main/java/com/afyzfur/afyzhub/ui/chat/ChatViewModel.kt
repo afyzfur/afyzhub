@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.afyzfur.afyzhub.data.repository.ChatRepository
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.domain.usecase.SendMessageUseCase
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,25 +27,60 @@ class ChatViewModel(
 
     private var currentConversationId: Long = -1L
 
+    /**
+     * 当前的消息订阅任务。
+     *
+     * 抽屉切换会话后会再次调用 [loadMessages]，若不取消上一次的 collect，
+     * 旧会话的 Flow 仍在向 [_messages] 写入，两个会话的消息会互相覆盖。
+     */
+    private var messagesJob: Job? = null
+
     fun loadMessages(conversationId: Long) {
         currentConversationId = conversationId
-        viewModelScope.launch {
+        messagesJob?.cancel()
+        messagesJob = viewModelScope.launch {
             repository.getMessagesByConversationId(conversationId).collect { list ->
                 _messages.value = list
             }
         }
     }
 
-    fun sendMessage(conversationId: Long, content: String) {
+    /**
+     * 清空消息列表并停止订阅，用于切到尚未落库的空白新会话。
+     */
+    fun clearMessages() {
+        messagesJob?.cancel()
+        messagesJob = null
+        currentConversationId = -1L
+        _messages.value = emptyList()
+        _error.value = null
+    }
+
+    /**
+     * 发送消息。
+     *
+     * [resolveConversationId] 用于取得目标会话 id，允许是挂起函数——
+     * 空白新会话需要先落库才有 id（见 ChatHostViewModel.ensureConversation）。
+     *
+     * 之所以由本方法负责调用而不是让调用方先取好 id 再传进来：
+     * 会话创建会触发 currentConversationId 变化，进而触发 loadMessages 重新订阅，
+     * 与发送流程并发。把两者收在同一个协程里可避免"是否首条消息"的判断
+     * 读到被订阅回填后的列表。
+     */
+    fun sendMessage(content: String, resolveConversationId: suspend () -> Long) {
         val text = content.trim()
         if (text.isEmpty() || _isLoading.value) return
 
+        // 立即置位，防止连续点击发送在协程启动前穿透上面的判断
+        _isLoading.value = true
+
         viewModelScope.launch {
-            _isLoading.value = true
             _error.value = null
 
-            // 首条消息用于自动命名会话。
+            // 必须在创建会话之前取，否则新会话的订阅可能已回填列表
             val isFirstMessage = _messages.value.isEmpty()
+
+            val conversationId = resolveConversationId()
 
             sendMessageUseCase(conversationId, text)
                 .onSuccess {

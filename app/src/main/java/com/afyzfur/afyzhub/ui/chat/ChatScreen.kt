@@ -6,8 +6,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,23 +16,46 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.ui.components.MarkdownText
+import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
+/**
+ * 聊天页，应用的根页面。
+ *
+ * 结构变更（阶段 2）：原先由 HomeScreen 经导航进入并接收 conversationId 参数，
+ * 现在改为应用启动目标，会话列表移入抽屉。因此当前会话不再来自路由参数，
+ * 而是由 [ChatHostViewModel] 持有。
+ *
+ * 启动时为空白新会话（id 为 null），首次发送消息才落库，
+ * 避免每次打开应用都产生一条空的"新对话"记录。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    conversationId: Long,
-    onNavigateBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    hostViewModel: ChatHostViewModel = koinViewModel(),
     viewModel: ChatViewModel = koinViewModel()
 ) {
+    val conversations by hostViewModel.conversations.collectAsState()
+    val currentConversationId by hostViewModel.currentConversationId.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val listState = rememberLazyListState()
     var inputText by remember { mutableStateOf("") }
 
-    LaunchedEffect(conversationId) {
-        viewModel.loadMessages(conversationId)
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    // 会话切换时重新订阅消息；空白新会话则清空列表
+    LaunchedEffect(currentConversationId) {
+        val id = currentConversationId
+        if (id != null) {
+            viewModel.loadMessages(id)
+        } else {
+            viewModel.clearMessages()
+        }
     }
 
     // 流式输出时最后一条消息内容会持续变化，需要一并作为滚动触发条件。
@@ -43,13 +66,89 @@ fun ChatScreen(
         }
     }
 
+    val currentTitle = conversations.firstOrNull { it.id == currentConversationId }?.title
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerShape = AppShapeTokens.Drawer
+            ) {
+                ConversationDrawer(
+                    conversations = conversations,
+                    currentConversationId = currentConversationId,
+                    onConversationClick = { id ->
+                        hostViewModel.openConversation(id)
+                        scope.launch { drawerState.close() }
+                    },
+                    onNewConversation = {
+                        hostViewModel.startNewConversation()
+                        scope.launch { drawerState.close() }
+                    },
+                    onDeleteConversation = { id ->
+                        hostViewModel.deleteConversation(id)
+                    },
+                    onSettingsClick = {
+                        scope.launch { drawerState.close() }
+                        onNavigateToSettings()
+                    }
+                )
+            }
+        }
+    ) {
+        ChatContent(
+            title = currentTitle,
+            messages = messages,
+            isLoading = isLoading,
+            error = error,
+            listState = listState,
+            inputText = inputText,
+            onInputChange = { inputText = it },
+            onOpenDrawer = { scope.launch { drawerState.open() } },
+            onSend = {
+                val text = inputText
+                if (text.isNotBlank() && !isLoading) {
+                    inputText = ""
+                    // 会话 id 的获取延迟到 ViewModel 的协程内，
+                    // 空白新会话在那时才落库
+                    viewModel.sendMessage(text) { hostViewModel.ensureConversation() }
+                }
+            },
+            onRetry = { messageId -> viewModel.retryMessage(messageId) },
+            onClearError = { viewModel.clearError() }
+        )
+    }
+}
+
+/**
+ * 聊天页主体内容，与抽屉解耦以便单独预览与测试。
+ *
+ * 消息渲染与流式光标逻辑沿用改版前的实现，本阶段只调整外层结构。
+ * 输入区的容器化重做属于阶段 3。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatContent(
+    title: String?,
+    messages: List<Message>,
+    isLoading: Boolean,
+    error: String?,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    inputText: String,
+    onInputChange: (String) -> Unit,
+    onOpenDrawer: () -> Unit,
+    onSend: () -> Unit,
+    onRetry: (Long) -> Unit,
+    onClearError: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("对话") },
+                // 空白新会话尚无标题，显示应用名占位
+                title = { Text(title ?: "AfyzHub") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "打开会话列表")
                     }
                 }
             )
@@ -86,7 +185,7 @@ fun ChatScreen(
                     items(messages, key = { it.id }) { message ->
                         MessageItem(
                             message = message,
-                            onRetry = { viewModel.retryMessage(message.id) }
+                            onRetry = { onRetry(message.id) }
                         )
                     }
                     // 流式回复已在气泡内逐字呈现，无需额外的等待指示。
@@ -121,7 +220,7 @@ fun ChatScreen(
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick = { viewModel.clearError() }) {
+                        TextButton(onClick = onClearError) {
                             Text("关闭")
                         }
                     }
@@ -140,7 +239,7 @@ fun ChatScreen(
                 ) {
                     OutlinedTextField(
                         value = inputText,
-                        onValueChange = { inputText = it },
+                        onValueChange = onInputChange,
                         modifier = Modifier.weight(1f),
                         placeholder = { Text("输入消息...") },
                         maxLines = 5,
@@ -148,13 +247,7 @@ fun ChatScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     FloatingActionButton(
-                        onClick = {
-                            val text = inputText
-                            if (text.isNotBlank() && !isLoading) {
-                                viewModel.sendMessage(conversationId, text)
-                                inputText = ""
-                            }
-                        },
+                        onClick = onSend,
                         modifier = Modifier.size(56.dp),
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
