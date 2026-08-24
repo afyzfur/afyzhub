@@ -10,6 +10,7 @@ import com.afyzfur.afyzhub.ui.settings.AppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ProviderSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.QuickPromptsSettingsScreen
+import com.afyzfur.afyzhub.ui.settings.RequestLogScreen
 import com.afyzfur.afyzhub.ui.settings.SettingsHomeScreen
 
 /**
@@ -28,6 +29,7 @@ sealed class Screen(val route: String) {
     object AppearanceSettings : Screen("settings/appearance")
     object MessageDisplaySettings : Screen("settings/message_display")
     object QuickPromptsSettings : Screen("settings/quick_prompts")
+    object RequestLog : Screen("settings/request_log")
     object AboutSettings : Screen("settings/about")
 }
 
@@ -62,6 +64,9 @@ fun NavGraph() {
                 onNavigateToQuickPrompts = {
                     navController.navigate(Screen.QuickPromptsSettings.route)
                 },
+                onNavigateToRequestLog = {
+                    navController.navigate(Screen.RequestLog.route)
+                },
                 onNavigateToAbout = {
                     navController.navigate(Screen.AboutSettings.route)
                 }
@@ -84,6 +89,9 @@ fun NavGraph() {
             QuickPromptsSettingsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
+        composable(Screen.RequestLog.route) {
+            RequestLogScreen(onNavigateBack = { navController.popBackStack() })
+        }
         composable(Screen.AboutSettings.route) {
             AboutSettingsScreen(onNavigateBack = { navController.popBackStack() })
         }

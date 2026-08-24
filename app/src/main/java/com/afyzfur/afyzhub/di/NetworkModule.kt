@@ -8,6 +8,7 @@ import com.afyzfur.afyzhub.BuildConfig
 import com.afyzfur.afyzhub.data.remote.provider.AnthropicChatClient
 import com.afyzfur.afyzhub.data.remote.provider.ChatClientRegistry
 import com.afyzfur.afyzhub.data.remote.provider.GeminiChatClient
+import com.afyzfur.afyzhub.data.log.RequestLogStore
 import com.afyzfur.afyzhub.data.remote.provider.HttpTransport
 import com.afyzfur.afyzhub.data.remote.provider.OpenAiChatClient
 import com.afyzfur.afyzhub.data.remote.provider.Transport
@@ -70,7 +71,9 @@ val networkModule = module {
             .build()
     }
 
-    single<Transport> { HttpTransport(get()) }
+    // 日志存储须为单例：请求在网络层写入，日志页在另一处读取
+    single { RequestLogStore() }
+    single<Transport> { HttpTransport(get(), get()) }
 
     single {
         ChatClientRegistry(

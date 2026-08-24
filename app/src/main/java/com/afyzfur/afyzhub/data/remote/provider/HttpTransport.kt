@@ -1,5 +1,9 @@
 package com.afyzfur.afyzhub.data.remote.provider
 
+import com.afyzfur.afyzhub.data.log.RequestLogEntry
+import com.afyzfur.afyzhub.data.log.RequestLogStore
+import com.afyzfur.afyzhub.data.log.redactHeaders
+import com.afyzfur.afyzhub.data.log.redactUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -19,7 +23,10 @@ import java.io.IOException
  * 负责地址拼接、POST 发送和 SSE 逐行读取；
  * 具体的请求体格式与数据块解析由各 provider 决定。
  */
-class HttpTransport(private val client: OkHttpClient) : Transport {
+class HttpTransport(
+    private val client: OkHttpClient,
+    private val logStore: RequestLogStore
+) : Transport {
 
     private val jsonMediaType = "application/json".toMediaType()
 
@@ -33,18 +40,36 @@ class HttpTransport(private val client: OkHttpClient) : Transport {
         headers: Map<String, String>,
         query: Map<String, String>
     ): String = withContext(Dispatchers.IO) {
+        val url = resolveUrl(baseUrl, path, query)
+        val startedAt = System.currentTimeMillis()
         val request = Request.Builder()
-            .url(resolveUrl(baseUrl, path, query))
+            .url(url)
             .apply { headers.forEach { (k, v) -> header(k, v) } }
             .get()
             .build()
 
-        client.newCall(request).execute().use { response ->
-            val text = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                throw IOException(describeFailure(response.code, text))
+        // 标记而非比对错误文案：拿到响应后无论成败都已记过日志，
+        // catch 里只需处理"请求根本没发出去"的情况
+        var logged = false
+        try {
+            client.newCall(request).execute().use { response ->
+                val text = response.body?.string().orEmpty()
+                val failure = if (response.isSuccessful) {
+                    null
+                } else {
+                    describeFailure(response.code, text)
+                }
+                log(startedAt, "GET", url, headers, null, response.code, text, failure)
+                logged = true
+                if (failure != null) throw IOException(failure)
+                text
             }
-            text
+        } catch (e: IOException) {
+            // DNS、超时、连接重置等没有状态码可记
+            if (!logged) {
+                log(startedAt, "GET", url, headers, null, null, null, e.message ?: "网络错误")
+            }
+            throw e
         }
     }
 
@@ -55,13 +80,29 @@ class HttpTransport(private val client: OkHttpClient) : Transport {
         body: String,
         query: Map<String, String>
     ): String = withContext(Dispatchers.IO) {
-        val request = buildRequest(baseUrl, path, headers, body, query)
-        client.newCall(request).execute().use { response ->
-            val text = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                throw IOException(describeFailure(response.code, text))
+        val url = resolveUrl(baseUrl, path, query)
+        val startedAt = System.currentTimeMillis()
+        val request = buildRequest(url, headers, body)
+
+        var logged = false
+        try {
+            client.newCall(request).execute().use { response ->
+                val text = response.body?.string().orEmpty()
+                val failure = if (response.isSuccessful) {
+                    null
+                } else {
+                    describeFailure(response.code, text)
+                }
+                log(startedAt, "POST", url, headers, body, response.code, text, failure)
+                logged = true
+                if (failure != null) throw IOException(failure)
+                text
             }
-            text
+        } catch (e: IOException) {
+            if (!logged) {
+                log(startedAt, "POST", url, headers, body, null, null, e.message ?: "网络错误")
+            }
+            throw e
         }
     }
 
@@ -73,42 +114,71 @@ class HttpTransport(private val client: OkHttpClient) : Transport {
         body: String,
         query: Map<String, String>
     ): Flow<String> = flow {
-        val request = buildRequest(
-            baseUrl,
-            path,
-            headers + mapOf("Accept" to "text/event-stream"),
-            body,
-            query
-        )
+        val url = resolveUrl(baseUrl, path, query)
+        val sseHeaders = headers + mapOf("Accept" to "text/event-stream")
+        val startedAt = System.currentTimeMillis()
+        val request = buildRequest(url, sseHeaders, body)
 
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                val detail = response.body?.string().orEmpty()
-                throw IOException(describeFailure(response.code, detail))
+        // 流式响应体逐行到达，累积起来供日志记录。
+        // 只留前 MAX_BODY_CHARS 字符，长回复不必全存
+        val collected = StringBuilder()
+        var statusCode: Int? = null
+        var logged = false
+
+        try {
+            client.newCall(request).execute().use { response ->
+                statusCode = response.code
+                if (!response.isSuccessful) {
+                    val detail = response.body?.string().orEmpty()
+                    val failure = describeFailure(response.code, detail)
+                    log(startedAt, "POST", url, sseHeaders, body, response.code, detail, failure)
+                    logged = true
+                    throw IOException(failure)
+                }
+                val source = response.body?.source() ?: throw IOException("响应体为空")
+
+                while (true) {
+                    val line = source.readUtf8Line() ?: break
+                    if (line.isBlank()) continue
+                    if (!line.startsWith(DATA_PREFIX)) continue
+
+                    val payload = line.removePrefix(DATA_PREFIX).trim()
+                    if (payload.isEmpty() || payload == DONE_MARKER) continue
+
+                    if (collected.length < MAX_BODY_CHARS) {
+                        collected.append(payload).append('\n')
+                    }
+                    emit(payload)
+                }
             }
-            val source = response.body?.source() ?: throw IOException("响应体为空")
-
-            while (true) {
-                val line = source.readUtf8Line() ?: break
-                if (line.isBlank()) continue
-                if (!line.startsWith(DATA_PREFIX)) continue
-
-                val payload = line.removePrefix(DATA_PREFIX).trim()
-                if (payload.isEmpty() || payload == DONE_MARKER) continue
-                emit(payload)
+            log(startedAt, "POST", url, sseHeaders, body, statusCode, collected.toString(), null)
+            logged = true
+        } catch (e: Exception) {
+            // 也捕获非 IOException：流式过程中的解析异常同样需要留痕
+            if (!logged) {
+                log(
+                    startedAt,
+                    "POST",
+                    url,
+                    sseHeaders,
+                    body,
+                    statusCode,
+                    collected.toString().takeIf { it.isNotEmpty() },
+                    e.message ?: "流式中断"
+                )
             }
+            throw e
         }
     }.flowOn(Dispatchers.IO)
 
+    /** 接收已解析的 URL，因为调用方还要拿它写日志。 */
     private fun buildRequest(
-        baseUrl: String,
-        path: String,
+        url: HttpUrl,
         headers: Map<String, String>,
-        body: String,
-        query: Map<String, String>
+        body: String
     ): Request {
         return Request.Builder()
-            .url(resolveUrl(baseUrl, path, query))
+            .url(url)
             .apply { headers.forEach { (k, v) -> header(k, v) } }
             .post(body.toRequestBody(jsonMediaType))
             .build()
@@ -141,8 +211,49 @@ class HttpTransport(private val client: OkHttpClient) : Transport {
         }
     }
 
+    /**
+     * 写入一条请求日志。
+     *
+     * 密钥在此处脱敏，[RequestLogStore] 里存的已是安全内容——
+     * 脱敏放在入口而非展示层，避免今后新增展示路径时漏掉。
+     */
+    private suspend fun log(
+        startedAt: Long,
+        method: String,
+        url: HttpUrl,
+        headers: Map<String, String>,
+        requestBody: String?,
+        statusCode: Int?,
+        responseBody: String?,
+        error: String?
+    ) {
+        logStore.record(
+            RequestLogEntry(
+                id = logStore.newId(),
+                startedAt = startedAt,
+                host = url.host,
+                method = method,
+                url = redactUrl(url.toString()),
+                headers = redactHeaders(headers),
+                requestBody = requestBody?.take(MAX_BODY_CHARS),
+                statusCode = statusCode,
+                responseBody = responseBody?.take(MAX_BODY_CHARS),
+                error = error,
+                durationMs = System.currentTimeMillis() - startedAt
+            )
+        )
+    }
+
     private companion object {
         const val DATA_PREFIX = "data:"
         const val DONE_MARKER = "[DONE]"
+
+        /**
+         * 单个请求体/响应体的保留字符数。
+         *
+         * 长对话的请求体可达数十 KB，全量保留会让 100 条日志占用过多内存。
+         * 排查配置问题时开头部分已足够——错误信息通常在响应体前部。
+         */
+        const val MAX_BODY_CHARS = 4000
     }
 }

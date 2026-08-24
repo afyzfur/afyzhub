@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -40,6 +41,7 @@ fun SettingsHomeScreen(
     onNavigateToAppearance: () -> Unit,
     onNavigateToMessageDisplay: () -> Unit,
     onNavigateToQuickPrompts: () -> Unit,
+    onNavigateToRequestLog: () -> Unit,
     onNavigateToAbout: () -> Unit,
     uiPreferencesViewModel: UiPreferencesViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel()
@@ -123,8 +125,17 @@ fun SettingsHomeScreen(
                     )
                 }
 
-                SettingsCategoryTitle("关于")
+                SettingsCategoryTitle("诊断")
+                SettingsGroup {
+                    SettingsNavItem(
+                        icon = Icons.Default.Search,
+                        title = "请求日志",
+                        subtitle = "查看最近的接口请求与响应，排查失败原因",
+                        onClick = onNavigateToRequestLog
+                    )
+                }
 
+                SettingsCategoryTitle("关于")
                 SettingsGroup {
                     SettingsNavItem(
                         icon = Icons.Default.Info,

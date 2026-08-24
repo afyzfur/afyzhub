@@ -5,6 +5,7 @@ import com.afyzfur.afyzhub.data.repository.ChatRepositoryImpl
 import com.afyzfur.afyzhub.domain.usecase.SendMessageUseCase
 import com.afyzfur.afyzhub.ui.chat.ChatViewModel
 import com.afyzfur.afyzhub.ui.chat.ChatHostViewModel
+import com.afyzfur.afyzhub.ui.settings.RequestLogViewModel
 import com.afyzfur.afyzhub.ui.settings.SettingsViewModel
 import com.afyzfur.afyzhub.ui.settings.UiPreferencesViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -23,4 +24,5 @@ val appModule = module {
     viewModel { ChatViewModel(get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { UiPreferencesViewModel(get()) }
+    viewModel { RequestLogViewModel(get()) }
 }
