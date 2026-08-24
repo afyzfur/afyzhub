@@ -20,7 +20,7 @@ AfyzHub 是一个开源的 Android AI 聊天应用，采用 Kotlin + Jetpack Com
 
 支持 OpenAI、Anthropic Claude 与 Google Gemini 三家服务，各自的密钥与配置独立保存，可随时切换。
 
-**当前状态**：v0.2.3-dev 开发预览版
+**当前状态**：v0.2.4-dev 开发预览版
 
 ---
 

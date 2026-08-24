@@ -12,7 +12,9 @@ import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.data.settings.SettingsRepository
 import com.afyzfur.afyzhub.data.settings.UiPreferences
 import com.afyzfur.afyzhub.ui.theme.ThemePalette
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -80,38 +82,59 @@ class UiPreferencesViewModel(
     }
 
     /**
+     * 图片保存失败的原因，供界面提示。
+     *
+     * 静默失败是上一版的实际问题：选完图没有任何反应，
+     * 用户无法判断是没选中、格式不支持还是应用有 bug。
+     */
+    private val _imageError = MutableStateFlow<String?>(null)
+    val imageError: StateFlow<String?> = _imageError.asStateFlow()
+
+    fun clearImageError() {
+        _imageError.value = null
+    }
+
+    /**
      * 保存用户选择的图片。
      *
      * 先复制到私有目录再记录路径——两步都在同一个协程内顺序完成，
      * 避免路径已写入但文件尚未落盘的中间状态。
-     * 复制失败时不改动配置，界面保持原样。
      *
      * 选择自定义图片后自动把对应模式切到 CUSTOM / IMAGE，
      * 否则用户选完图却看不到变化，还得再点一次模式。
      */
     fun pickUserAvatar(uri: Uri) {
         viewModelScope.launch {
-            imageStore.save(uri, ImageStore.Purpose.USER_AVATAR)?.let { path ->
-                repository.setUserAvatarPath(path)
-                repository.setAvatarMode(AvatarMode.CUSTOM)
+            when (val result = imageStore.save(uri, ImageStore.Purpose.USER_AVATAR)) {
+                is ImageStore.Result.Success -> {
+                    repository.setUserAvatarPath(result.path)
+                    repository.setAvatarMode(AvatarMode.CUSTOM)
+                }
+                is ImageStore.Result.Failure -> _imageError.value = result.reason
             }
         }
     }
 
     fun pickAssistantAvatar(uri: Uri) {
         viewModelScope.launch {
-            imageStore.save(uri, ImageStore.Purpose.ASSISTANT_AVATAR)?.let { path ->
-                repository.setAssistantAvatarPath(path)
-                repository.setAvatarMode(AvatarMode.CUSTOM)
+            when (val result = imageStore.save(uri, ImageStore.Purpose.ASSISTANT_AVATAR)) {
+                is ImageStore.Result.Success -> {
+                    repository.setAssistantAvatarPath(result.path)
+                    repository.setAvatarMode(AvatarMode.CUSTOM)
+                }
+                is ImageStore.Result.Failure -> _imageError.value = result.reason
             }
         }
     }
 
     fun pickBackground(uri: Uri) {
         viewModelScope.launch {
-            imageStore.save(uri, ImageStore.Purpose.CHAT_BACKGROUND)?.let { path ->
-                repository.setBackgroundPath(path)
-                repository.setBackgroundMode(ChatBackgroundMode.IMAGE)
+            when (val result = imageStore.save(uri, ImageStore.Purpose.CHAT_BACKGROUND)) {
+                is ImageStore.Result.Success -> {
+                    repository.setBackgroundPath(result.path)
+                    repository.setBackgroundMode(ChatBackgroundMode.IMAGE)
+                }
+                is ImageStore.Result.Failure -> _imageError.value = result.reason
             }
         }
     }

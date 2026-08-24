@@ -57,6 +57,7 @@ fun ChatAppearanceSettingsScreen(
 ) {
     val prefs by viewModel.preferences.collectAsState()
     val appearance = prefs.chatAppearance
+    val imageError by viewModel.imageError.collectAsState()
 
     // 用 GetContent 而非 OpenDocument：只需一次性读取内容用于复制，
     // 不需要长期持有 URI 权限（图片已复制到私有目录）
@@ -82,6 +83,33 @@ fun ChatAppearanceSettingsScreen(
                 .statusBarsPadding()
         ) {
             SettingsPageHeader(title = "聊天外观", onNavigateBack = onNavigateBack)
+
+            // 加载失败时提示原因。放在页面顶部而非弹窗：
+            // 弹窗会打断操作，而这里的失败通常需要用户换一张图重试
+            imageError?.let { error ->
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = AppShapeTokens.SettingsGroup,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 16.dp, end = 4.dp)
+                    ) {
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = viewModel::clearImageError) {
+                            Text("关闭")
+                        }
+                    }
+                }
+            }
 
             Column(
                 modifier = Modifier
@@ -122,8 +150,11 @@ fun ChatAppearanceSettingsScreen(
                     }
                 }
 
-                // 仅在自定义模式下显示图片选择：其他模式下这两行没有作用
+                // 仅在自定义模式下显示图片选择：其他模式下这两行没有作用。
+                // 与上一组之间需要间距——SettingsGroup 自身不带外边距，
+                // 其他页面靠分类标题分隔，这里两组之间没有标题会贴在一起
                 if (appearance.avatarMode == AvatarMode.CUSTOM) {
+                    Spacer(Modifier.height(12.dp))
                     SettingsGroup {
                         AvatarPickerRow(
                             title = "我的头像",
@@ -167,6 +198,7 @@ fun ChatAppearanceSettingsScreen(
                 }
 
                 if (appearance.hasBackgroundImage) {
+                    Spacer(Modifier.height(12.dp))
                     SettingsGroup {
                         BackgroundPreview(
                             path = appearance.backgroundPath!!,
