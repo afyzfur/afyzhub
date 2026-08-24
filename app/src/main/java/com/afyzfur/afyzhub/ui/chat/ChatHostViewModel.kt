@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.afyzfur.afyzhub.data.repository.ChatRepository
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsRepository
-import com.afyzfur.afyzhub.domain.model.Conversation
+import com.afyzfur.afyzhub.domain.model.ConversationItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,8 +28,8 @@ class ChatHostViewModel(
     settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
-    val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
+    private val _conversations = MutableStateFlow<List<ConversationItem>>(emptyList())
+    val conversations: StateFlow<List<ConversationItem>> = _conversations.asStateFlow()
 
     /**
      * 当前生效的提供商与模型配置，供顶栏显示。
@@ -45,7 +45,7 @@ class ChatHostViewModel(
 
     init {
         viewModelScope.launch {
-            repository.getAllConversations().collect { list ->
+            repository.getConversationItems().collect { list ->
                 _conversations.value = list
             }
         }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,30 +34,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.afyzfur.afyzhub.domain.model.Conversation
+import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
 /**
- * 抽屉内容：会话列表 + 底部入口。
+ * 抽屉内容：分组会话列表 + 底部入口。
  *
- * 由原 HomeScreen 的职责转化而来。与原首页的差别：
- * - 不再是独立导航目的地，而是聊天页的抽屉内容
- * - 会话项不常驻删除按钮，改为长按触发确认弹窗。原首页每项右侧固定一个垃圾桶图标，
- *   既占宽度又容易误触
- * - 底部入口带文字标签，不用无标签的圆形图标按钮
- *
- * 时间分组与末条消息摘要属于阶段 4，本阶段先立结构。
+ * 阶段 4 相比阶段 2 的差别：
+ * - 会话按时间分组，组标题用强调色（见 ConversationGrouping.kt）
+ * - 列表项加末条消息摘要。参考对象仅显示标题，相邻的相似会话无法区分
+ * - 底部增加当前助手行。目前助手体系尚未落地，暂显示当前模型
  */
 @Composable
 fun ConversationDrawer(
-    conversations: List<Conversation>,
+    conversations: List<ConversationItem>,
     currentConversationId: Long?,
+    modelLabel: String,
     onConversationClick: (Long) -> Unit,
     onNewConversation: () -> Unit,
     onDeleteConversation: (Long) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 分组结果随列表变化重算，不必每次重组都做
+    val grouped = remember(conversations) { groupConversations(conversations) }
+
     Column(modifier = modifier.fillMaxSize()) {
 
         Text(
@@ -67,24 +70,58 @@ fun ConversationDrawer(
 
         DrawerActionRow(
             text = "新建对话",
-            onClick = onNewConversation
+            onClick = onNewConversation,
+            leading = {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
-        // 会话列表占据剩余空间，底部入口因此始终贴在下方
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(conversations, key = { it.id }) { conversation ->
-                ConversationRow(
-                    conversation = conversation,
-                    selected = conversation.id == currentConversationId,
-                    onClick = { onConversationClick(conversation.id) },
-                    onDelete = { onDeleteConversation(conversation.id) }
-                )
+            grouped.forEach { (group, items) ->
+                item(key = "header-${group.name}") {
+                    Text(
+                        text = group.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(
+                            start = 28.dp,
+                            top = 16.dp,
+                            bottom = 6.dp
+                        )
+                    )
+                }
+
+                items(
+                    items = items,
+                    key = { it.id }
+                ) { conversation ->
+                    ConversationRow(
+                        conversation = conversation,
+                        selected = conversation.id == currentConversationId,
+                        onClick = { onConversationClick(conversation.id) },
+                        onDelete = { onDeleteConversation(conversation.id) }
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
+
+        // 底部两行，均带文字标签。参考对象用五个无标签圆形图标，可发现性差
+        DrawerActionRow(
+            text = modelLabel,
+            onClick = onSettingsClick,
+            leading = {
+                // 助手体系落地前先用首字母占位，避免引入无意义的通用图标
+                AssistantAvatar(label = modelLabel)
+            }
+        )
 
         DrawerActionRow(
             text = "设置",
@@ -102,18 +139,31 @@ fun ConversationDrawer(
     }
 }
 
-/** 抽屉内的操作行，默认前置加号图标 */
+/** 助手标识占位：取模型名首字母，圆形底色 */
+@Composable
+private fun AssistantAvatar(label: String) {
+    Row(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(AppShapeTokens.CircleButton)
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label.take(1).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+}
+
+/** 抽屉内的操作行 */
 @Composable
 private fun DrawerActionRow(
     text: String,
     onClick: () -> Unit,
-    leading: @Composable () -> Unit = {
-        Icon(
-            Icons.Default.Add,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    leading: @Composable () -> Unit
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -129,33 +179,34 @@ private fun DrawerActionRow(
         Text(
             text = text,
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
 
 /**
- * 单个会话行。
+ * 单个会话行：标题 + 摘要。
  *
- * 选中态用 secondaryContainer 铺底并保持胶囊形状，与 M3 抽屉选中语言一致，
- * 但不使用 NavigationDrawerItem —— 后者不提供长按回调，无法承载删除操作。
+ * 不用 NavigationDrawerItem —— 它不提供长按回调，也放不下两行内容。
+ * 删除走长按，列表项本身不放按钮。
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ConversationRow(
-    conversation: Conversation,
+    conversation: ConversationItem,
     selected: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(AppShapeTokens.Pill)
+            .clip(AppShapeTokens.SettingsGroup)
             .background(
                 if (selected) MaterialTheme.colorScheme.secondaryContainer
                 else MaterialTheme.colorScheme.surface
@@ -164,7 +215,7 @@ private fun ConversationRow(
                 onClick = onClick,
                 onLongClick = { showDeleteDialog = true }
             )
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Text(
             text = conversation.title,
@@ -174,6 +225,19 @@ private fun ConversationRow(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+
+        // 无消息的会话不显示空摘要行，避免行高不齐
+        conversation.lastMessage?.let { summary ->
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 
     if (showDeleteDialog) {

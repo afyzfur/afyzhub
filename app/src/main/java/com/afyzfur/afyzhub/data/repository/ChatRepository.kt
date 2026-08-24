@@ -1,12 +1,16 @@
 package com.afyzfur.afyzhub.data.repository
 
 import com.afyzfur.afyzhub.domain.model.Conversation
+import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.domain.model.Message
 import kotlinx.coroutines.flow.Flow
 
 interface ChatRepository {
 
     fun getAllConversations(): Flow<List<Conversation>>
+
+    /** 会话列表附带末条消息摘要，供抽屉列表使用。 */
+    fun getConversationItems(): Flow<List<ConversationItem>>
 
     fun getMessagesByConversationId(conversationId: Long): Flow<List<Message>>
 

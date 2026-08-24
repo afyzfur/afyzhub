@@ -10,6 +10,7 @@ import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsProvider
 import com.afyzfur.afyzhub.domain.model.Conversation
+import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +25,24 @@ class ChatRepositoryImpl(
 
     override fun getAllConversations(): Flow<List<Conversation>> =
         conversationDao.getAllConversations().map { list -> list.map { it.toDomain() } }
+
+    override fun getConversationItems(): Flow<List<ConversationItem>> =
+        conversationDao.getConversationSummaries().map { list ->
+            list.map { summary ->
+                ConversationItem(
+                    id = summary.id,
+                    title = summary.title,
+                    updatedAt = summary.updatedAt,
+                    // 在此处截断而不是留给 UI：摘要只用于一行预览，
+                    // 长文本传到 UI 层再截断没有意义，还会白占内存
+                    lastMessage = summary.lastMessage
+                        ?.replace('\n', ' ')
+                        ?.trim()
+                        ?.take(SUMMARY_MAX_LENGTH)
+                        ?.takeIf { it.isNotEmpty() }
+                )
+            }
+        }
 
     override fun getMessagesByConversationId(conversationId: Long): Flow<List<Message>> =
         messageDao.getMessagesByConversationId(conversationId).map { list -> list.map { it.toDomain() } }
@@ -201,4 +220,9 @@ class ChatRepositoryImpl(
         errorMessage = errorMessage,
         createdAt = createdAt
     )
+
+    private companion object {
+        /** 抽屉摘要行的字符上限，足够填满一行且留有余量 */
+        const val SUMMARY_MAX_LENGTH = 60
+    }
 }

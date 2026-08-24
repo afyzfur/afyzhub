@@ -76,6 +76,7 @@ fun ChatScreen(
                 ConversationDrawer(
                     conversations = conversations,
                     currentConversationId = currentConversationId,
+                    modelLabel = settings.model,
                     onConversationClick = { id ->
                         hostViewModel.openConversation(id)
                         scope.launch { drawerState.close() }
