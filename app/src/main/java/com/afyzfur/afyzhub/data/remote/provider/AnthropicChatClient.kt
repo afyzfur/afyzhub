@@ -34,11 +34,9 @@ class AnthropicChatClient(
         )
         val response = json.decodeFromString(MessagesResponse.serializer(), text)
         return CompletionResult(
-            content = response.content
-                .filter { it.type == "text" }
-                .joinToString("") { it.text.orEmpty() },
+            content = response.extractText(),
             usage = response.usage?.let {
-                TokenUsage(it.inputTokens, it.outputTokens)
+                TokenUsage(it.input, it.output)
             }
         )
     }
@@ -63,15 +61,30 @@ class AnthropicChatClient(
             val event = parseEvent(payload) ?: return@collect
             when (event.type) {
                 "content_block_delta" ->
+                    // thinking 模型的 delta 分 thinking_delta 与 text_delta 两种，
+                    // 前者是思考过程不计入正文，取 text 字段即可自然跳过
                     event.delta?.text
                         ?.takeIf { it.isNotEmpty() }
                         ?.let { emit(StreamEvent.TextDelta(it)) }
 
                 "message_start" ->
-                    event.message?.usage?.let { inputTokens = it.inputTokens }
+                    event.message?.usage?.let { inputTokens = it.input }
 
                 "message_delta" ->
-                    event.usage?.let { outputTokens = it.outputTokens }
+                    event.usage?.let { outputTokens = it.output }
+
+                // 部分中转服务把 Claude 请求转成 OpenAI 协议后转发，
+                // 返回的 SSE 因而是 OpenAI 格式（无 type 字段，正文在
+                // choices[].delta.content）。不兼容会导致整段回复丢失
+                "" -> {
+                    event.choices?.firstOrNull()?.delta?.content
+                        ?.takeIf { it.isNotEmpty() }
+                        ?.let { emit(StreamEvent.TextDelta(it)) }
+                    event.usage?.let {
+                        inputTokens = it.input
+                        outputTokens = it.output
+                    }
+                }
             }
         }
 
@@ -155,11 +168,32 @@ class AnthropicChatClient(
     @Serializable
     private data class MessageItem(val role: String, val content: String)
 
+    /**
+     * 非流式响应。
+     *
+     * 同时兼容两种协议：Anthropic 的正文在 content[].text，
+     * 转成 OpenAI 格式的中转服务放在 choices[].message.content。
+     */
     @Serializable
     private data class MessagesResponse(
         val content: List<ContentBlock> = emptyList(),
-        val usage: AnthropicUsage? = null
-    )
+        val usage: AnthropicUsage? = null,
+        val choices: List<OpenAiFullChoice>? = null
+    ) {
+        fun extractText(): String {
+            val anthropic = content
+                .filter { it.type == "text" }
+                .joinToString("") { it.text.orEmpty() }
+            if (anthropic.isNotEmpty()) return anthropic
+            return choices?.firstOrNull()?.message?.content.orEmpty()
+        }
+    }
+
+    @Serializable
+    private data class OpenAiFullChoice(val message: OpenAiMessage? = null)
+
+    @Serializable
+    private data class OpenAiMessage(val content: String = "")
 
     @Serializable
     private data class ContentBlock(val type: String = "", val text: String? = null)
@@ -178,17 +212,40 @@ class AnthropicChatClient(
         val type: String = "",
         val delta: Delta? = null,
         val message: EventMessage? = null,
-        val usage: AnthropicUsage? = null
+        val usage: AnthropicUsage? = null,
+
+        // 兼容把 Claude 转成 OpenAI 格式的中转服务。这类响应没有 type 字段，
+        // 因此 type 取到默认空串，正文在 choices[].delta.content
+        val choices: List<OpenAiChoice>? = null
     )
+
+    @Serializable
+    private data class OpenAiChoice(val delta: OpenAiDelta? = null)
+
+    @Serializable
+    private data class OpenAiDelta(val content: String? = null)
 
     @Serializable
     private data class EventMessage(val usage: AnthropicUsage? = null)
 
+    /**
+     * Token 用量。
+     *
+     * 同时声明两套字段名：Anthropic 用 input_tokens / output_tokens，
+     * 而转成 OpenAI 格式的中转服务用 prompt_tokens / completion_tokens。
+     * 取值时哪套非零用哪套，避免为两种协议维护两个 usage 字段
+     * （同一个 JSON key 无法映射到两个属性）。
+     */
     @Serializable
     private data class AnthropicUsage(
         @SerialName("input_tokens") val inputTokens: Int = 0,
-        @SerialName("output_tokens") val outputTokens: Int = 0
-    )
+        @SerialName("output_tokens") val outputTokens: Int = 0,
+        @SerialName("prompt_tokens") val promptTokens: Int = 0,
+        @SerialName("completion_tokens") val completionTokens: Int = 0
+    ) {
+        val input: Int get() = if (inputTokens > 0) inputTokens else promptTokens
+        val output: Int get() = if (outputTokens > 0) outputTokens else completionTokens
+    }
 
     @Serializable
     private data class Delta(val text: String? = null)

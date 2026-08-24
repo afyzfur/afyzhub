@@ -1,16 +1,15 @@
 package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -81,21 +80,25 @@ fun EmptyChatContent(
 }
 
 /**
- * 常用提示词 chip 行，横向可滑动。
+ * 常用提示词 chip。
  *
- * 内容来自用户配置（阶段 5 在设置页提供编辑入口），非 AI 生成。
+ * 用 FlowRow 折行堆叠而非横向滚动：横滚时首尾 chip 被裁切成半截，
+ * 既不知道有多少条也不知道该往哪滑；折行则全部可见。
+ *
+ * 内容来自用户配置（设置页可编辑），非 AI 生成。
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PromptRow(
     prompts: List<String>,
     onPromptClick: (String) -> Unit
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 24.dp)
     ) {
         prompts.forEach { prompt ->
             Surface(

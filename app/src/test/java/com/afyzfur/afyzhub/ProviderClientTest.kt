@@ -356,6 +356,39 @@ class AnthropicChatClientTest {
     }
 
     @Test
+    fun `中转返回 OpenAI 格式的流式响应仍能取到正文`() = runTest {
+        // 部分中转把 Claude 请求转成 OpenAI 协议转发，返回的 SSE 没有 type 字段。
+        // 不兼容会导致整段回复丢失，界面上表现为空白或状态卡住
+        val transport = FakeTransport(
+            sseLines = listOf(
+                """{"choices":[{"delta":{"content":"你"}}]}""",
+                """{"choices":[{"delta":{"content":"好"}}]}"""
+            )
+        )
+        val client = AnthropicChatClient(transport, json)
+
+        assertEquals(
+            listOf("你", "好"),
+            client.stream(listOf(ChatTurn("user", "hi")), settings).textDeltas()
+        )
+    }
+
+    @Test
+    fun `中转返回 OpenAI 格式的非流式响应仍能取到正文`() = runTest {
+        val transport = FakeTransport(
+            response = """{"choices":[{"message":{"content":"中转回复"}}],"usage":{"prompt_tokens":3,"completion_tokens":4}}"""
+        )
+        val client = AnthropicChatClient(transport, json)
+
+        val result = client.complete(listOf(ChatTurn("user", "hi")), settings)
+
+        assertEquals("中转回复", result.content)
+        // usage 的两套字段名共用一个数据类，prompt/completion 也应被识别
+        assertEquals(3, result.usage?.promptTokens)
+        assertEquals(4, result.usage?.completionTokens)
+    }
+
+    @Test
     fun `流式从 message_start 与 message_delta 合并 usage`() = runTest {
         // Claude 把输入与输出 token 分散在两个事件里，需要跨事件累积
         val transport = FakeTransport(

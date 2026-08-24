@@ -16,6 +16,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.io.InterruptedIOException
+import java.util.concurrent.TimeUnit
 
 /**
  * 三家提供商共用的 HTTP 传输层。
@@ -137,14 +139,36 @@ class HttpTransport(
                 }
                 val source = response.body?.source() ?: throw IOException("响应体为空")
 
+                // 已收到过数据后，把读超时缩短为空闲超时。
+                //
+                // 部分中转服务在回复结束后既不发 [DONE] 也不关闭连接，
+                // readUtf8Line() 会一直阻塞到 OkHttp 的 readTimeout（5 分钟），
+                // 期间消息状态停在「发送中」。首字节前不能用这个短超时——
+                // 模型思考阶段本身可能几十秒无输出。
+                var receivedAny = false
+
                 while (true) {
-                    val line = source.readUtf8Line() ?: break
+                    if (receivedAny) {
+                        source.timeout().timeout(IDLE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                    }
+
+                    val line = try {
+                        source.readUtf8Line() ?: break
+                    } catch (e: InterruptedIOException) {
+                        // 空闲超时视为流正常结束，而非错误——
+                        // 已收到的内容是完整回复，只是服务端没发结束标记
+                        break
+                    }
+
                     if (line.isBlank()) continue
                     if (!line.startsWith(DATA_PREFIX)) continue
 
                     val payload = line.removePrefix(DATA_PREFIX).trim()
-                    if (payload.isEmpty() || payload == DONE_MARKER) continue
+                    if (payload.isEmpty()) continue
+                    // 收到结束标记即主动退出，不必等连接关闭
+                    if (payload == DONE_MARKER) break
 
+                    receivedAny = true
                     if (collected.length < MAX_BODY_CHARS) {
                         collected.append(payload).append('\n')
                     }
@@ -247,6 +271,15 @@ class HttpTransport(
     private companion object {
         const val DATA_PREFIX = "data:"
         const val DONE_MARKER = "[DONE]"
+
+        /**
+         * 流式响应的空闲超时（秒）。
+         *
+         * 仅在已收到至少一个数据块后生效，用于兜住不发结束标记也不关闭
+         * 连接的服务端。取 20 秒：正常输出的块间隔在百毫秒级，
+         * 而模型中途长时间停顿的情况少见。
+         */
+        const val IDLE_TIMEOUT_SECONDS = 20L
 
         /**
          * 单个请求体/响应体的保留字符数。
