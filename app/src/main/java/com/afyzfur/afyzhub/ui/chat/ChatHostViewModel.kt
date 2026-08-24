@@ -3,6 +3,8 @@ package com.afyzfur.afyzhub.ui.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.afyzfur.afyzhub.data.repository.ChatRepository
+import com.afyzfur.afyzhub.data.settings.AppSettings
+import com.afyzfur.afyzhub.data.settings.SettingsRepository
 import com.afyzfur.afyzhub.domain.model.Conversation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,11 +24,20 @@ import kotlinx.coroutines.launch
  * 因此 [currentConversationId] 允许为 null，表示"尚未落库的新会话"。
  */
 class ChatHostViewModel(
-    private val repository: ChatRepository
+    private val repository: ChatRepository,
+    settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
     val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
+
+    /**
+     * 当前生效的提供商与模型配置，供顶栏显示。
+     *
+     * 直接复用 SettingsRepository 已有的 StateFlow，不另建缓存——
+     * 设置页改动后顶栏需要立即反映。
+     */
+    val settings: StateFlow<AppSettings> = settingsRepository.settings
 
     /** null 表示当前是尚未落库的空白新会话 */
     private val _currentConversationId = MutableStateFlow<Long?>(null)

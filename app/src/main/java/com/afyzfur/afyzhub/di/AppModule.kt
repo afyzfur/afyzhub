@@ -18,7 +18,7 @@ val appModule = module {
     single { SendMessageUseCase(get()) }
 
     // ViewModels
-    viewModel { ChatHostViewModel(get()) }
+    viewModel { ChatHostViewModel(get(), get()) }
     viewModel { ChatViewModel(get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
 }
