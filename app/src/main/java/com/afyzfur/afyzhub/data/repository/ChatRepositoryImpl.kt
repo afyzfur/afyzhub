@@ -7,6 +7,9 @@ import com.afyzfur.afyzhub.data.local.entity.MessageEntity
 import com.afyzfur.afyzhub.data.remote.provider.ChatClient
 import com.afyzfur.afyzhub.data.remote.provider.ChatClientRegistry
 import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
+import com.afyzfur.afyzhub.data.remote.provider.CompletionResult
+import com.afyzfur.afyzhub.data.remote.provider.StreamEvent
+import com.afyzfur.afyzhub.data.remote.provider.TokenUsage
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsProvider
 import com.afyzfur.afyzhub.domain.model.Conversation
@@ -89,11 +92,14 @@ class ChatRepositoryImpl(
             if (settings.apiKey.isBlank()) {
                 throw IllegalStateException("请先在设置中配置 API Key")
             }
-
             // 具体协议差异由对应 provider 的客户端处理，此处只关心对话内容。
             val client = clientRegistry.clientFor(settings.provider)
             val turns = buildContext(conversationId, userMessageId)
-            val reply = if (settings.streamEnabled) {
+
+            // 耗时从发出请求前开始计，包含网络往返与模型生成
+            val startedAt = System.currentTimeMillis()
+
+            val outcome = if (settings.streamEnabled) {
                 // 先占位再逐段填充，界面即可实时看到增量文本。
                 val placeholderId = messageDao.insertMessage(
                     MessageEntity(
@@ -109,32 +115,47 @@ class ChatRepositoryImpl(
                 client.complete(turns, settings)
             }
 
+            val latencyMs = System.currentTimeMillis() - startedAt
+            val reply = outcome.content
             if (reply.isBlank()) {
                 throw IllegalStateException("模型返回内容为空")
             }
-
             messageDao.updateStatus(userMessageId, Constants.STATUS_SUCCESS, null)
 
             val finalId = assistantId?.also {
-                messageDao.updateContentAndStatus(it, reply, Constants.STATUS_SUCCESS)
+                messageDao.finalizeAssistantMessage(
+                    id = it,
+                    content = reply,
+                    status = Constants.STATUS_SUCCESS,
+                    model = settings.model,
+                    promptTokens = outcome.usage?.promptTokens,
+                    completionTokens = outcome.usage?.completionTokens,
+                    latencyMs = latencyMs
+                )
             } ?: messageDao.insertMessage(
                 MessageEntity(
                     conversationId = conversationId,
                     content = reply,
                     role = Constants.ROLE_ASSISTANT,
-                    status = Constants.STATUS_SUCCESS
+                    status = Constants.STATUS_SUCCESS,
+                    model = settings.model,
+                    promptTokens = outcome.usage?.promptTokens,
+                    completionTokens = outcome.usage?.completionTokens,
+                    latencyMs = latencyMs
                 )
             )
-
             touchConversation(conversationId)
-
             Result.success(
                 Message(
                     id = finalId,
                     conversationId = conversationId,
                     content = reply,
                     role = Constants.ROLE_ASSISTANT,
-                    createdAt = System.currentTimeMillis()
+                    createdAt = System.currentTimeMillis(),
+                    model = settings.model,
+                    promptTokens = outcome.usage?.promptTokens,
+                    completionTokens = outcome.usage?.completionTokens,
+                    latencyMs = latencyMs
                 )
             )
         } catch (e: Exception) {
@@ -146,19 +167,32 @@ class ChatRepositoryImpl(
         }
     }
 
-    /** 消费流式增量，边写库边累积完整文本。 */
+    /**
+     * 消费流式增量，边写库边累积完整文本。
+     *
+     * usage 只出现在流末尾的 Finished 事件里，且部分提供商不返回，
+     * 因此返回值与非流式共用 [CompletionResult]，usage 可空。
+     */
     private suspend fun collectStream(
         client: ChatClient,
         turns: List<ChatTurn>,
         settings: AppSettings,
         placeholderId: Long
-    ): String {
+    ): CompletionResult {
         val builder = StringBuilder()
-        client.stream(turns, settings).collect { delta ->
-            builder.append(delta)
-            messageDao.updateContent(placeholderId, builder.toString())
+        var usage: TokenUsage? = null
+
+        client.stream(turns, settings).collect { event ->
+            when (event) {
+                is StreamEvent.TextDelta -> {
+                    builder.append(event.delta)
+                    messageDao.updateContent(placeholderId, builder.toString())
+                }
+                is StreamEvent.Finished -> usage = event.usage
+            }
         }
-        return builder.toString()
+
+        return CompletionResult(content = builder.toString(), usage = usage)
     }
 
     /**
@@ -218,7 +252,11 @@ class ChatRepositoryImpl(
         role = role,
         status = status,
         errorMessage = errorMessage,
-        createdAt = createdAt
+        createdAt = createdAt,
+        model = model,
+        promptTokens = promptTokens,
+        completionTokens = completionTokens,
+        latencyMs = latencyMs
     )
 
     private companion object {

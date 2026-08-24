@@ -4,6 +4,9 @@ import com.afyzfur.afyzhub.data.local.entity.ConversationEntity
 import com.afyzfur.afyzhub.data.remote.provider.ChatClient
 import com.afyzfur.afyzhub.data.remote.provider.ChatClientRegistry
 import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
+import com.afyzfur.afyzhub.data.remote.provider.CompletionResult
+import com.afyzfur.afyzhub.data.remote.provider.StreamEvent
+import com.afyzfur.afyzhub.data.remote.provider.TokenUsage
 import com.afyzfur.afyzhub.data.repository.ChatRepositoryImpl
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsProvider
@@ -28,21 +31,26 @@ private class RecordingClient(
     private val reply: String? = "好的",
     private val error: Exception? = null,
     private val chunks: List<String> = emptyList(),
-    private val failAfter: Int? = null
+    private val failAfter: Int? = null,
+    /** 可选的 token 用量，默认不返回以模拟不支持 usage 的服务 */
+    private val usage: TokenUsage? = null
 ) : ChatClient {
 
     var completeTurns: List<ChatTurn>? = null
     var streamTurns: List<ChatTurn>? = null
     var usedSettings: AppSettings? = null
 
-    override suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): String {
+    override suspend fun complete(
+        turns: List<ChatTurn>,
+        settings: AppSettings
+    ): CompletionResult {
         completeTurns = turns
         usedSettings = settings
         error?.let { throw it }
-        return reply.orEmpty()
+        return CompletionResult(content = reply.orEmpty(), usage = usage)
     }
 
-    override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<String> {
+    override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> {
         streamTurns = turns
         usedSettings = settings
         return flow {
@@ -50,8 +58,10 @@ private class RecordingClient(
                 if (failAfter != null && index == failAfter) {
                     throw IOException("连接中断")
                 }
-                emit(chunk)
+                emit(StreamEvent.TextDelta(chunk))
             }
+            // 中断路径在上面就抛了，走到这里说明流正常结束
+            emit(StreamEvent.Finished(usage))
         }
     }
 

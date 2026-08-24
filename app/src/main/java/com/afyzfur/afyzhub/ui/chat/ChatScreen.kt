@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 import kotlinx.coroutines.launch
@@ -102,6 +103,7 @@ fun ChatScreen(
             modelLabel = "${settings.model} · ${settings.provider.displayName}",
             providerLabel = settings.provider.displayName,
             quickPrompts = uiPreferences.quickPrompts,
+            displayOptions = uiPreferences.messageDisplay,
             messages = messages,
             isLoading = isLoading,
             error = error,
@@ -142,6 +144,7 @@ private fun ChatContent(
     modelLabel: String,
     providerLabel: String,
     quickPrompts: List<String>,
+    displayOptions: MessageDisplayOptions,
     messages: List<Message>,
     isLoading: Boolean,
     error: String?,
@@ -213,6 +216,7 @@ private fun ChatContent(
                     items(messages, key = { it.id }) { message ->
                         MessageBlock(
                             message = message,
+                            displayOptions = displayOptions,
                             onRetry = { onRetry(message.id) }
                         )
                     }

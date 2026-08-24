@@ -9,6 +9,35 @@ data class ChatTurn(
     val content: String
 )
 
+/** Token 用量，来自各提供商的 usage 字段。 */
+data class TokenUsage(
+    val promptTokens: Int,
+    val completionTokens: Int
+)
+
+/**
+ * 非流式请求的完整结果。
+ *
+ * [usage] 可空：部分提供商或错误情况下可能缺失。
+ */
+data class CompletionResult(
+    val content: String,
+    val usage: TokenUsage? = null
+)
+
+/**
+ * 流式请求的增量事件。
+ *
+ * 正常流程：先 emit 若干 [TextDelta]，最后 emit 一个 [Finished]。
+ * [Finished.usage] 可空，因为某些提供商的流式响应不带 usage。
+ */
+sealed interface StreamEvent {
+    /** 增量文本 */
+    data class TextDelta(val delta: String) : StreamEvent
+    /** 流结束，可能携带 usage */
+    data class Finished(val usage: TokenUsage? = null) : StreamEvent
+}
+
 /**
  * 统一的对话客户端。
  *
@@ -16,12 +45,10 @@ data class ChatTurn(
  * 不需要知道具体是 OpenAI、Claude 还是 Gemini。
  */
 interface ChatClient {
-
-    /** 一次性返回完整回复。 */
-    suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): String
-
-    /** 流式返回增量文本。 */
-    fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<String>
+    /** 一次性返回完整回复及 usage。 */
+    suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): CompletionResult
+    /** 流式返回增量文本及最终 usage。调用方需处理 [StreamEvent] 的两种子类型。 */
+    fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent>
 
     /**
      * 拉取该提供商当前可用的模型名列表。

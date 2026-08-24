@@ -5,6 +5,7 @@ import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
 import com.afyzfur.afyzhub.data.remote.provider.GeminiChatClient
 import com.afyzfur.afyzhub.data.remote.provider.HttpTransport
 import com.afyzfur.afyzhub.data.remote.provider.OpenAiChatClient
+import com.afyzfur.afyzhub.data.remote.provider.StreamEvent
 import com.afyzfur.afyzhub.data.remote.provider.Transport
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.domain.model.AiProvider
@@ -22,6 +23,20 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+
+/**
+ * 取出流中的文本增量，忽略结束事件。
+ *
+ * stream() 现在发的是 StreamEvent 而非裸字符串，但多数测试关心的仍是
+ * 文本拼接是否正确，用这个扩展让原有断言保持简洁。
+ * 需要验证 usage 的测试单独取 Finished 事件。
+ */
+private suspend fun Flow<StreamEvent>.textDeltas(): List<String> =
+    toList().filterIsInstance<StreamEvent.TextDelta>().map { it.delta }
+
+/** 取出流末尾的 usage，没有则为 null。 */
+private suspend fun Flow<StreamEvent>.finishedUsage() =
+    toList().filterIsInstance<StreamEvent.Finished>().firstOrNull()?.usage
 
 /**
  * 记录请求参数并回放预设响应的假传输层。
@@ -111,11 +126,55 @@ class OpenAiChatClientTest {
         )
         val client = OpenAiChatClient(transport, json)
 
-        val reply = client.complete(listOf(ChatTurn("user", "hi")), settings)
+        val reply = client.complete(listOf(ChatTurn("user", "hi")), settings).content
 
         assertEquals("你好", reply)
         assertEquals("v1/chat/completions", transport.lastPath)
         assertEquals("Bearer sk-test", transport.lastHeaders["Authorization"])
+    }
+
+    @Test
+    fun `流式请求索取 usage 而非流式不带该字段`() = runTest {
+        // stream_options 出现在非流式请求里会被部分中转服务拒绝，
+        // 这条断言防止今后误改成无条件带上
+        val streaming = FakeTransport(sseLines = listOf("""{"choices":[{"delta":{"content":"a"}}]}"""))
+        OpenAiChatClient(streaming, json)
+            .stream(listOf(ChatTurn("user", "hi")), settings)
+            .textDeltas()
+        assertEquals(
+            true,
+            body(streaming)["stream_options"]!!
+                .jsonObject["include_usage"]!!.jsonPrimitive.content.toBoolean()
+        )
+
+        val plain = FakeTransport(
+            response = """{"choices":[{"message":{"content":"a"}}]}"""
+        )
+        OpenAiChatClient(plain, json).complete(listOf(ChatTurn("user", "hi")), settings)
+        assertNull(body(plain)["stream_options"])
+    }
+
+    @Test
+    fun `流式末尾的 usage 块被解析`() = runTest {
+        val transport = FakeTransport(
+            sseLines = listOf(
+                """{"choices":[{"delta":{"content":"a"}}]}""",
+                // 带 usage 的收尾块 choices 为空，不应被当作文本增量
+                """{"choices":[],"usage":{"prompt_tokens":5,"completion_tokens":8}}"""
+            )
+        )
+        val client = OpenAiChatClient(transport, json)
+
+        // 收尾块的 choices 为空，不应混进文本增量
+        assertEquals(
+            listOf("a"),
+            client.stream(listOf(ChatTurn("user", "hi")), settings).textDeltas()
+        )
+
+        // FakeTransport 用 asFlow() 回放，可重复消费，故能再取一次验证 usage
+        val usage = client.stream(listOf(ChatTurn("user", "hi")), settings).finishedUsage()
+        assertEquals(5, usage?.promptTokens)
+        assertEquals(8, usage?.completionTokens)
     }
 
     @Test
@@ -126,7 +185,7 @@ class OpenAiChatClientTest {
         )
         val client = OpenAiChatClient(transport, json)
 
-        assertEquals("精简响应", client.complete(listOf(ChatTurn("user", "hi")), settings))
+        assertEquals("精简响应", client.complete(listOf(ChatTurn("user", "hi")), settings).content)
     }
 
     @Test
@@ -141,7 +200,7 @@ class OpenAiChatClientTest {
         )
         val client = OpenAiChatClient(transport, json)
 
-        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).toList()
+        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).textDeltas()
 
         assertEquals(listOf("你", "好"), deltas)
         assertEquals(true, body(transport)["stream"]!!.jsonPrimitive.content.toBoolean())
@@ -171,7 +230,7 @@ class OpenAiChatClientTest {
         )
         val client = OpenAiChatClient(transport, json)
 
-        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).toList()
+        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).textDeltas()
 
         assertEquals(listOf("前", "后"), deltas)
     }
@@ -269,7 +328,7 @@ class AnthropicChatClientTest {
         )
         val client = AnthropicChatClient(transport, json)
 
-        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).toList()
+        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).textDeltas()
 
         assertEquals(listOf("你", "好"), deltas)
     }
@@ -280,8 +339,39 @@ class AnthropicChatClientTest {
             response = """{"content":[{"type":"text","text":"前"},{"type":"text","text":"后"}]}"""
         )
         val client = AnthropicChatClient(transport, json)
+        assertEquals("前后", client.complete(listOf(ChatTurn("user", "hi")), settings).content)
+    }
 
-        assertEquals("前后", client.complete(listOf(ChatTurn("user", "hi")), settings))
+    @Test
+    fun `非流式解析 input 与 output token`() = runTest {
+        val transport = FakeTransport(
+            response = """{"content":[{"type":"text","text":"hi"}],"usage":{"input_tokens":11,"output_tokens":22}}"""
+        )
+        val client = AnthropicChatClient(transport, json)
+
+        val usage = client.complete(listOf(ChatTurn("user", "hi")), settings).usage
+
+        assertEquals(11, usage?.promptTokens)
+        assertEquals(22, usage?.completionTokens)
+    }
+
+    @Test
+    fun `流式从 message_start 与 message_delta 合并 usage`() = runTest {
+        // Claude 把输入与输出 token 分散在两个事件里，需要跨事件累积
+        val transport = FakeTransport(
+            sseLines = listOf(
+                """{"type":"message_start","message":{"usage":{"input_tokens":7}}}""",
+                """{"type":"content_block_delta","delta":{"text":"a"}}""",
+                """{"type":"message_delta","usage":{"output_tokens":9}}""",
+                """{"type":"message_stop"}"""
+            )
+        )
+        val client = AnthropicChatClient(transport, json)
+
+        val usage = client.stream(listOf(ChatTurn("user", "hi")), settings).finishedUsage()
+
+        assertEquals(7, usage?.promptTokens)
+        assertEquals(9, usage?.completionTokens)
     }
 }
 
@@ -366,7 +456,7 @@ class GeminiChatClientTest {
         )
         val client = GeminiChatClient(transport, json)
 
-        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).toList()
+        val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).textDeltas()
 
         assertEquals(listOf("你", "好"), deltas)
         assertEquals("sse", transport.lastQuery["alt"])

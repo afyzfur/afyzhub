@@ -14,7 +14,7 @@ val databaseModule = module {
             Constants.DATABASE_NAME
         )
             // 注册迁移而非破坏性重建，升级时保留用户的历史对话。
-            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
             .build()
     }
 

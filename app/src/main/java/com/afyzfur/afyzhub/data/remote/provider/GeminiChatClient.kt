@@ -3,7 +3,7 @@ package com.afyzfur.afyzhub.data.remote.provider
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -24,7 +24,7 @@ class GeminiChatClient(
     private val json: Json
 ) : ChatClient {
 
-    override suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): String {
+    override suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): CompletionResult {
         val body = json.encodeToString(GenerateRequest.serializer(), buildRequest(turns))
         val text = transport.postForText(
             baseUrl = settings.baseUrl,
@@ -32,19 +32,34 @@ class GeminiChatClient(
             headers = authHeaders(settings),
             body = body
         )
-        return json.decodeFromString(GenerateResponse.serializer(), text)
-            .extractText()
+        val response = json.decodeFromString(GenerateResponse.serializer(), text)
+        return CompletionResult(
+            content = response.extractText(),
+            usage = response.usageMetadata?.toTokenUsage()
+        )
     }
 
-    override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<String> {
+    override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> = flow {
         val body = json.encodeToString(GenerateRequest.serializer(), buildRequest(turns))
-        return transport.postForSse(
+        var usage: TokenUsage? = null
+
+        transport.postForSse(
             baseUrl = settings.baseUrl,
             path = "$MODELS_PREFIX/${settings.model}:streamGenerateContent",
             headers = authHeaders(settings),
             body = body,
             query = mapOf("alt" to "sse")
-        ).mapNotNull { payload -> parseDelta(payload) }
+        ).collect { payload ->
+            val response = parseResponse(payload) ?: return@collect
+            // Gemini 每个 chunk 都可能带 usageMetadata，且为累计值，
+            // 因此直接覆盖，最后一个即为最终结果
+            response.usageMetadata?.toTokenUsage()?.let { usage = it }
+            response.extractText()
+                .takeIf { it.isNotEmpty() }
+                ?.let { emit(StreamEvent.TextDelta(it)) }
+        }
+
+        emit(StreamEvent.Finished(usage))
     }
 
     override suspend fun listModels(settings: AppSettings): List<String> {
@@ -89,10 +104,9 @@ class GeminiChatClient(
         "x-goog-api-key" to settings.apiKey
     )
 
-    private fun parseDelta(payload: String): String? = try {
+    /** 单个 chunk 解析失败不应中断整段回复，返回 null 表示跳过。 */
+    private fun parseResponse(payload: String): GenerateResponse? = try {
         json.decodeFromString(GenerateResponse.serializer(), payload)
-            .extractText()
-            .takeIf { it.isNotEmpty() }
     } catch (e: Exception) {
         null
     }
@@ -110,7 +124,10 @@ class GeminiChatClient(
     private data class Part(val text: String = "")
 
     @Serializable
-    private data class GenerateResponse(val candidates: List<Candidate> = emptyList()) {
+    private data class GenerateResponse(
+        val candidates: List<Candidate> = emptyList(),
+        val usageMetadata: UsageMetadata? = null
+    ) {
         fun extractText(): String = candidates
             .firstOrNull()
             ?.content
@@ -121,6 +138,21 @@ class GeminiChatClient(
 
     @Serializable
     private data class Candidate(val content: Content? = null)
+
+    /**
+     * Gemini 的 token 统计。字段名与 OpenAI / Claude 都不同，
+     * 且 candidatesTokenCount 在流式早期 chunk 中可能缺失。
+     */
+    @Serializable
+    private data class UsageMetadata(
+        val promptTokenCount: Int = 0,
+        val candidatesTokenCount: Int = 0
+    ) {
+        fun toTokenUsage() = TokenUsage(
+            promptTokens = promptTokenCount,
+            completionTokens = candidatesTokenCount
+        )
+    }
 
     @Serializable
     private data class ModelListResponse(val models: List<ModelEntry> = emptyList())

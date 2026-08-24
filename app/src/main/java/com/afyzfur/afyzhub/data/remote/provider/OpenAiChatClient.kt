@@ -4,9 +4,10 @@ import com.afyzfur.afyzhub.data.remote.dto.ChatRequest
 import com.afyzfur.afyzhub.data.remote.dto.ChatResponse
 import com.afyzfur.afyzhub.data.remote.dto.ChatStreamChunk
 import com.afyzfur.afyzhub.data.remote.dto.RequestMessage
+import com.afyzfur.afyzhub.data.remote.dto.StreamOptions
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -21,7 +22,7 @@ class OpenAiChatClient(
     private val json: Json
 ) : ChatClient {
 
-    override suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): String {
+    override suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): CompletionResult {
         val body = json.encodeToString(ChatRequest.serializer(), buildRequest(turns, settings, false))
         val text = transport.postForText(
             baseUrl = settings.baseUrl,
@@ -29,18 +30,36 @@ class OpenAiChatClient(
             headers = authHeaders(settings),
             body = body
         )
-        return json.decodeFromString(ChatResponse.serializer(), text)
-            .choices.firstOrNull()?.message?.content.orEmpty()
+        val response = json.decodeFromString(ChatResponse.serializer(), text)
+        return CompletionResult(
+            content = response.choices.firstOrNull()?.message?.content.orEmpty(),
+            usage = response.usage?.let {
+                TokenUsage(it.prompt_tokens, it.completion_tokens)
+            }
+        )
     }
 
-    override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<String> {
+    override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> = flow {
         val body = json.encodeToString(ChatRequest.serializer(), buildRequest(turns, settings, true))
-        return transport.postForSse(
+        var usage: TokenUsage? = null
+
+        transport.postForSse(
             baseUrl = settings.baseUrl,
             path = CHAT_PATH,
             headers = authHeaders(settings),
             body = body
-        ).mapNotNull { payload -> parseDelta(payload) }
+        ).collect { payload ->
+            val chunk = parseChunk(payload) ?: return@collect
+            // 带 usage 的那个 chunk 通常 choices 为空，两者需分别处理
+            chunk.usage?.let {
+                usage = TokenUsage(it.prompt_tokens, it.completion_tokens)
+            }
+            chunk.choices.firstOrNull()?.delta?.content
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { emit(StreamEvent.TextDelta(it)) }
+        }
+
+        emit(StreamEvent.Finished(usage))
     }
 
     override suspend fun listModels(settings: AppSettings): List<String> {
@@ -63,7 +82,9 @@ class OpenAiChatClient(
     ) = ChatRequest(
         model = settings.model,
         messages = turns.map { RequestMessage(role = it.role, content = it.content) },
-        stream = stream
+        stream = stream,
+        // 仅流式请求索取 usage。非流式的 usage 本来就在响应体里
+        stream_options = if (stream) StreamOptions() else null
     )
 
     private fun authHeaders(settings: AppSettings) = mapOf(
@@ -72,9 +93,8 @@ class OpenAiChatClient(
     )
 
     /** 单个数据块解析失败不应中断整段回复，返回 null 表示跳过。 */
-    private fun parseDelta(payload: String): String? = try {
+    private fun parseChunk(payload: String): ChatStreamChunk? = try {
         json.decodeFromString(ChatStreamChunk.serializer(), payload)
-            .choices.firstOrNull()?.delta?.content?.takeIf { it.isNotEmpty() }
     } catch (e: Exception) {
         null
     }

@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.ui.components.MarkdownText
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
@@ -33,12 +34,27 @@ import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 @Composable
 fun MessageBlock(
     message: Message,
+    displayOptions: MessageDisplayOptions,
     onRetry: () -> Unit = {}
 ) {
-    when {
-        message.isFailed -> FailedMessage(message = message, onRetry = onRetry)
-        message.isFromUser -> UserMessage(message = message)
-        else -> AssistantMessage(message = message)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = if (message.isFromUser) Alignment.End else Alignment.Start
+    ) {
+        when {
+            message.isFailed -> FailedMessage(message = message, onRetry = onRetry)
+            message.isFromUser -> UserMessage(message = message)
+            else -> AssistantMessage(message = message)
+        }
+
+        // 失败消息已有错误提示与重试按钮，再加元信息只会更乱
+        if (!message.isFailed && !message.isSending) {
+            MessageMetaRow(
+                message = message,
+                options = displayOptions,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
     }
 }
 
@@ -47,32 +63,28 @@ fun MessageBlock(
  */
 @Composable
 private fun UserMessage(message: Message) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.End
+    // 外层 MessageBlock 已负责对齐，此处只管气泡本身
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = AppShapeTokens.UserMessage,
+        modifier = Modifier.widthIn(max = 300.dp)
     ) {
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
-            shape = AppShapeTokens.UserMessage,
-            modifier = Modifier.widthIn(max = 300.dp)
-        ) {
-            Text(
-                // 用户输入按原样显示，不解析 Markdown
-                text = message.content,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-            )
-        }
+        Text(
+            // 用户输入按原样显示，不解析 Markdown
+            text = message.content,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        )
+    }
 
-        if (message.isSending) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "发送中",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    if (message.isSending) {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "发送中",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -100,32 +112,27 @@ private fun FailedMessage(
     message: Message,
     onRetry: () -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (message.isFromUser) Alignment.End else Alignment.Start
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = AppShapeTokens.AssistantMessage,
+        modifier = Modifier.widthIn(max = 320.dp)
     ) {
-        Surface(
-            color = MaterialTheme.colorScheme.errorContainer,
-            shape = AppShapeTokens.AssistantMessage,
-            modifier = Modifier.widthIn(max = 320.dp)
-        ) {
-            Text(
-                text = message.content,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-            )
-        }
+        Text(
+            text = message.content,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        )
+    }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = message.errorMessage ?: "发送失败",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error
-            )
-            TextButton(onClick = onRetry) {
-                Text("重试")
-            }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = message.errorMessage ?: "发送失败",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error
+        )
+        TextButton(onClick = onRetry) {
+            Text("重试")
         }
     }
 }

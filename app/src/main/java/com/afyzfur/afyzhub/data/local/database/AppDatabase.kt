@@ -11,7 +11,7 @@ import com.afyzfur.afyzhub.data.local.entity.MessageEntity
 
 @Database(
     entities = [ConversationEntity::class, MessageEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,6 +31,16 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_messages_conversationId ON messages(conversationId)"
                 )
+            }
+        }
+
+        /** v2 -> v3：消息表新增模型名、token 用量与耗时元信息，全部可空。 */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN model TEXT")
+                db.execSQL("ALTER TABLE messages ADD COLUMN promptTokens INTEGER")
+                db.execSQL("ALTER TABLE messages ADD COLUMN completionTokens INTEGER")
+                db.execSQL("ALTER TABLE messages ADD COLUMN latencyMs INTEGER")
             }
         }
     }

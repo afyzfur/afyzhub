@@ -11,7 +11,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ChatStreamChunk(
     val id: String? = null,
-    val choices: List<StreamChoice> = emptyList()
+    val choices: List<StreamChoice> = emptyList(),
+    /**
+     * 仅当请求带 `stream_options.include_usage` 时，OpenAI 会在最后一个
+     * chunk（choices 为空）中返回 usage。中转服务可能不支持，故可空。
+     */
+    val usage: Usage? = null
 )
 
 @Serializable

@@ -51,6 +51,31 @@ class FakeMessageDao : MessageDao {
         }
     }
 
+    override suspend fun finalizeAssistantMessage(
+        id: Long,
+        content: String,
+        status: String,
+        model: String?,
+        promptTokens: Int?,
+        completionTokens: Int?,
+        latencyMs: Long?
+    ) {
+        state.value = state.value.map {
+            if (it.id == id) {
+                it.copy(
+                    content = content,
+                    status = status,
+                    model = model,
+                    promptTokens = promptTokens,
+                    completionTokens = completionTokens,
+                    latencyMs = latencyMs
+                )
+            } else {
+                it
+            }
+        }
+    }
+
     override suspend fun deleteMessageById(id: Long) {
         state.value = state.value.filterNot { it.id == id }
     }

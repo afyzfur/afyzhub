@@ -33,6 +33,34 @@ interface MessageDao {
     @Query("UPDATE messages SET content = :content, status = :status WHERE id = :id")
     suspend fun updateContentAndStatus(id: Long, content: String, status: String)
 
+    /**
+     * 流式回复结束时一次性写入正文、状态与元信息。
+     *
+     * 合并为单条 UPDATE 而不是分多次调用：流式过程中 updateContent 已经
+     * 触发了大量写入，收尾阶段不必再增加事务数。
+     */
+    @Query(
+        """
+        UPDATE messages
+        SET content = :content,
+            status = :status,
+            model = :model,
+            promptTokens = :promptTokens,
+            completionTokens = :completionTokens,
+            latencyMs = :latencyMs
+        WHERE id = :id
+        """
+    )
+    suspend fun finalizeAssistantMessage(
+        id: Long,
+        content: String,
+        status: String,
+        model: String?,
+        promptTokens: Int?,
+        completionTokens: Int?,
+        latencyMs: Long?
+    )
+
     @Query("DELETE FROM messages WHERE id = :id")
     suspend fun deleteMessageById(id: Long)
 
