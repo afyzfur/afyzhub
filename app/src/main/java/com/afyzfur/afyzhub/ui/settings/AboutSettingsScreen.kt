@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -68,13 +68,13 @@ fun AboutSettingsScreen(
 
                 SettingsGroup {
                     SettingsNavItem(
-                        icon = Icons.Default.Code,
+                        icon = Icons.Default.Share,
                         title = "源代码",
                         subtitle = REPO_URL.removePrefix("https://"),
                         onClick = { openUrl(REPO_URL) }
                     )
                     SettingsNavItem(
-                        icon = Icons.Default.Description,
+                        icon = Icons.Default.List,
                         title = "更新日志",
                         subtitle = "查看各版本的变更内容",
                         onClick = { openUrl(CHANGELOG_URL) }

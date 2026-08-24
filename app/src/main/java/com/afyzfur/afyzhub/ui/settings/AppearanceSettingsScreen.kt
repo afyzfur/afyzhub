@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,7 +65,7 @@ fun AppearanceSettingsScreen(
 
                 SettingsGroup {
                     SettingsSwitchItem(
-                        icon = Icons.Default.Palette,
+                        icon = Icons.Default.Favorite,
                         title = "动态取色",
                         subtitle = if (dynamicColorSupported) {
                             "跟随系统壁纸生成配色"

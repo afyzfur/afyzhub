@@ -9,12 +9,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.DataUsage
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,7 +59,7 @@ fun MessageDisplaySettingsScreen(
 
                 SettingsGroup {
                     SettingsSwitchItem(
-                        icon = Icons.Default.AccessTime,
+                        icon = Icons.Default.DateRange,
                         title = "时间戳",
                         subtitle = "同日只显示时分，跨日带日期",
                         checked = display.showTimestamp,
@@ -68,7 +68,7 @@ fun MessageDisplaySettingsScreen(
                         }
                     )
                     SettingsSwitchItem(
-                        icon = Icons.Default.TouchApp,
+                        icon = Icons.Default.Build,
                         title = "操作按钮",
                         subtitle = "复制、重新生成等",
                         checked = display.showActions,
@@ -77,7 +77,7 @@ fun MessageDisplaySettingsScreen(
                         }
                     )
                     SettingsSwitchItem(
-                        icon = Icons.Default.Memory,
+                        icon = Icons.Default.Face,
                         title = "模型名称",
                         subtitle = "标注每条回复由哪个模型生成",
                         checked = display.showModelName,
@@ -91,7 +91,7 @@ fun MessageDisplaySettingsScreen(
 
                 SettingsGroup {
                     SettingsSwitchItem(
-                        icon = Icons.Default.DataUsage,
+                        icon = Icons.Default.List,
                         title = "Token 用量",
                         subtitle = "输入与输出的 token 数",
                         checked = display.showTokenUsage,
@@ -100,7 +100,7 @@ fun MessageDisplaySettingsScreen(
                         }
                     )
                     SettingsSwitchItem(
-                        icon = Icons.Default.Speed,
+                        icon = Icons.Default.PlayArrow,
                         title = "生成速度",
                         subtitle = "每秒输出的 token 数",
                         checked = display.showSpeed,
@@ -109,7 +109,7 @@ fun MessageDisplaySettingsScreen(
                         }
                     )
                     SettingsSwitchItem(
-                        icon = Icons.Default.Timer,
+                        icon = Icons.Default.Refresh,
                         title = "耗时",
                         subtitle = "从发出请求到回复结束",
                         checked = display.showLatency,

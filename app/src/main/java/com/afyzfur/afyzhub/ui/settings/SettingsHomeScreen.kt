@@ -8,13 +8,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Brightness6
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Stream
-import androidx.compose.material.icons.filled.TipsAndUpdates
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -69,14 +69,14 @@ fun SettingsHomeScreen(
 
                 SettingsGroup {
                     SettingsValueItem(
-                        icon = Icons.Default.Brightness6,
+                        icon = Icons.Default.Star,
                         title = "颜色模式",
                         subtitle = "浅色、深色或跟随系统",
                         value = prefs.colorMode.label,
                         onClick = onNavigateToAppearance
                     )
                     SettingsNavItem(
-                        icon = Icons.Default.Palette,
+                        icon = Icons.Default.Favorite,
                         title = "外观",
                         subtitle = "动态取色与配色来源",
                         onClick = onNavigateToAppearance
@@ -87,14 +87,14 @@ fun SettingsHomeScreen(
 
                 SettingsGroup {
                     SettingsNavItem(
-                        icon = Icons.Default.Cloud,
+                        icon = Icons.Default.AccountCircle,
                         title = "提供商",
                         // 副标题直接显示当前配置，省去进入子页面确认
                         subtitle = "${provider.displayName} · $model",
                         onClick = onNavigateToProvider
                     )
                     SettingsNavItem(
-                        icon = Icons.Default.TipsAndUpdates,
+                        icon = Icons.Default.Create,
                         title = "首屏提示词",
                         subtitle = if (prefs.quickPrompts.isEmpty()) {
                             "未设置"
@@ -109,13 +109,13 @@ fun SettingsHomeScreen(
 
                 SettingsGroup {
                     SettingsNavItem(
-                        icon = Icons.Default.Chat,
+                        icon = Icons.Default.Email,
                         title = "消息显示",
                         subtitle = "时间戳、token 用量等元信息",
                         onClick = onNavigateToMessageDisplay
                     )
                     SettingsSwitchItem(
-                        icon = Icons.Default.Stream,
+                        icon = Icons.Default.PlayArrow,
                         title = "流式输出",
                         subtitle = "逐字显示回复，部分中转服务不支持",
                         checked = streamEnabled,
