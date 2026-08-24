@@ -3,25 +3,110 @@
 本项目在 1.0.0 正式版之前均为开发版（`-dev`）。
 版本号格式为 `主版本.次版本.修订号-dev`，遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+按时间正序排列，最新版本在最下方。
+
 ---
 
-## v0.1.4-dev
+## v0.1.0-dev
+
+首个开发预览版，完成基础可用的聊天闭环。
+
+### 新增
+
+- 基于 Kotlin + Jetpack Compose 的聊天界面，遵循 Material Design 3
+- OpenAI Chat Completions 接口集成（非流式）
+- 会话列表与对话历史本地保存（Room）
+- API Key 配置，保存在本机 DataStore
+- Material You 动态主题
+- GitHub Actions 自动构建并发布预发行版
+
+### 技术栈
+
+- Kotlin 2.0.20、AGP 8.7.0、Gradle 8.9
+- Jetpack Compose（BOM 2024.10.00）、Navigation Compose
+- Koin 4.0.0 依赖注入
+- Retrofit 2.11.0 + OkHttp 4.12.0 + kotlinx.serialization
+- Room 2.6.1、DataStore 1.1.1
+- 最低支持 Android 8.0（API 26），目标 API 35
+
+### 已知问题
+
+> 以下问题在 v0.1.1-dev 中修复。
+
+- 对话不携带上下文，每轮提问相互独立
+- 设置中选择的模型不生效
+- API 地址硬编码为官方域名，无法使用中转服务
+- release 构建产物未签名，无法直接安装
+
+---
+
+## v0.1.1-dev
+
+### 新增
+
+- **多轮对话上下文**：请求会携带该会话的历史消息，最多保留最近 20 条以控制 token 消耗
+- **自定义 API 地址**：设置中可填入中转服务地址，通过拦截器在运行时改写请求目标
+- **发送失败重试**：消息新增 `sending` / `success` / `failed` 状态，失败的消息标红并显示
+  失败原因与「重试」按钮
+- **会话自动命名**：首条用户消息的前 20 个字符自动作为会话标题，超长截断并加省略号
+- **APK 签名发布**：发行版改为只提供一个已签名的 `AfyzHub-vX.Y.Z-dev.apk`，可直接安装
+- 项目补充 `.gitignore`，此前缺失，存在误提交 keystore 或构建产物的风险
+- 引入 JUnit 与 kotlinx-coroutines-test，新增 9 个单元测试，CI 在构建前执行
 
 ### 修复
 
-- **模型列表无法获取**：`HttpTransport` 的 `getForText` 与 `postForText` 虽标记为 `suspend`，
-  但内部使用 OkHttp 的阻塞式 `execute()` 且未切换线程，从主线程调用时会抛
-  `NetworkOnMainThreadException`。现已用 `withContext(Dispatchers.IO)` 包裹。
-  同一问题也会导致关闭流式输出后无法发送消息，一并修复（流式路径因已有
-  `flowOn(Dispatchers.IO)` 而未受影响）
-- 新增回归测试，断言两个同步请求方法保持 `suspend` 签名
+- **对话没有上下文**：此前每次请求只发送当前一条用户消息，多轮追问完全失效
+- **设置中选择的模型不生效**：此前请求体的 `model` 硬编码为默认值，用户的选择被忽略
+- **API Key 泄漏到系统日志**：`HttpLoggingInterceptor` 此前固定为 `BODY` 级别，
+  会把 `Authorization` 头和完整对话内容写入 logcat；现在 release 构建下关闭日志
+- **失败消息残留**：此前用户消息先入库，API 调用失败后这条消息会留在界面上且无法重试
+- 修正聊天页标题的错别字「对觞」，应为「对话」
+- 修正 `Constants.kt` 的缩进错乱
 
 ### 变更
 
-- **API Key 改为明文显示**：不再使用密码掩码，便于核对与修改
-- **设置自动保存**：移除「保存设置」按钮，改动在停止输入约 0.6 秒后自动落盘；
-  切换提供商与开关类改动立即保存；点击返回时会先刷盘，避免防抖窗口内的改动丢失
-- 切换提供商前会先保存当前提供商的未落盘改动，切换后立即记录新的当前提供商
+- 新增 `SettingsRepository` 统一管理设置读写，并抽出只读接口 `SettingsProvider`
+  供数据层依赖，便于在 JVM 上测试
+- 拦截器改为从内存中的 `StateFlow` 快照同步读取 API Key，不再每次请求都用
+  `runBlocking` 阻塞网络线程读磁盘
+- 移除 `ChatRepository.sendMessage` 和 `SendMessageUseCase` 中从未被使用的 `apiKey` 参数
+  （鉴权实际由拦截器注入）
+- 模型选择由固定下拉框改为可自由输入，并保留常用模型快捷选项，以支持中转服务的非官方模型
+- 数据库版本从 1 升到 2（消息表新增 `status`、`errorMessage` 字段和会话索引），
+  提供迁移脚本而非破坏性重建，升级时保留历史对话
+- Release 构建启用签名与混淆后体积从 12.87MB 降至约 2.4MB（此前发布的是 debug 包）
+
+### 破坏性变更
+
+- 从 v0.1.0-dev 升级需要先卸载。v0.1.0-dev 的安装包使用 debug 签名，
+  与本版本的正式签名不匹配，系统会拒绝覆盖安装。卸载会清除本地对话数据。
+
+---
+
+## v0.1.2-dev
+
+### 新增
+
+- **流式响应（SSE）**：回复逐字显示，不必等待完整生成
+  - 新增 `ChatStreamSource`，基于 OkHttp 逐行读取 `text/event-stream`
+  - 助手消息先以空占位入库，随增量更新内容，界面通过 Room Flow 自动刷新
+  - 设置中新增「流式输出」开关，默认开启；部分中转服务不支持 SSE 时可关闭退回一次性返回
+
+### 修复
+
+- OkHttp 读超时从 60 秒延长到 5 分钟，此前流式长连接会被提前掐断
+- `AuthInterceptor` 此前只替换协议、主机和端口，若自定义 API 地址带路径前缀
+  （如 `https://relay.example.com/openai/`），该前缀会丢失导致请求失败；现在会正确拼接
+- kotlinx.serialization 的 `encodeDefaults` 此前为 `false`，导致请求体中的 `stream` 字段
+  根本不会被发送，服务端始终按非流式返回
+- 流式传输中断时会删除半截的助手占位消息，只将用户消息标记为失败并保留重试入口，
+  不再留下无意义的残缺回复
+
+### 变更
+
+- `ChatStreamSource` 抽为接口，OkHttp 实现改名 `OkHttpChatStreamSource`，便于替换与测试
+- CI 在测试失败时直接打印失败用例名与断言详情，不必再下载日志压缩包排查
+- 新增 3 个流式相关单元测试（分片拼接、中断清理、开关生效）
 
 ---
 
@@ -87,103 +172,20 @@
 
 ---
 
-## v0.1.2-dev
-
-### 新增
-
-- **流式响应（SSE）**：回复逐字显示，不必等待完整生成
-  - 新增 `ChatStreamSource`，基于 OkHttp 逐行读取 `text/event-stream`
-  - 助手消息先以空占位入库，随增量更新内容，界面通过 Room Flow 自动刷新
-  - 设置中新增「流式输出」开关，默认开启；部分中转服务不支持 SSE 时可关闭退回一次性返回
+## v0.1.4-dev
 
 ### 修复
 
-- OkHttp 读超时从 60 秒延长到 5 分钟，此前流式长连接会被提前掐断
-- `AuthInterceptor` 此前只替换协议、主机和端口，若自定义 API 地址带路径前缀
-  （如 `https://relay.example.com/openai/`），该前缀会丢失导致请求失败；现在会正确拼接
-- kotlinx.serialization 的 `encodeDefaults` 此前为 `false`，导致请求体中的 `stream` 字段
-  根本不会被发送，服务端始终按非流式返回
-- 流式传输中断时会删除半截的助手占位消息，只将用户消息标记为失败并保留重试入口，
-  不再留下无意义的残缺回复
+- **模型列表无法获取**：`HttpTransport` 的 `getForText` 与 `postForText` 虽标记为 `suspend`，
+  但内部使用 OkHttp 的阻塞式 `execute()` 且未切换线程，从主线程调用时会抛
+  `NetworkOnMainThreadException`。现已用 `withContext(Dispatchers.IO)` 包裹。
+  同一问题也会导致关闭流式输出后无法发送消息，一并修复（流式路径因已有
+  `flowOn(Dispatchers.IO)` 而未受影响）
+- 新增回归测试，断言两个同步请求方法保持 `suspend` 签名
 
 ### 变更
 
-- `ChatStreamSource` 抽为接口，OkHttp 实现改名 `OkHttpChatStreamSource`，便于替换与测试
-- CI 在测试失败时直接打印失败用例名与断言详情，不必再下载日志压缩包排查
-- 新增 3 个流式相关单元测试（分片拼接、中断清理、开关生效）
-
----
-
-## v0.1.1-dev
-
-### 新增
-
-- **多轮对话上下文**：请求会携带该会话的历史消息，最多保留最近 20 条以控制 token 消耗
-- **自定义 API 地址**：设置中可填入中转服务地址，通过拦截器在运行时改写请求目标
-- **发送失败重试**：消息新增 `sending` / `success` / `failed` 状态，失败的消息标红并显示
-  失败原因与「重试」按钮
-- **会话自动命名**：首条用户消息的前 20 个字符自动作为会话标题，超长截断并加省略号
-- **APK 签名发布**：发行版改为只提供一个已签名的 `AfyzHub-vX.Y.Z-dev.apk`，可直接安装
-- 项目补充 `.gitignore`，此前缺失，存在误提交 keystore 或构建产物的风险
-- 引入 JUnit 与 kotlinx-coroutines-test，新增 9 个单元测试，CI 在构建前执行
-
-### 修复
-
-- **对话没有上下文**：此前每次请求只发送当前一条用户消息，多轮追问完全失效
-- **设置中选择的模型不生效**：此前请求体的 `model` 硬编码为默认值，用户的选择被忽略
-- **API Key 泄漏到系统日志**：`HttpLoggingInterceptor` 此前固定为 `BODY` 级别，
-  会把 `Authorization` 头和完整对话内容写入 logcat；现在 release 构建下关闭日志
-- **失败消息残留**：此前用户消息先入库，API 调用失败后这条消息会留在界面上且无法重试
-- 修正聊天页标题的错别字「对觞」，应为「对话」
-- 修正 `Constants.kt` 的缩进错乱
-
-### 变更
-
-- 新增 `SettingsRepository` 统一管理设置读写，并抽出只读接口 `SettingsProvider`
-  供数据层依赖，便于在 JVM 上测试
-- 拦截器改为从内存中的 `StateFlow` 快照同步读取 API Key，不再每次请求都用
-  `runBlocking` 阻塞网络线程读磁盘
-- 移除 `ChatRepository.sendMessage` 和 `SendMessageUseCase` 中从未被使用的 `apiKey` 参数
-  （鉴权实际由拦截器注入）
-- 模型选择由固定下拉框改为可自由输入，并保留常用模型快捷选项，以支持中转服务的非官方模型
-- 数据库版本从 1 升到 2（消息表新增 `status`、`errorMessage` 字段和会话索引），
-  提供迁移脚本而非破坏性重建，升级时保留历史对话
-- Release 构建启用签名与混淆后体积从 12.87MB 降至约 2.4MB（此前发布的是 debug 包）
-
-### 破坏性变更
-
-- 从 v0.1.0-dev 升级需要先卸载。v0.1.0-dev 的安装包使用 debug 签名，
-  与本版本的正式签名不匹配，系统会拒绝覆盖安装。卸载会清除本地对话数据。
-
----
-
-## v0.1.0-dev
-
-首个开发预览版，完成基础可用的聊天闭环。
-
-### 新增
-
-- 基于 Kotlin + Jetpack Compose 的聊天界面，遵循 Material Design 3
-- OpenAI Chat Completions 接口集成（非流式）
-- 会话列表与对话历史本地保存（Room）
-- API Key 配置，保存在本机 DataStore
-- Material You 动态主题
-- GitHub Actions 自动构建并发布预发行版
-
-### 技术栈
-
-- Kotlin 2.0.20、AGP 8.7.0、Gradle 8.9
-- Jetpack Compose（BOM 2024.10.00）、Navigation Compose
-- Koin 4.0.0 依赖注入
-- Retrofit 2.11.0 + OkHttp 4.12.0 + kotlinx.serialization
-- Room 2.6.1、DataStore 1.1.1
-- 最低支持 Android 8.0（API 26），目标 API 35
-
-### 已知问题
-
-> 以下问题在 v0.1.1-dev 中修复。
-
-- 对话不携带上下文，每轮提问相互独立
-- 设置中选择的模型不生效
-- API 地址硬编码为官方域名，无法使用中转服务
-- release 构建产物未签名，无法直接安装
+- **API Key 改为明文显示**：不再使用密码掩码，便于核对与修改
+- **设置自动保存**：移除「保存设置」按钮，改动在停止输入约 0.6 秒后自动落盘；
+  切换提供商与开关类改动立即保存；点击返回时会先刷盘，避免防抖窗口内的改动丢失
+- 切换提供商前会先保存当前提供商的未落盘改动，切换后立即记录新的当前提供商

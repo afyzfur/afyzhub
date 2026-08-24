@@ -3,8 +3,17 @@ name: Android CI
 on:
   push:
     branches: [ main ]
+    # 纯文档改动不触发构建，避免重复重建同一版本的 APK。
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
 
 permissions:

@@ -18,9 +18,9 @@
 
 AfyzHub 是一个开源的 Android AI 聊天应用，采用 Kotlin + Jetpack Compose 构建，遵循 Material Design 3 设计规范。
 
-**当前状态**：v0.1.3-dev 开发预览版
+支持 OpenAI、Anthropic Claude 与 Google Gemini 三家服务，各自的密钥与配置独立保存，可随时切换。
 
-各版本的详细变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+**当前状态**：v0.1.4-dev 开发预览版
 
 ---
 
@@ -29,20 +29,22 @@ AfyzHub 是一个开源的 Android AI 聊天应用，采用 Kotlin + Jetpack Com
 ### 已实现
 
 - ✅ 简洁的聊天界面
-- ✅ OpenAI API 集成
+- ✅ 多 AI 提供商：OpenAI、Anthropic Claude、Google Gemini
+- ✅ 各提供商的密钥、模型与地址独立保存，切换互不影响
+- ✅ 模型列表从服务端动态获取并本地缓存，也可手动输入模型名
 - ✅ 对话历史保存
-- ✅ API Key 配置
-- ✅ Material You 动态主题
 - ✅ 多轮对话上下文
 - ✅ 流式响应（SSE，可在设置中关闭）
-- ✅ 自定义 API 地址与模型
-- ✅ 发送失败重试
 - ✅ Markdown 渲染（代码块、列表、标题、链接等）
+- ✅ 自定义 API 地址，支持中转服务
+- ✅ 发送失败重试
+- ✅ 设置自动保存
+- ✅ Material You 动态主题
 
 ### 开发中
 
-- 🚧 多 AI 提供商支持
-- 🚧 对话管理
+- 🚧 对话管理（分组、搜索、导出）
+- 🚧 系统提示词设置
 - 🚧 主题定制
 
 ---
@@ -56,15 +58,18 @@ AfyzHub 是一个开源的 Android AI 聊天应用，采用 Kotlin + Jetpack Com
 ### 使用要求
 
 - Android 8.0 (API 26) 或更高版本
-- 有效的 OpenAI API Key
+- 至少一家服务的 API Key（OpenAI、Claude 或 Gemini）
 
 ### 配置步骤
 
 1. 安装并打开应用
 2. 进入设置页面
-3. 填入 OpenAI API Key
-4. 选择模型（默认：gpt-3.5-turbo）
-5. 返回聊天页面开始对话
+3. 选择服务提供商
+4. 填入对应的 API Key
+5. 点击「获取模型列表」，从结果中选择模型；也可直接输入模型名
+6. 返回聊天页面开始对话
+
+设置会自动保存，无需手动确认。API Key 仅存储在本机。
 
 ---
 
@@ -73,7 +78,8 @@ AfyzHub 是一个开源的 Android AI 聊天应用，采用 Kotlin + Jetpack Com
 - **Kotlin** 2.0.20
 - **Jetpack Compose** - 声明式 UI 框架
 - **Koin** - 依赖注入
-- **Retrofit + OkHttp** - 网络请求
+- **OkHttp** - 网络请求与 SSE 流式读取
+- **Kotlin Serialization** - JSON 序列化
 - **Room** - 本地数据库
 - **DataStore** - 配置存储
 
@@ -81,18 +87,19 @@ AfyzHub 是一个开源的 Android AI 聊天应用，采用 Kotlin + Jetpack Com
 
 ## 🗺 开发计划
 
-### 阶段一：MVP（当前）
+### 阶段一：MVP
 
 - [x] 基础聊天功能
 - [x] OpenAI API 集成
 - [x] 对话历史保存
-- [ ] Markdown 渲染
-- [ ] 流式响应
+- [x] 流式响应
+- [x] Markdown 渲染
 
 ### 阶段二：功能扩展
 
-- [ ] 多 AI 提供商（Claude、Gemini 等）
+- [x] 多 AI 提供商（Claude、Gemini）
 - [ ] 对话管理（分组、搜索、导出）
+- [ ] 系统提示词设置
 - [ ] 图片上传
 - [ ] 语音输入
 
@@ -125,6 +132,36 @@ APK 位于 `app/build/outputs/apk/` 目录。
 
 ---
 
+## 📝 更新日志
+
+1.0.0 正式版之前的所有版本均为开发版，带 `-dev` 后缀并以预发行版形式发布。
+完整记录见 [CHANGELOG.md](CHANGELOG.md)。
+
+### v0.1.4-dev
+
+修复模型列表无法获取的问题，根因是同步请求未切换到 IO 线程。
+API Key 改为明文显示，设置改为自动保存。
+
+### v0.1.3-dev
+
+新增多 AI 提供商支持，可在 OpenAI、Claude、Gemini 之间切换，三家的密钥与配置独立保存。
+模型列表改为从服务端动态获取并缓存。网络层由 Retrofit 换成 OkHttp 直接构造请求。更换应用图标。
+
+### v0.1.2-dev
+
+实现 SSE 流式响应，回复逐字显示，可在设置中关闭。
+
+### v0.1.1-dev
+
+修复多轮上下文丢失、模型设置不生效、API 地址写死等问题。
+新增失败重试、会话自动命名，并改用正式签名发布。
+
+### v0.1.0-dev
+
+首个开发预览版，完成基础聊天闭环。
+
+---
+
 ## 📄 开源协议
 
 本项目采用 [Apache License 2.0](LICENSE) 协议开源。
@@ -134,4 +171,3 @@ APK 位于 `app/build/outputs/apk/` 目录。
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
-
