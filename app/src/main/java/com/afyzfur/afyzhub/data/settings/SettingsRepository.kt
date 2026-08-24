@@ -63,6 +63,10 @@ class SettingsRepository(
     private val backgroundPathKey = stringPreferencesKey(Constants.KEY_BACKGROUND_PATH)
     private val backgroundDimKey = floatPreferencesKey(Constants.KEY_BACKGROUND_DIM)
     private val imageVersionKey = longPreferencesKey(Constants.KEY_IMAGE_VERSION)
+    private val transparentTopBarKey =
+        booleanPreferencesKey(Constants.KEY_TRANSPARENT_TOP_BAR)
+    private val transparentInputBarKey =
+        booleanPreferencesKey(Constants.KEY_TRANSPARENT_INPUT_BAR)
 
     private fun apiKeyKey(p: AiProvider) =
         stringPreferencesKey("${Constants.KEY_PREFIX_API_KEY}_${p.id}")
@@ -125,6 +129,8 @@ class SettingsRepository(
                 backgroundMode = ChatBackgroundMode.fromId(prefs[backgroundModeKey]),
                 backgroundPath = prefs[backgroundPathKey]?.takeIf { it.isNotBlank() },
                 backgroundDim = prefs[backgroundDimKey] ?: 0.35f,
+                transparentTopBar = prefs[transparentTopBarKey] ?: true,
+                transparentInputBar = prefs[transparentInputBarKey] ?: false,
                 imageVersion = prefs[imageVersionKey] ?: 0L
             )
         )
@@ -195,6 +201,14 @@ class SettingsRepository(
 
     suspend fun setBackgroundDim(value: Float) {
         dataStore.edit { it[backgroundDimKey] = value.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setTransparentTopBar(enabled: Boolean) {
+        dataStore.edit { it[transparentTopBarKey] = enabled }
+    }
+
+    suspend fun setTransparentInputBar(enabled: Boolean) {
+        dataStore.edit { it[transparentInputBarKey] = enabled }
     }
 
     /**

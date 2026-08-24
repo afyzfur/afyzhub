@@ -1,22 +1,51 @@
 package com.afyzfur.afyzhub.ui.settings
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.AiProvider
+import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 /**
  * 提供商配置子页面。
  *
- * 由改版前的单页设置整体转化而来——那时它就是整个设置页，现在成为
- * 「模型与服务 → 提供商」下的一个子页面。内容与交互逻辑未改动，
- * 只替换了页面头部并套用新的分组容器。
+ * 改版说明：此前这页是从旧版单页设置整体搬来的，仍在用 OutlinedTextField
+ * 与 HorizontalDivider——描边输入框加分割线是 Material 2 的语言，
+ * 与其他设置页的「分类标题 + 圆角分组容器」不一致。现已统一。
+ *
+ * 交互逻辑未改：改动仍由 SettingsViewModel 防抖后自动落盘，
+ * 返回时先刷盘。
  */
 @Composable
 fun ProviderSettingsScreen(
@@ -33,6 +62,13 @@ fun ProviderSettingsScreen(
     val modelsError by viewModel.modelsError.collectAsState()
     val saveSuccess by viewModel.saveSuccess.collectAsState()
 
+    if (saveSuccess) {
+        LaunchedEffect(saveSuccess) {
+            delay(2000)
+            viewModel.clearSaveSuccess()
+        }
+    }
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxSize()
@@ -45,7 +81,7 @@ fun ProviderSettingsScreen(
             SettingsPageHeader(
                 title = "提供商",
                 onNavigateBack = {
-                    // 防抖窗口内可能还有未落盘的改动，先刷盘再返回。
+                    // 防抖窗口内可能还有未落盘的改动，先刷盘再返回
                     viewModel.flushPendingChanges()
                     onNavigateBack()
                 }
@@ -55,179 +91,212 @@ fun ProviderSettingsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-            Text(
-                text = "服务提供商",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            ProviderSelector(
-                current = provider,
-                onSelect = viewModel::selectProvider
-            )
-
-            Text(
-                text = "各提供商的 Key、地址和模型分别保存，切换时不会互相覆盖。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            HorizontalDivider()
-
-            Text(
-                text = "接口配置",
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            // 明文显示：便于核对与修改，Key 只存在本机。
-            OutlinedTextField(
-                value = apiKey,
-                onValueChange = viewModel::updateApiKey,
-                label = { Text("API Key") },
-                placeholder = { Text(apiKeyPlaceholder(provider)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            OutlinedTextField(
-                value = baseUrl,
-                onValueChange = viewModel::updateBaseUrl,
-                label = { Text("API 地址") },
-                placeholder = { Text(provider.defaultBaseUrl) },
-                supportingText = { Text("使用中转服务时填入对应地址") },
-                trailingIcon = {
-                    TextButton(onClick = viewModel::resetBaseUrl) {
-                        Text("默认")
+                SettingsCategoryTitle("服务提供商")
+                SettingsGroup {
+                    AiProvider.entries.forEach { entry ->
+                        SettingsRadioItem(
+                            title = entry.displayName,
+                            selected = entry == provider,
+                            onClick = { viewModel.selectProvider(entry) }
+                        )
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Text(
-                text = "模型",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            // 允许直接输入模型名，以支持中转服务提供的非官方模型。
-            OutlinedTextField(
-                value = selectedModel,
-                onValueChange = viewModel::updateModel,
-                label = { Text("模型名称") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = viewModel::refreshModels,
-                    enabled = !loadingModels
-                ) {
-                    Text(if (availableModels.isEmpty()) "获取模型列表" else "刷新列表")
                 }
-                if (loadingModels) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                }
-            }
 
-            modelsError?.let { message ->
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    text = message,
+                    text = "各提供商的 Key、地址与模型分别保存，切换时不会互相覆盖。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 28.dp)
                 )
-            }
 
-            // 列表直接平铺在此处并持久缓存，避免离开页面后需要重新获取。
-            if (availableModels.isNotEmpty()) {
+                SettingsCategoryTitle("接口配置")
+                SettingsGroup {
+                    // 明文显示：便于核对与修改，Key 只存在本机
+                    SettingsTextFieldItem(
+                        title = "API Key",
+                        value = apiKey,
+                        onValueChange = viewModel::updateApiKey,
+                        placeholder = apiKeyPlaceholder(provider)
+                    )
+                    SettingsTextFieldItem(
+                        title = "API 地址",
+                        value = baseUrl,
+                        onValueChange = viewModel::updateBaseUrl,
+                        placeholder = provider.defaultBaseUrl,
+                        subtitle = "使用中转服务时填入对应地址",
+                        trailing = {
+                            TextButton(onClick = viewModel::resetBaseUrl) {
+                                Text("恢复默认")
+                            }
+                        }
+                    )
+                }
+
+                SettingsCategoryTitle("模型")
+                SettingsGroup {
+                    // 允许直接输入模型名，以支持中转服务提供的非官方模型
+                    SettingsTextFieldItem(
+                        title = "模型名称",
+                        value = selectedModel,
+                        onValueChange = viewModel::updateModel,
+                        placeholder = "留空则使用提供商默认模型"
+                    )
+
+                    ModelRefreshRow(
+                        loading = loadingModels,
+                        hasModels = availableModels.isNotEmpty(),
+                        onRefresh = viewModel::refreshModels
+                    )
+
+                    modelsError?.let { message ->
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+
+                // 列表平铺在此处并持久缓存，避免离开页面后需要重新获取
+                if (availableModels.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    SettingsGroup {
+                        Text(
+                            text = "可用模型（${availableModels.size}）",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(
+                                start = 20.dp,
+                                end = 20.dp,
+                                top = 12.dp
+                            )
+                        )
+                        ModelChips(
+                            models = availableModels,
+                            selected = selectedModel,
+                            onSelect = viewModel::updateModel
+                        )
+                    }
+                }
+
+                SettingsCategoryTitle("请求")
+                SettingsGroup {
+                    SettingsSwitchItem(
+                        icon = Icons.Default.Refresh,
+                        title = "流式输出",
+                        subtitle = "逐字显示回复。部分中转服务不支持，可关闭后重试",
+                        checked = streamEnabled,
+                        onCheckedChange = viewModel::updateStreamEnabled
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "可用模型（${availableModels.size}）",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = if (saveSuccess) {
+                        "设置已保存"
+                    } else {
+                        "改动会自动保存。API Key 仅存在本机，不会上传到第三方。"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (saveSuccess) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.padding(horizontal = 28.dp)
                 )
-                FlowRowModels(
-                    models = availableModels,
-                    selected = selectedModel,
-                    onSelect = viewModel::updateModel
-                )
-            }
 
-            HorizontalDivider()
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "流式输出",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "逐字显示回复。部分中转服务不支持，可关闭后重试。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = streamEnabled,
-                    onCheckedChange = viewModel::updateStreamEnabled
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 设置改动自动保存，不再需要手动确认。
-            Text(
-                text = if (saveSuccess) "设置已自动保存" else "改动会自动保存",
-                style = MaterialTheme.typography.bodySmall,
-                color = if (saveSuccess) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
-
-            if (saveSuccess) {
-                LaunchedEffect(saveSuccess) {
-                    kotlinx.coroutines.delay(2000)
-                    viewModel.clearSaveSuccess()
-                }
-            }
-
-            Text(
-                text = "API Key 仅保存在本机，不会上传到任何第三方服务器。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
 }
 
+/** 刷新模型列表的操作行，加载中时显示进度指示 */
+@Composable
+private fun ModelRefreshRow(
+    loading: Boolean,
+    hasModels: Boolean,
+    onRefresh: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !loading, onClick = onRefresh)
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Refresh,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.size(12.dp))
+        Text(
+            text = if (hasModels) "刷新模型列表" else "从服务端获取模型列表",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+        if (loading) {
+            CircularProgressIndicator(
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/**
+ * 可用模型的选择 chip。
+ *
+ * 不用 FilterChip：它自带描边与选中态图标，在数百个模型的列表里
+ * 视觉噪音过大。改用与首屏提示词一致的实心胶囊。
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ProviderSelector(
-    current: AiProvider,
-    onSelect: (AiProvider) -> Unit
+private fun ModelChips(
+    models: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit
 ) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
-        AiProvider.entries.forEach { provider ->
-            FilterChip(
-                selected = provider == current,
-                onClick = { onSelect(provider) },
-                label = { Text(provider.displayName) }
-            )
+        models.forEach { model ->
+            val isSelected = model == selected
+            Surface(
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                },
+                shape = AppShapeTokens.Pill,
+                modifier = Modifier.clickable { onSelect(model) }
+            ) {
+                Text(
+                    text = model,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .heightIn(min = 32.dp)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                )
+            }
         }
     }
 }
@@ -237,25 +306,4 @@ private fun apiKeyPlaceholder(provider: AiProvider): String = when (provider) {
     AiProvider.OPENAI -> "sk-..."
     AiProvider.ANTHROPIC -> "sk-ant-..."
     AiProvider.GEMINI -> "AIza..."
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun FlowRowModels(
-    models: List<String>,
-    selected: String,
-    onSelect: (String) -> Unit
-) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        models.forEach { model ->
-            FilterChip(
-                selected = model == selected,
-                onClick = { onSelect(model) },
-                label = { Text(model) }
-            )
-        }
-    }
 }

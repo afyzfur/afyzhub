@@ -50,6 +50,9 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 
 # Image Loading
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+# SVG 解码器。厂商图标用 SVG 而非位图：同一图标要在 24dp 与 32dp
+# 两种尺寸下显示，矢量避免为每个尺寸准备一份位图
+coil-svg = { group = "io.coil-kt", name = "coil-svg", version.ref = "coil" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

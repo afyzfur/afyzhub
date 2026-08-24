@@ -28,7 +28,8 @@ import com.afyzfur.afyzhub.BuildConfig
  */
 @Composable
 fun AboutSettingsScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToChangelog: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -76,8 +77,8 @@ fun AboutSettingsScreen(
                     SettingsNavItem(
                         icon = Icons.Default.List,
                         title = "更新日志",
-                        subtitle = "查看各版本的变更内容",
-                        onClick = { openUrl(CHANGELOG_URL) }
+                        subtitle = "在应用内查看各版本的变更内容",
+                        onClick = onNavigateToChangelog
                     )
                 }
 
@@ -98,5 +99,3 @@ fun AboutSettingsScreen(
 }
 
 private const val REPO_URL = "https://github.com/afyzfur/afyzhub"
-private const val CHANGELOG_URL =
-    "https://github.com/afyzfur/afyzhub/blob/main/CHANGELOG.md"

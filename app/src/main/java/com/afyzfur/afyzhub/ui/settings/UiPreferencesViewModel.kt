@@ -81,6 +81,14 @@ class UiPreferencesViewModel(
         viewModelScope.launch { repository.setBackgroundDim(value) }
     }
 
+    fun setTransparentTopBar(enabled: Boolean) {
+        viewModelScope.launch { repository.setTransparentTopBar(enabled) }
+    }
+
+    fun setTransparentInputBar(enabled: Boolean) {
+        viewModelScope.launch { repository.setTransparentInputBar(enabled) }
+    }
+
     /**
      * 图片保存失败的原因，供界面提示。
      *

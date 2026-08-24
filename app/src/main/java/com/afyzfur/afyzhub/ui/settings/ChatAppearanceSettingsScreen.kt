@@ -20,6 +20,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -211,6 +213,26 @@ fun ChatAppearanceSettingsScreen(
                             onChange = viewModel::setBackgroundDim
                         )
                     }
+                }
+
+                // 透明度开关独立成组：即使没有背景图也可能想让顶栏
+                // 与页面背景融为一体，因此不限定在有图时才显示
+                SettingsCategoryTitle("栏目透明度")
+                SettingsGroup {
+                    SettingsSwitchItem(
+                        icon = Icons.Default.KeyboardArrowUp,
+                        title = "顶栏透明",
+                        subtitle = "关闭后顶栏铺主题色，会遮住背景图上部",
+                        checked = appearance.transparentTopBar,
+                        onCheckedChange = viewModel::setTransparentTopBar
+                    )
+                    SettingsSwitchItem(
+                        icon = Icons.Default.KeyboardArrowDown,
+                        title = "输入栏透明",
+                        subtitle = "开启后背景图会透上来，可能影响输入文字的可读性",
+                        checked = appearance.transparentInputBar,
+                        onCheckedChange = viewModel::setTransparentInputBar
+                    )
                 }
 
                 Spacer(Modifier.height(24.dp))

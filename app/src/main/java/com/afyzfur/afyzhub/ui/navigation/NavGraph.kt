@@ -7,6 +7,7 @@ import androidx.navigation.compose.rememberNavController
 import com.afyzfur.afyzhub.ui.chat.ChatScreen
 import com.afyzfur.afyzhub.ui.settings.AboutSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.AppearanceSettingsScreen
+import com.afyzfur.afyzhub.ui.settings.ChangelogScreen
 import com.afyzfur.afyzhub.ui.settings.ChatAppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ProviderSettingsScreen
@@ -33,6 +34,7 @@ sealed class Screen(val route: String) {
     object QuickPromptsSettings : Screen("settings/quick_prompts")
     object RequestLog : Screen("settings/request_log")
     object AboutSettings : Screen("settings/about")
+    object Changelog : Screen("settings/changelog")
 }
 
 @Composable
@@ -47,6 +49,9 @@ fun NavGraph() {
             ChatScreen(
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToProvider = {
+                    navController.navigate(Screen.ProviderSettings.route)
                 }
             )
         }
@@ -101,7 +106,15 @@ fun NavGraph() {
             RequestLogScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(Screen.AboutSettings.route) {
-            AboutSettingsScreen(onNavigateBack = { navController.popBackStack() })
+            AboutSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToChangelog = {
+                    navController.navigate(Screen.Changelog.route)
+                }
+            )
+        }
+        composable(Screen.Changelog.route) {
+            ChangelogScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

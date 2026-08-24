@@ -29,6 +29,7 @@ import com.afyzfur.afyzhub.data.settings.ChatAppearance
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.ui.components.LocalImage
+import com.afyzfur.afyzhub.ui.components.ModelIcon
 import com.afyzfur.afyzhub.ui.components.MarkdownText
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
@@ -63,7 +64,8 @@ fun MessageBlock(
             MessageAvatar(
                 appearance = appearance,
                 fromUser = false,
-                providerLabel = providerLabel
+                providerLabel = providerLabel,
+                modelName = message.model
             )
             Spacer(Modifier.size(8.dp))
         }
@@ -98,7 +100,8 @@ fun MessageBlock(
             MessageAvatar(
                 appearance = appearance,
                 fromUser = true,
-                providerLabel = providerLabel
+                providerLabel = providerLabel,
+                modelName = message.model
             )
         }
     }
@@ -183,7 +186,9 @@ private fun MessageBody(
 private fun MessageAvatar(
     appearance: ChatAppearance,
     fromUser: Boolean,
-    providerLabel: String
+    providerLabel: String,
+    /** 该条消息使用的模型名，用于匹配厂商图标；v3 之前的消息为 null */
+    modelName: String?
 ) {
     val path = if (fromUser) appearance.userAvatarPath else appearance.assistantAvatarPath
     val useCustom = appearance.avatarMode == AvatarMode.CUSTOM && !path.isNullOrBlank()
@@ -220,12 +225,12 @@ private fun MessageAvatar(
                             modifier = Modifier.size(18.dp)
                         )
                     } else {
-                        // 助手用提供商首字母：三家的图标没有内置矢量资源，
-                        // 首字母比通用图标更能区分当前用的是哪家
-                        Text(
-                            text = providerLabel.take(1).uppercase(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        // 优先用消息自身记录的模型名——历史消息可能来自
+                        // 与当前配置不同的模型。缺失时退回提供商名，
+                        // 两者都匹配不到时 ModelIcon 内部会显示首字母
+                        ModelIcon(
+                            modelName = modelName ?: providerLabel,
+                            size = 24.dp
                         )
                     }
                 }

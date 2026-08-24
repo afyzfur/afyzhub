@@ -132,6 +132,19 @@ data class ChatAppearance(
      */
     val backgroundDim: Float = 0.35f,
     /**
+     * 顶栏是否透明，仅在有背景图时有意义。
+     *
+     * 默认透明：顶栏本就没有独立内容，铺色会把背景图切掉一条。
+     */
+    val transparentTopBar: Boolean = true,
+    /**
+     * 输入栏是否透明。
+     *
+     * 默认不透明：输入栏承载文本输入，背景图透上来会明显影响
+     * 输入内容与占位文字的可读性。想要通透观感的用户可以打开。
+     */
+    val transparentInputBar: Boolean = false,
+    /**
      * 图片内容的版本号，每次保存图片递增。
      *
      * ImageStore 用固定文件名保存，换图后路径不变，渲染层无法从路径

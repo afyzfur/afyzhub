@@ -14,8 +14,8 @@ android {
         applicationId = "com.afyzhub.chat"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.2.4-dev"
+        versionCode = 12
+        versionName = "0.2.5-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -109,8 +109,24 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
 
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+}
+
+/**
+ * 把仓库根目录的 CHANGELOG.md 复制进 assets，供应用内的更新日志页读取。
+ *
+ * 用构建任务而非手工复制：手工维护两份必然会漏，届时应用内显示的
+ * 是过期内容，而这类错误不会被编译或测试发现。
+ */
+val syncChangelog by tasks.registering(Copy::class) {
+    from(rootProject.file("CHANGELOG.md"))
+    into(layout.projectDirectory.dir("src/main/assets"))
+}
+
+tasks.named("preBuild") {
+    dependsOn(syncChangelog)
 }

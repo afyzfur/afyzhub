@@ -46,12 +46,19 @@ fun ChatInputBar(
     onSend: () -> Unit,
     providerLabel: String,
     isLoading: Boolean,
+    transparent: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val canSend = value.isNotBlank() && !isLoading
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        // 透明时仍留一层极淡的底色而非全透：完全透明会让光标与
+        // 占位文字直接压在背景图上，几乎无法辨认边界
+        color = if (transparent) {
+            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        },
         shape = AppShapeTokens.InputContainer,
         modifier = modifier.fillMaxWidth()
     ) {

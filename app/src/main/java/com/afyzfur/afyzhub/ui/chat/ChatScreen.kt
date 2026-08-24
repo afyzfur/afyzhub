@@ -38,6 +38,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun ChatScreen(
     onNavigateToSettings: () -> Unit,
+    onNavigateToProvider: () -> Unit,
     hostViewModel: ChatHostViewModel = koinViewModel(),
     viewModel: ChatViewModel = koinViewModel()
 ) {
@@ -98,6 +99,10 @@ fun ChatScreen(
                     onSettingsClick = {
                         scope.launch { drawerState.close() }
                         onNavigateToSettings()
+                    },
+                    onModelClick = {
+                        scope.launch { drawerState.close() }
+                        onNavigateToProvider()
                     }
                 )
             }
@@ -207,7 +212,13 @@ private fun ChatContent(
             topBar = {
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
+                        // 顶栏透明由设置决定：铺色会在背景图上方切出一条色带，
+                    // 但不透明时文字对比度更稳定，取舍交给用户
+                    containerColor = if (appearance.transparentTopBar) {
+                        Color.Transparent
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    }
                     ),
                     title = {
                         Column {
@@ -310,6 +321,7 @@ private fun ChatContent(
                 }
 
                 ChatInputBar(
+                    transparent = appearance.transparentInputBar,
                     value = inputText,
                     onValueChange = onInputChange,
                     onSend = onSend,

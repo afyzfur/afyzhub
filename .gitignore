@@ -15,3 +15,7 @@ local.properties
 *.keystore
 keystore.properties
 signing.properties
+
+# CHANGELOG 的 assets 副本由构建任务 syncChangelog 生成，
+# 源文件在仓库根目录，无需提交副本
+/app/src/main/assets/CHANGELOG.md

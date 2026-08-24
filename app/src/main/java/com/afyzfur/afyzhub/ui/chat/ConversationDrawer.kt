@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.ConversationItem
+import com.afyzfur.afyzhub.ui.components.ModelIcon
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
 /**
@@ -54,6 +55,7 @@ fun ConversationDrawer(
     onNewConversation: () -> Unit,
     onDeleteConversation: (Long) -> Unit,
     onSettingsClick: () -> Unit,
+    onModelClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 分组结果随列表变化重算，不必每次重组都做
@@ -114,12 +116,14 @@ fun ConversationDrawer(
         Spacer(Modifier.height(8.dp))
 
         // 底部两行，均带文字标签。参考对象用五个无标签圆形图标，可发现性差
+        // 点模型直接进提供商配置：模型与 Key 是最常改动的项，
+        // 经设置首页多绕一层没有必要
         DrawerActionRow(
             text = modelLabel,
-            onClick = onSettingsClick,
+            onClick = onModelClick,
             leading = {
-                // 助手体系落地前先用首字母占位，避免引入无意义的通用图标
-                AssistantAvatar(label = modelLabel)
+                // 按模型名匹配厂商图标，匹配不到时 ModelIcon 内部退回首字母
+                ModelIcon(modelName = modelLabel)
             }
         )
 
@@ -138,26 +142,6 @@ fun ConversationDrawer(
         Spacer(Modifier.height(16.dp))
     }
 }
-
-/** 助手标识占位：取模型名首字母，圆形底色 */
-@Composable
-private fun AssistantAvatar(label: String) {
-    Row(
-        modifier = Modifier
-            .size(24.dp)
-            .clip(AppShapeTokens.CircleButton)
-            .background(MaterialTheme.colorScheme.primaryContainer),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label.take(1).uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
-        )
-    }
-}
-
 /** 抽屉内的操作行 */
 @Composable
 private fun DrawerActionRow(
