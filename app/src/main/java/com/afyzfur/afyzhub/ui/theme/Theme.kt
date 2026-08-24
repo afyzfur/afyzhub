@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -22,7 +23,7 @@ import androidx.core.view.WindowCompat
  * 旧版本仅指定了 primary / secondary / tertiary 三项，其余全部由 M3 默认值填充，
  * 因此 surface 层次实际不可用。
  */
-private val LightColors = lightColorScheme(
+internal val LightColors = lightColorScheme(
     primary = LightPrimary,
     onPrimary = LightOnPrimary,
     primaryContainer = LightPrimaryContainer,
@@ -59,7 +60,7 @@ private val LightColors = lightColorScheme(
 )
 
 /** 静态深色配色。背景为暖调深灰而非纯黑，见 Color.kt 说明 */
-private val DarkColors = darkColorScheme(
+internal val DarkColors = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
     primaryContainer = DarkPrimaryContainer,
@@ -111,15 +112,19 @@ private val DarkColors = darkColorScheme(
 fun AfyzHubTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
+    palette: ThemePalette = ThemePalette.DEFAULT,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val context = LocalContext.current
+    val colorScheme = remember(darkTheme, dynamicColor, palette, context) {
+        when {
+            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                if (darkTheme) dynamicDarkColorScheme(context)
+                else dynamicLightColorScheme(context)
+
+            darkTheme -> palette.dark()
+            else -> palette.light()
         }
-        darkTheme -> DarkColors
-        else -> LightColors
     }
 
     // 状态栏与导航栏交由内容延伸绘制，图标明暗跟随主题。

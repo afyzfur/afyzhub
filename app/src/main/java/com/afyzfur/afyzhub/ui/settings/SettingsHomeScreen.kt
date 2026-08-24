@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
@@ -39,6 +40,7 @@ fun SettingsHomeScreen(
     onNavigateBack: () -> Unit,
     onNavigateToProvider: () -> Unit,
     onNavigateToAppearance: () -> Unit,
+    onNavigateToChatAppearance: () -> Unit,
     onNavigateToMessageDisplay: () -> Unit,
     onNavigateToQuickPrompts: () -> Unit,
     onNavigateToRequestLog: () -> Unit,
@@ -110,6 +112,12 @@ fun SettingsHomeScreen(
                 SettingsCategoryTitle("对话")
 
                 SettingsGroup {
+                    SettingsNavItem(
+                        icon = Icons.Default.Face,
+                        title = "聊天外观",
+                        subtitle = "气泡样式、头像与背景",
+                        onClick = onNavigateToChatAppearance
+                    )
                     SettingsNavItem(
                         icon = Icons.Default.Email,
                         title = "消息显示",

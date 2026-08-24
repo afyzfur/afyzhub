@@ -1,5 +1,73 @@
 package com.afyzfur.afyzhub.data.settings
 
+import com.afyzfur.afyzhub.ui.theme.ThemePalette
+
+/**
+ * 消息的呈现形态。
+ *
+ * 改版初期助手消息一律无容器、用户消息一律有气泡，靠不对称区分双方。
+ * 但这个不对称本身会让人觉得两边"不是一套东西"，是否接受因人而异，
+ * 因此改为两边各自可选。
+ */
+enum class BubbleStyle(val id: String, val label: String) {
+    /** 有底色容器，宽度随内容 */
+    BUBBLE("bubble", "气泡"),
+
+    /**
+     * 无容器，占满可用宽度。
+     *
+     * 助手消息用这个的好处是代码块与表格能获得完整宽度；
+     * 代价是与用户消息的区分只剩对齐方向。
+     */
+    PLAIN("plain", "无气泡");
+
+    companion object {
+        fun fromId(id: String?, default: BubbleStyle): BubbleStyle =
+            entries.firstOrNull { it.id == id } ?: default
+    }
+}
+
+/**
+ * 头像显示方式。
+ *
+ * 不做「自动获取模型 logo」：各提供商没有稳定的公开 logo 地址，
+ * 网络拉取既不可靠也会引入额外请求与缓存问题。内置图标按提供商区分，
+ * 用户也可以自选图片。
+ */
+enum class AvatarMode(val id: String, val label: String) {
+    /** 不显示头像，靠对齐与容器区分双方 */
+    NONE("none", "不显示"),
+
+    /** 内置图标：助手按当前提供商取标识，用户用通用人形图标 */
+    BUILTIN("builtin", "内置图标"),
+
+    /** 用户自选图片，未设置时回落到内置图标 */
+    CUSTOM("custom", "自定义图片");
+
+    companion object {
+        val DEFAULT = NONE
+
+        fun fromId(id: String?): AvatarMode =
+            entries.firstOrNull { it.id == id } ?: DEFAULT
+    }
+}
+
+/** 聊天背景的显示方式。 */
+enum class ChatBackgroundMode(val id: String, val label: String) {
+    /** 纯色，取主题的 surfaceContainer */
+    NONE("none", "跟随主题"),
+
+    /** 用户自选图片 */
+    IMAGE("image", "自定义图片");
+
+    companion object {
+        val DEFAULT = NONE
+
+        fun fromId(id: String?): ChatBackgroundMode =
+            entries.firstOrNull { it.id == id } ?: DEFAULT
+    }
+}
+
 /** 颜色模式。 */
 enum class ColorMode(val id: String, val label: String) {
     SYSTEM("system", "跟随系统"),
@@ -38,14 +106,64 @@ data class MessageDisplayOptions(
 }
 
 /**
+ * 聊天界面的外观设置。
+ *
+ * 单独成组而非平铺进 [UiPreferences]：这几项只影响消息列表的渲染，
+ * 由聊天页整体接收，避免为每项单独穿参。
+ */
+data class ChatAppearance(
+    /** 用户消息默认有气泡，符合即时通讯的普遍预期 */
+    val userBubble: BubbleStyle = BubbleStyle.BUBBLE,
+    /** 助手消息默认无气泡，使代码块与表格能用满宽度 */
+    val assistantBubble: BubbleStyle = BubbleStyle.PLAIN,
+    val avatarMode: AvatarMode = AvatarMode.DEFAULT,
+    /** 自定义用户头像的本地文件路径，未设置为 null */
+    val userAvatarPath: String? = null,
+    /** 自定义助手头像的本地文件路径，未设置为 null */
+    val assistantAvatarPath: String? = null,
+    val backgroundMode: ChatBackgroundMode = ChatBackgroundMode.DEFAULT,
+    /** 背景图的本地文件路径 */
+    val backgroundPath: String? = null,
+    /**
+     * 背景图暗化程度（0..1）。
+     *
+     * 背景图会削弱文字对比度，尤其浅色图配深色文字。
+     * 叠一层可调的遮罩比要求用户自己处理图片实际。
+     */
+    val backgroundDim: Float = 0.35f,
+    /**
+     * 图片内容的版本号，每次保存图片递增。
+     *
+     * ImageStore 用固定文件名保存，换图后路径不变，渲染层无法从路径
+     * 判断内容已更新。这个值参与图片解码的缓存 key，使换图后能立即刷新。
+     */
+    val imageVersion: Long = 0L
+) {
+    /** 是否需要渲染背景图层 */
+    val hasBackgroundImage: Boolean
+        get() = backgroundMode == ChatBackgroundMode.IMAGE && !backgroundPath.isNullOrBlank()
+
+    /** 是否需要为消息预留头像位 */
+    val showAvatars: Boolean get() = avatarMode != AvatarMode.NONE
+}
+
+/**
  * 界面偏好。与 [AppSettings] 分开：后者是"以什么配置发请求"，
  * 这里是"界面怎么显示"，两者的读取方与变更频率都不同。
  */
 data class UiPreferences(
     val colorMode: ColorMode = ColorMode.DEFAULT,
-    /** Android 12+ 生效，取系统壁纸配色 */
+    /**
+     * Android 12+ 生效，取系统壁纸配色。
+     *
+     * 开启时 [palette] 不生效——动态取色的整套色板来自壁纸，
+     * 无法与预设配色叠加。
+     */
     val dynamicColor: Boolean = true,
+    /** 关闭动态取色时使用的预设配色 */
+    val palette: ThemePalette = ThemePalette.DEFAULT,
     val messageDisplay: MessageDisplayOptions = MessageDisplayOptions(),
+    val chatAppearance: ChatAppearance = ChatAppearance(),
     /** 空会话首屏的提示词候选池 */
     val quickPrompts: List<String> = DefaultQuickPrompts,
     /**

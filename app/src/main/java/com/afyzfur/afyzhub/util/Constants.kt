@@ -31,6 +31,20 @@ object Constants {
     const val KEY_QUICK_PROMPTS = "quick_prompts"
     const val KEY_SHUFFLE_PROMPTS = "shuffle_prompts"
 
+    /** 预设配色，动态取色关闭时生效 */
+    const val KEY_PALETTE = "theme_palette"
+
+    // 聊天外观
+    const val KEY_USER_BUBBLE = "user_bubble_style"
+    const val KEY_ASSISTANT_BUBBLE = "assistant_bubble_style"
+    const val KEY_AVATAR_MODE = "avatar_mode"
+    const val KEY_USER_AVATAR_PATH = "user_avatar_path"
+    const val KEY_ASSISTANT_AVATAR_PATH = "assistant_avatar_path"
+    const val KEY_BACKGROUND_MODE = "chat_background_mode"
+    const val KEY_BACKGROUND_PATH = "chat_background_path"
+    const val KEY_BACKGROUND_DIM = "chat_background_dim"
+    const val KEY_IMAGE_VERSION = "chat_image_version"
+
     /**
      * 以下三项按提供商分别存储，键名格式为 `前缀_提供商id`。
      * 切换提供商时不会互相覆盖凭证与地址。

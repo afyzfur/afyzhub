@@ -7,6 +7,7 @@ import androidx.navigation.compose.rememberNavController
 import com.afyzfur.afyzhub.ui.chat.ChatScreen
 import com.afyzfur.afyzhub.ui.settings.AboutSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.AppearanceSettingsScreen
+import com.afyzfur.afyzhub.ui.settings.ChatAppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ProviderSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.QuickPromptsSettingsScreen
@@ -27,6 +28,7 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object ProviderSettings : Screen("settings/provider")
     object AppearanceSettings : Screen("settings/appearance")
+    object ChatAppearanceSettings : Screen("settings/chat_appearance")
     object MessageDisplaySettings : Screen("settings/message_display")
     object QuickPromptsSettings : Screen("settings/quick_prompts")
     object RequestLog : Screen("settings/request_log")
@@ -58,6 +60,9 @@ fun NavGraph() {
                 onNavigateToAppearance = {
                     navController.navigate(Screen.AppearanceSettings.route)
                 },
+                onNavigateToChatAppearance = {
+                    navController.navigate(Screen.ChatAppearanceSettings.route)
+                },
                 onNavigateToMessageDisplay = {
                     navController.navigate(Screen.MessageDisplaySettings.route)
                 },
@@ -81,6 +86,9 @@ fun NavGraph() {
             AppearanceSettingsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
+        composable(Screen.ChatAppearanceSettings.route) {
+            ChatAppearanceSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
         composable(Screen.MessageDisplaySettings.route) {
             MessageDisplaySettingsScreen(onNavigateBack = { navController.popBackStack() })
         }

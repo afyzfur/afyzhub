@@ -4,8 +4,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.afyzfur.afyzhub.domain.model.AiProvider
+import com.afyzfur.afyzhub.ui.theme.ThemePalette
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -50,6 +53,16 @@ class SettingsRepository(
     private val showModelNameKey = booleanPreferencesKey(Constants.KEY_SHOW_MODEL_NAME)
     private val quickPromptsKey = stringPreferencesKey(Constants.KEY_QUICK_PROMPTS)
     private val shufflePromptsKey = booleanPreferencesKey(Constants.KEY_SHUFFLE_PROMPTS)
+    private val paletteKey = stringPreferencesKey(Constants.KEY_PALETTE)
+    private val userBubbleKey = stringPreferencesKey(Constants.KEY_USER_BUBBLE)
+    private val assistantBubbleKey = stringPreferencesKey(Constants.KEY_ASSISTANT_BUBBLE)
+    private val avatarModeKey = stringPreferencesKey(Constants.KEY_AVATAR_MODE)
+    private val userAvatarPathKey = stringPreferencesKey(Constants.KEY_USER_AVATAR_PATH)
+    private val assistantAvatarPathKey = stringPreferencesKey(Constants.KEY_ASSISTANT_AVATAR_PATH)
+    private val backgroundModeKey = stringPreferencesKey(Constants.KEY_BACKGROUND_MODE)
+    private val backgroundPathKey = stringPreferencesKey(Constants.KEY_BACKGROUND_PATH)
+    private val backgroundDimKey = floatPreferencesKey(Constants.KEY_BACKGROUND_DIM)
+    private val imageVersionKey = longPreferencesKey(Constants.KEY_IMAGE_VERSION)
 
     private fun apiKeyKey(p: AiProvider) =
         stringPreferencesKey("${Constants.KEY_PREFIX_API_KEY}_${p.id}")
@@ -98,7 +111,22 @@ class SettingsRepository(
                 ?.split('\n')
                 ?.filter { it.isNotBlank() }
                 ?: DefaultQuickPrompts,
-            shufflePrompts = prefs[shufflePromptsKey] ?: true
+            shufflePrompts = prefs[shufflePromptsKey] ?: true,
+            palette = ThemePalette.fromId(prefs[paletteKey]),
+            chatAppearance = ChatAppearance(
+                userBubble = BubbleStyle.fromId(prefs[userBubbleKey], BubbleStyle.BUBBLE),
+                assistantBubble = BubbleStyle.fromId(
+                    prefs[assistantBubbleKey],
+                    BubbleStyle.PLAIN
+                ),
+                avatarMode = AvatarMode.fromId(prefs[avatarModeKey]),
+                userAvatarPath = prefs[userAvatarPathKey]?.takeIf { it.isNotBlank() },
+                assistantAvatarPath = prefs[assistantAvatarPathKey]?.takeIf { it.isNotBlank() },
+                backgroundMode = ChatBackgroundMode.fromId(prefs[backgroundModeKey]),
+                backgroundPath = prefs[backgroundPathKey]?.takeIf { it.isNotBlank() },
+                backgroundDim = prefs[backgroundDimKey] ?: 0.35f,
+                imageVersion = prefs[imageVersionKey] ?: 0L
+            )
         )
     }
 
@@ -143,6 +171,59 @@ class SettingsRepository(
 
     suspend fun setShufflePrompts(enabled: Boolean) {
         dataStore.edit { it[shufflePromptsKey] = enabled }
+    }
+
+    suspend fun setPalette(palette: ThemePalette) {
+        dataStore.edit { it[paletteKey] = palette.id }
+    }
+
+    suspend fun setUserBubble(style: BubbleStyle) {
+        dataStore.edit { it[userBubbleKey] = style.id }
+    }
+
+    suspend fun setAssistantBubble(style: BubbleStyle) {
+        dataStore.edit { it[assistantBubbleKey] = style.id }
+    }
+
+    suspend fun setAvatarMode(mode: AvatarMode) {
+        dataStore.edit { it[avatarModeKey] = mode.id }
+    }
+
+    suspend fun setBackgroundMode(mode: ChatBackgroundMode) {
+        dataStore.edit { it[backgroundModeKey] = mode.id }
+    }
+
+    suspend fun setBackgroundDim(value: Float) {
+        dataStore.edit { it[backgroundDimKey] = value.coerceIn(0f, 1f) }
+    }
+
+    /**
+     * 记录图片路径并递增版本号。
+     *
+     * 路径与版本号必须在同一次 edit 内更新，否则渲染层可能读到
+     * 新路径配旧版本号（或反之），导致图片不刷新。
+     *
+     * [path] 为 null 表示清除该图片。
+     */
+    suspend fun setUserAvatarPath(path: String?) {
+        dataStore.edit { prefs ->
+            prefs[userAvatarPathKey] = path.orEmpty()
+            prefs[imageVersionKey] = (prefs[imageVersionKey] ?: 0L) + 1
+        }
+    }
+
+    suspend fun setAssistantAvatarPath(path: String?) {
+        dataStore.edit { prefs ->
+            prefs[assistantAvatarPathKey] = path.orEmpty()
+            prefs[imageVersionKey] = (prefs[imageVersionKey] ?: 0L) + 1
+        }
+    }
+
+    suspend fun setBackgroundPath(path: String?) {
+        dataStore.edit { prefs ->
+            prefs[backgroundPathKey] = path.orEmpty()
+            prefs[imageVersionKey] = (prefs[imageVersionKey] ?: 0L) + 1
+        }
     }
 
     override suspend fun current(): AppSettings = settingsFlow.first()

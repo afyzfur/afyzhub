@@ -40,7 +40,8 @@ class MainActivity : ComponentActivity() {
 
             AfyzHubTheme(
                 darkTheme = darkTheme,
-                dynamicColor = prefs.dynamicColor
+                dynamicColor = prefs.dynamicColor,
+                palette = prefs.palette
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),

@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub.ui.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -13,6 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import com.afyzfur.afyzhub.data.settings.ChatAppearance
+import com.afyzfur.afyzhub.ui.components.LocalImage
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
@@ -102,6 +107,7 @@ fun ChatScreen(
             title = currentTitle,
             modelLabel = "${settings.model} · ${settings.provider.displayName}",
             providerLabel = settings.provider.displayName,
+            appearance = uiPreferences.chatAppearance,
             quickPrompts = uiPreferences.quickPrompts,
             shufflePrompts = uiPreferences.shufflePrompts,
             displayOptions = uiPreferences.messageDisplay,
@@ -144,6 +150,7 @@ private fun ChatContent(
     title: String?,
     modelLabel: String,
     providerLabel: String,
+    appearance: ChatAppearance,
     quickPrompts: List<String>,
     shufflePrompts: Boolean,
     displayOptions: MessageDisplayOptions,
@@ -159,127 +166,157 @@ private fun ChatContent(
     onRetry: (Long) -> Unit,
     onClearError: () -> Unit
 ) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        // 键盘弹出时整体上移，使输入框始终可见。
-        // 需配合 manifest 的 windowSoftInputMode="adjustResize"，
-        // 否则窗口不重新布局，内容会被整体顶到状态栏下方
-        modifier = Modifier.imePadding(),
-        // 底部 inset 交给输入框自己处理，使其背景能延伸到屏幕底边。
-        // 若保留默认值，Scaffold 与输入框会各加一次导航栏内边距
-        contentWindowInsets = WindowInsets.safeDrawing.only(
-            WindowInsetsSides.Top + WindowInsetsSides.Horizontal
-        ),
-        topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                title = {
-                    Column {
-                        // 空会话时省略会话名，避免与首屏问候语重复占位
-                        if (title != null) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 背景图铺满整个页面（含系统栏区域），再叠一层可调遮罩。
+        // 遮罩必要性：浅色图配深色文字时对比度不足，无法阅读
+        if (appearance.hasBackgroundImage) {
+            LocalImage(
+                path = appearance.backgroundPath!!,
+                version = appearance.imageVersion,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        MaterialTheme.colorScheme.surface
+                            .copy(alpha = appearance.backgroundDim)
+                    )
+            )
+        }
+
+        Scaffold(
+            // 有背景图时容器透明，让下层的图片透出；
+            // 顶栏与输入框自身的色阶仍然保留，否则文字会直接压在图上
+            containerColor = if (appearance.hasBackgroundImage) {
+                Color.Transparent
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            },
+            // 键盘弹出时整体上移，使输入框始终可见。
+            // 需配合 manifest 的 windowSoftInputMode="adjustResize"，
+            // 否则窗口不重新布局，内容会被整体顶到状态栏下方
+            modifier = Modifier.imePadding(),
+            // 底部 inset 交给输入框自己处理，使其背景能延伸到屏幕底边。
+            // 若保留默认值，Scaffold 与输入框会各加一次导航栏内边距
+            contentWindowInsets = WindowInsets.safeDrawing.only(
+                WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+            ),
+            topBar = {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    ),
+                    title = {
+                        Column {
+                            // 空会话时省略会话名，避免与首屏问候语重复占位
+                            if (title != null) {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                             Text(
-                                text = title,
-                                style = MaterialTheme.typography.titleMedium,
+                                text = modelLabel,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        Text(
-                            text = modelLabel,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(Icons.Default.Menu, contentDescription = "打开会话列表")
+                        }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "打开会话列表")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            if (messages.isEmpty() && !isLoading) {
-                EmptyChatContent(
-                    prompts = quickPrompts,
-                    shufflePrompts = shufflePrompts,
-                    onPromptClick = onPromptClick,
-                    modifier = Modifier.weight(1f)
                 )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    state = listState,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    items(messages, key = { it.id }) { message ->
-                        MessageBlock(
-                            message = message,
-                            displayOptions = displayOptions,
-                            onRetry = { onRetry(message.id) }
-                        )
-                    }
-                    // 流式回复已在正文内逐字呈现，无需额外的等待指示
-                    val streaming = messages.lastOrNull()
-                        ?.let { !it.isFromUser && it.isSending } == true
-                    if (isLoading && !streaming) {
-                        item {
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp))
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                if (messages.isEmpty() && !isLoading) {
+                    EmptyChatContent(
+                        prompts = quickPrompts,
+                        shufflePrompts = shufflePrompts,
+                        onPromptClick = onPromptClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        state = listState,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        items(messages, key = { it.id }) { message ->
+                            MessageBlock(
+                                message = message,
+                                displayOptions = displayOptions,
+                                appearance = appearance,
+                                providerLabel = providerLabel,
+                                onRetry = { onRetry(message.id) }
+                            )
+                        }
+                        // 流式回复已在正文内逐字呈现，无需额外的等待指示
+                        val streaming = messages.lastOrNull()
+                            ?.let { !it.isFromUser && it.isSending } == true
+                        if (isLoading && !streaming) {
+                            item {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            error?.let { errorMessage ->
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    shape = AppShapeTokens.SettingsGroup,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(start = 16.dp, end = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                error?.let { errorMessage ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = AppShapeTokens.SettingsGroup,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
                     ) {
-                        Text(
-                            text = errorMessage,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TextButton(onClick = onClearError) {
-                            Text("关闭")
+                        Row(
+                            modifier = Modifier.padding(start = 16.dp, end = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = errorMessage,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = onClearError) {
+                                Text("关闭")
+                            }
                         }
                     }
                 }
-            }
 
-            ChatInputBar(
-                value = inputText,
-                onValueChange = onInputChange,
-                onSend = onSend,
-                providerLabel = providerLabel,
-                isLoading = isLoading
-            )
+                ChatInputBar(
+                    value = inputText,
+                    onValueChange = onInputChange,
+                    onSend = onSend,
+                    providerLabel = providerLabel,
+                    isLoading = isLoading
+                )
+            }
         }
     }
 }
