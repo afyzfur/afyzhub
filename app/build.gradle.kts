@@ -14,8 +14,8 @@ android {
         applicationId = "com.afyzhub.chat"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "0.2.6-dev"
+        versionCode = 19
+        versionName = "0.2.7-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

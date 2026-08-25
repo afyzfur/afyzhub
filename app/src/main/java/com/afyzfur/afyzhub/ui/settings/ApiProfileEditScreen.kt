@@ -1,6 +1,5 @@
 package com.afyzfur.afyzhub.ui.settings
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,50 +27,65 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.AiProvider
+import com.afyzfur.afyzhub.domain.model.ApiProfile
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
-import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * 提供商配置子页面。
+ * 单组 API 配置的编辑页。
  *
- * 改版说明：此前这页是从旧版单页设置整体搬来的，仍在用 OutlinedTextField
- * 与 HorizontalDivider——描边输入框加分割线是 Material 2 的语言，
- * 与其他设置页的「分类标题 + 圆角分组容器」不一致。现已统一。
+ * 改动即时写回配置组。这里没做防抖：DataStore 的写入本身是异步且
+ * 串行的，输入过程中的中间态被后来的值覆盖即可，不需要额外协调。
+ * 状态唯一来源是仓库的 flow，因此不存在界面与存储不一致的窗口。
  *
- * 交互逻辑未改：改动仍由 SettingsViewModel 防抖后自动落盘，
- * 返回时先刷盘。
+ * 找不到 [profileId] 时直接返回：可能是这一组已在别处被删掉。
  */
 @Composable
-fun ProviderSettingsScreen(
+fun ApiProfileEditScreen(
+    profileId: String,
     onNavigateBack: () -> Unit,
-    viewModel: SettingsViewModel = koinViewModel()
+    viewModel: ApiProfilesViewModel = koinViewModel(),
+    modelsViewModel: ProfileModelsViewModel = koinViewModel()
 ) {
-    val provider by viewModel.provider.collectAsState()
-    val apiKey by viewModel.apiKey.collectAsState()
-    val selectedModel by viewModel.selectedModel.collectAsState()
-    val baseUrl by viewModel.baseUrl.collectAsState()
-    val streamEnabled by viewModel.streamEnabled.collectAsState()
-    val availableModels by viewModel.availableModels.collectAsState()
-    val loadingModels by viewModel.loadingModels.collectAsState()
-    val modelsError by viewModel.modelsError.collectAsState()
-    val saveSuccess by viewModel.saveSuccess.collectAsState()
-    val modelPageIndex by viewModel.modelPageIndex.collectAsState()
+    val store by viewModel.store.collectAsState()
+    val profile = store.profiles.firstOrNull { it.id == profileId }
 
-    if (saveSuccess) {
-        LaunchedEffect(saveSuccess) {
-            delay(2000)
-            viewModel.clearSaveSuccess()
+    if (profile == null) {
+        // 这一组已不存在，没什么可编辑的
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+            ) {
+                SettingsPageHeader(title = "配置", onNavigateBack = onNavigateBack)
+                Text(
+                    text = "这组配置已被删除。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(28.dp)
+                )
+            }
         }
+        return
     }
+
+    val loading by modelsViewModel.loading.collectAsState()
+    val error by modelsViewModel.error.collectAsState()
+    var pageIndex by remember(profileId) { mutableIntStateOf(0) }
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -82,12 +97,8 @@ fun ProviderSettingsScreen(
                 .statusBarsPadding()
         ) {
             SettingsPageHeader(
-                title = "提供商",
-                onNavigateBack = {
-                    // 防抖窗口内可能还有未落盘的改动，先刷盘再返回
-                    viewModel.flushPendingChanges()
-                    onNavigateBack()
-                }
+                title = profile.displayName,
+                onNavigateBack = onNavigateBack
             )
 
             Column(
@@ -95,43 +106,60 @@ fun ProviderSettingsScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
+                SettingsCategoryTitle("名称与分组")
+                SettingsGroup {
+                    SettingsTextFieldItem(
+                        title = "名称",
+                        value = profile.name,
+                        onValueChange = { viewModel.updateProfile(profile.copy(name = it)) },
+                        placeholder = "例如：主号、中转-便宜"
+                    )
+                    SettingsItemDivider()
+                    SettingsTextFieldItem(
+                        title = "分组",
+                        value = profile.group,
+                        onValueChange = { viewModel.updateProfile(profile.copy(group = it)) },
+                        placeholder = "留空则归入未分组",
+                        subtitle = "同名分组会归到一起"
+                    )
+                }
+
                 SettingsCategoryTitle("服务提供商")
                 SettingsGroup {
-                    AiProvider.entries.forEach { entry ->
+                    AiProvider.entries.forEachIndexed { index, entry ->
+                        if (index > 0) SettingsItemDivider()
                         SettingsRadioItem(
                             title = entry.displayName,
-                            selected = entry == provider,
-                            onClick = { viewModel.selectProvider(entry) }
+                            selected = entry.id == profile.providerId,
+                            onClick = {
+                                viewModel.updateProfile(
+                                    profile.copy(providerId = entry.id)
+                                )
+                            }
                         )
                     }
                 }
-
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "各提供商的 Key、地址与模型分别保存，切换时不会互相覆盖。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 28.dp)
-                )
 
                 SettingsCategoryTitle("接口配置")
                 SettingsGroup {
                     // 明文显示：便于核对与修改，Key 只存在本机
                     SettingsTextFieldItem(
                         title = "API Key",
-                        value = apiKey,
-                        onValueChange = viewModel::updateApiKey,
-                        placeholder = apiKeyPlaceholder(provider)
+                        value = profile.apiKey,
+                        onValueChange = { viewModel.updateProfile(profile.copy(apiKey = it)) },
+                        placeholder = apiKeyHint(profile.provider)
                     )
                     SettingsItemDivider()
                     SettingsTextFieldItem(
                         title = "API 地址",
-                        value = baseUrl,
-                        onValueChange = viewModel::updateBaseUrl,
-                        placeholder = provider.defaultBaseUrl,
+                        value = profile.baseUrl,
+                        onValueChange = { viewModel.updateProfile(profile.copy(baseUrl = it)) },
+                        placeholder = profile.provider.defaultBaseUrl,
                         subtitle = "使用中转服务时填入对应地址",
                         trailing = {
-                            TextButton(onClick = viewModel::resetBaseUrl) {
+                            TextButton(onClick = {
+                                viewModel.updateProfile(profile.copy(baseUrl = ""))
+                            }) {
                                 Text("恢复默认")
                             }
                         }
@@ -140,22 +168,28 @@ fun ProviderSettingsScreen(
 
                 SettingsCategoryTitle("模型")
                 SettingsGroup {
-                    // 允许直接输入模型名，以支持中转服务提供的非官方模型
                     SettingsTextFieldItem(
                         title = "模型名称",
-                        value = selectedModel,
-                        onValueChange = viewModel::updateModel,
-                        placeholder = "留空则使用提供商默认模型"
+                        value = profile.model,
+                        onValueChange = { viewModel.updateProfile(profile.copy(model = it)) },
+                        placeholder = "留空则使用 ${profile.provider.fallbackModel}"
                     )
 
                     SettingsItemDivider()
-                    ModelRefreshRow(
-                        loading = loadingModels,
-                        hasModels = availableModels.isNotEmpty(),
-                        onRefresh = viewModel::refreshModels
+                    ModelFetchRow(
+                        loading = loading,
+                        hasModels = profile.cachedModels.isNotEmpty(),
+                        onRefresh = {
+                            modelsViewModel.fetchModels(profile) { models ->
+                                viewModel.updateProfile(
+                                    profile.copy(cachedModels = models)
+                                )
+                                pageIndex = 0
+                            }
+                        }
                     )
 
-                    modelsError?.let { message ->
+                    error?.let { message ->
                         Text(
                             text = message,
                             style = MaterialTheme.typography.bodySmall,
@@ -165,17 +199,16 @@ fun ProviderSettingsScreen(
                     }
                 }
 
-                // 列表分页展示并持久缓存，避免离开页面后需要重新获取
-                if (availableModels.isNotEmpty()) {
+                if (profile.cachedModels.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
                     SettingsGroup {
-                        val page = pageOfModels(availableModels, modelPageIndex)
+                        val page = pageOfModels(profile.cachedModels, pageIndex)
                         Text(
                             text = if (page.showPager) {
-                                "可用模型（${availableModels.size}）" +
+                                "可用模型（${profile.cachedModels.size}）" +
                                     " 第 ${page.pageIndex + 1}/${page.pageCount} 页"
                             } else {
-                                "可用模型（${availableModels.size}）"
+                                "可用模型（${profile.cachedModels.size}）"
                             },
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
@@ -185,59 +218,70 @@ fun ProviderSettingsScreen(
                                 top = 12.dp
                             )
                         )
-                        ModelChips(
+                        ModelPickerChips(
                             models = page.models,
-                            selected = selectedModel,
-                            onSelect = viewModel::updateModel
+                            selected = profile.model,
+                            onSelect = {
+                                viewModel.updateProfile(profile.copy(model = it))
+                            }
                         )
-                        // 十个以内不出翻页控件
                         if (page.showPager) {
                             SettingsItemDivider()
-                            ModelPagerRow(
-                                page = page,
-                                onPrevious = viewModel::previousModelPage,
-                                onNext = viewModel::nextModelPage
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                TextButton(
+                                    onClick = { pageIndex -= 1 },
+                                    enabled = page.hasPrevious
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text("上一页")
+                                }
+                                Text(
+                                    text = "${page.pageIndex + 1} / ${page.pageCount}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                TextButton(
+                                    onClick = { pageIndex += 1 },
+                                    enabled = page.hasNext
+                                ) {
+                                    Text("下一页")
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
 
-                SettingsCategoryTitle("请求")
-                SettingsGroup {
-                    SettingsSwitchItem(
-                        icon = Icons.Default.Refresh,
-                        title = "流式输出",
-                        subtitle = "逐字显示回复。部分中转服务不支持，可关闭后重试",
-                        checked = streamEnabled,
-                        onCheckedChange = viewModel::updateStreamEnabled
-                    )
-                }
-
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = if (saveSuccess) {
-                        "设置已保存"
-                    } else {
-                        "改动会自动保存。API Key 仅存在本机，不会上传到第三方。"
-                    },
+                    text = "改动会自动保存。API Key 仅存在本机，不会上传到第三方。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (saveSuccess) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp)
                 )
-
                 Spacer(Modifier.height(24.dp))
             }
         }
     }
 }
 
-/** 刷新模型列表的操作行，加载中时显示进度指示 */
+/** 拉取模型列表的操作行 */
 @Composable
-private fun ModelRefreshRow(
+private fun ModelFetchRow(
     loading: Boolean,
     hasModels: Boolean,
     onRefresh: () -> Unit
@@ -271,58 +315,10 @@ private fun ModelRefreshRow(
     }
 }
 
-/**
- * 模型列表的翻页控件。
- *
- * 用左右按钮而非 HorizontalPager：这一段嵌在垂直滚动的设置页里，
- * 横向滑动手势会与父级滚动争夺事件，按钮点击不存在这个问题。
- */
-@Composable
-private fun ModelPagerRow(
-    page: ModelPage,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-    ) {
-        TextButton(onClick = onPrevious, enabled = page.hasPrevious) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Text("上一页")
-        }
-        Text(
-            text = "${page.pageIndex + 1} / ${page.pageCount}",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        TextButton(onClick = onNext, enabled = page.hasNext) {
-            Text("下一页")
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
-}
-
-/**
- * 可用模型的选择 chip。
- *
- * 不用 FilterChip：它自带描边与选中态图标，在数百个模型的列表里
- * 视觉噪音过大。改用与首屏提示词一致的实心胶囊。
- */
+/** 模型选择胶囊，与提供商页一致的实心样式 */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ModelChips(
+private fun ModelPickerChips(
     models: List<String>,
     selected: String,
     onSelect: (String) -> Unit
@@ -364,8 +360,8 @@ private fun ModelChips(
     }
 }
 
-/** 各家 Key 的格式差别较大，占位符给出对应示例。 */
-private fun apiKeyPlaceholder(provider: AiProvider): String = when (provider) {
+/** 各家 Key 格式差别较大，占位符给出对应示例 */
+private fun apiKeyHint(provider: AiProvider): String = when (provider) {
     AiProvider.OPENAI -> "sk-..."
     AiProvider.ANTHROPIC -> "sk-ant-..."
     AiProvider.GEMINI -> "AIza..."

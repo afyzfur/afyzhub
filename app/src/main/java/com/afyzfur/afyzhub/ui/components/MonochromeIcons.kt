@@ -23,7 +23,11 @@ internal val MONOCHROME_ICONS: Set<String> = setOf(
     "xai.svg",
     // 橙色图形加单色文字。整体着色会覆盖橙色，
     // 但文字是主体，不着色则整段文字在深色下消失
-    "cerebras-color.svg"
+    "cerebras-color.svg",
+    // 主体 K 原本硬编码 #fff（原图为深色背景设计），浅色主题下
+    // 整个字形消失。已把该 fill 改成 currentColor 纳入着色，
+    // 蓝色圆点保留品牌色
+    "kimi-color.svg"
 )
 
 /** 该图标是否需要按主题着色 */

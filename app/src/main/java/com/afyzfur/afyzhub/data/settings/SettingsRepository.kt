@@ -8,7 +8,9 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.afyzfur.afyzhub.domain.model.AiProvider
+import com.afyzfur.afyzhub.domain.model.ApiProfileStore
 import com.afyzfur.afyzhub.ui.theme.ThemePalette
+import kotlinx.serialization.json.Json
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +40,17 @@ class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
     scope: CoroutineScope
 ) : SettingsProvider {
+
+    /**
+     * 配置组的序列化器。
+     *
+     * ignoreUnknownKeys 是为了让降级安装不至于把配置清空：
+     * 新版加了字段后回退到旧版，严格模式会解析失败。
+     */
+    private val profileJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     private val providerKey = stringPreferencesKey(Constants.KEY_PROVIDER)
     private val streamKey = booleanPreferencesKey(Constants.KEY_STREAM_ENABLED)
@@ -83,16 +96,124 @@ class SettingsRepository(
 
     private fun modelListKey(p: AiProvider) =
         stringPreferencesKey("${Constants.KEY_PREFIX_MODEL_LIST}_${p.id}")
+    private val apiProfilesKey = stringPreferencesKey(Constants.KEY_API_PROFILES)
+    private val profilesMigratedKey =
+        booleanPreferencesKey(Constants.KEY_PROFILES_MIGRATED)
 
-    val settingsFlow: Flow<AppSettings> = dataStore.data.map { prefs ->
-        val provider = AiProvider.fromId(prefs[providerKey])
-        AppSettings(
-            provider = provider,
-            apiKey = readApiKey(prefs, provider),
-            model = readModel(prefs, provider),
-            baseUrl = readBaseUrl(prefs, provider),
-            streamEnabled = prefs[streamKey] ?: true
+    /**
+     * 多组 API 配置。
+     *
+     * 存成一个 JSON 键而非给每组拆键：组数不定且可增删，拆键需要
+     * 额外维护一份"有哪些组"的索引，删除时还要逐个清理残留键。
+     *
+     * 解析失败时返回空 store 而非抛出：DataStore 里的值可能因为
+     * 降级安装等原因带上未知字段，让配置页显示为空并可重建，
+     * 比整个应用起不来要好。
+     */
+    val apiProfilesFlow: Flow<ApiProfileStore> = dataStore.data.map { prefs ->
+        readProfiles(prefs)
+    }
+
+    val apiProfiles: StateFlow<ApiProfileStore> = apiProfilesFlow.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = ApiProfileStore()
+    )
+
+    private fun readProfiles(prefs: Preferences): ApiProfileStore {
+        val raw = prefs[apiProfilesKey]
+        if (raw.isNullOrBlank()) return ApiProfileStore()
+        return try {
+            profileJson.decodeFromString(ApiProfileStore.serializer(), raw)
+        } catch (_: Exception) {
+            ApiProfileStore()
+        }
+    }
+
+    /** 覆盖写入全部配置组。增删改都走这里，调用方先拿到完整 store 再改 */
+    suspend fun saveProfiles(store: ApiProfileStore) {
+        dataStore.edit { prefs ->
+            prefs[apiProfilesKey] = profileJson.encodeToString(ApiProfileStore.serializer(), store)
+            // 手工建过组之后就不该再被旧配置迁移覆盖
+            prefs[profilesMigratedKey] = true
+        }
+    }
+
+    suspend fun currentProfiles(): ApiProfileStore = apiProfilesFlow.first()
+
+    /**
+     * 首次进入多组配置时，把旧的按提供商单组配置搬过来。
+     *
+     * 只执行一次，由 [profilesMigratedKey] 标记。已经有组存在时
+     * 直接标记完成——这种情况说明用户已经在用新结构了。
+     */
+    suspend fun migrateProfilesIfNeeded() {
+        val prefs = dataStore.data.first()
+        if (prefs[profilesMigratedKey] == true) return
+
+        val existing = readProfiles(prefs)
+        if (existing.profiles.isNotEmpty()) {
+            dataStore.edit { it[profilesMigratedKey] = true }
+            return
+        }
+
+        val legacy = AiProvider.entries.map { provider ->
+            LegacyProviderConfig(
+                provider = provider,
+                apiKey = readApiKey(prefs, provider),
+                baseUrl = prefs[baseUrlKey(provider)].orEmpty(),
+                // readModel 会补上兜底模型，这里要的是用户实际填过的值，
+                // 否则每家都会被当成"配置过"
+                model = prefs[modelKey(provider)].orEmpty(),
+                cachedModels = prefs[modelListKey(provider)]
+                    .orEmpty()
+                    .split('\n')
+                    .filter { it.isNotBlank() }
+            )
+        }
+        val migrated = migrateLegacyConfigs(
+            configs = legacy,
+            activeProvider = AiProvider.fromId(prefs[providerKey])
         )
+
+        dataStore.edit { edit ->
+            if (migrated.profiles.isNotEmpty()) {
+                edit[apiProfilesKey] = profileJson.encodeToString(ApiProfileStore.serializer(), migrated)
+            }
+            edit[profilesMigratedKey] = true
+        }
+    }
+
+    /**
+     * 当前生效的设置。
+     *
+     * 有配置组时取激活的那一组，否则回落到旧的按提供商单组读取。
+     * 这样网络层与传输层完全不用知道多组的存在——它们拿到的仍是
+     * 一份扁平的 [AppSettings]。
+     *
+     * 回落分支不能删：迁移在设置页首次打开时才执行，此前若用户
+     * 直接发消息，仍要能用上旧配置。
+     */
+    val settingsFlow: Flow<AppSettings> = dataStore.data.map { prefs ->
+        val active = readProfiles(prefs).active
+        if (active != null) {
+            AppSettings(
+                provider = active.provider,
+                apiKey = active.apiKey,
+                model = active.effectiveModel,
+                baseUrl = normalizeBaseUrl(active.effectiveBaseUrl, active.provider),
+                streamEnabled = prefs[streamKey] ?: true
+            )
+        } else {
+            val provider = AiProvider.fromId(prefs[providerKey])
+            AppSettings(
+                provider = provider,
+                apiKey = readApiKey(prefs, provider),
+                model = readModel(prefs, provider),
+                baseUrl = readBaseUrl(prefs, provider),
+                streamEnabled = prefs[streamKey] ?: true
+            )
+        }
     }
 
     /** 常驻缓存，供拦截器与传输层同步取值。 */

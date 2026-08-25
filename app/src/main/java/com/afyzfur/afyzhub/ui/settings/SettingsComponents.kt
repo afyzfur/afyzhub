@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -68,6 +69,25 @@ fun SettingsGroup(
             content()
         }
     }
+}
+
+/**
+ * 组内条目之间的分隔线。
+ *
+ * 由调用方在需要的位置显式插入，而不是让 [SettingsGroup] 自动在
+ * 每个子项之间加：Compose 的 content lambda 拿不到子项数量，
+ * 无法判断哪里是边界，硬做需要引入子项包装类型。
+ *
+ * 左侧留出与条目文字对齐的缩进，右侧到底——不通栏是为了让
+ * 分隔线读起来属于这一组内部，而非切断整个容器。
+ */
+@Composable
+fun SettingsItemDivider() {
+    HorizontalDivider(
+        thickness = 0.5.dp,
+        color = MaterialTheme.colorScheme.outlineVariant,
+        modifier = Modifier.padding(start = 20.dp)
+    )
 }
 
 /**
@@ -160,6 +180,56 @@ fun SettingsNavItem(
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+/**
+ * 操作型条目。点击就地执行，不跳页，因此右侧不放箭头。
+ *
+ * [destructive] 为 true 时整行用错误色——删除这类不可撤销的操作
+ * 值得在点之前就看出来，而不是只在确认弹窗里才提示。
+ */
+@Composable
+fun SettingsActionItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    destructive: Boolean = false,
+    onClick: () -> Unit
+) {
+    val tint = if (destructive) {
+        MaterialTheme.colorScheme.error
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = tint
+            )
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 

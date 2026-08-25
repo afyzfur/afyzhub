@@ -64,6 +64,12 @@ object Constants {
      */
     const val KEY_PREFIX_MODEL_LIST = "model_list"
 
+    /** 多组 API 配置，整体以 JSON 存一个键 */
+    const val KEY_API_PROFILES = "api_profiles"
+
+    /** 旧的单组配置是否已迁移成多组。只做一次，之后不再读旧键 */
+    const val KEY_PROFILES_MIGRATED = "api_profiles_migrated"
+
     /** v0.1.3 及之前只存单份 OpenAI 配置，升级时迁移到新键名。 */
     const val LEGACY_KEY_API_KEY = "openai_api_key"
     const val LEGACY_KEY_MODEL = "selected_model"

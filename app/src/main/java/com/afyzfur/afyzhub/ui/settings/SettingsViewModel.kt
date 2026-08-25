@@ -40,6 +40,24 @@ class SettingsViewModel(
     private val _loadingModels = MutableStateFlow(false)
     val loadingModels: StateFlow<Boolean> = _loadingModels.asStateFlow()
 
+    /**
+     * 模型列表的当前页码，从 0 开始。
+     *
+     * 放在 ViewModel 而非 Composable 的 remember 里：设置页会因为
+     * 输入 Key 等改动频繁重组，页码留在界面层容易被重置。
+     * 越界由 [pageOfModels] 夹住，这里不额外校验。
+     */
+    private val _modelPageIndex = MutableStateFlow(0)
+    val modelPageIndex: StateFlow<Int> = _modelPageIndex.asStateFlow()
+
+    fun nextModelPage() {
+        _modelPageIndex.value += 1
+    }
+
+    fun previousModelPage() {
+        _modelPageIndex.value = (_modelPageIndex.value - 1).coerceAtLeast(0)
+    }
+
     /** 模型列表拉取失败的原因，成功或未拉取时为 null。 */
     private val _modelsError = MutableStateFlow<String?>(null)
     val modelsError: StateFlow<String?> = _modelsError.asStateFlow()
@@ -126,6 +144,8 @@ class SettingsViewModel(
             _baseUrl.value = config.baseUrl
             _availableModels.value = settingsRepository.cachedModels(target)
             _modelsError.value = null
+            // 换了提供商就是另一份列表，停在旧页码上没有意义
+            _modelPageIndex.value = 0
             // 记录当前提供商，聊天时才会走对应的客户端。
             persist()
         }
@@ -160,6 +180,8 @@ class SettingsViewModel(
                     _modelsError.value = "接口未返回任何模型"
                 } else {
                     _availableModels.value = models
+                    // 新列表从头看，否则可能停在一个已不存在的页码上
+                    _modelPageIndex.value = 0
                     settingsRepository.saveModels(provider, models)
                 }
             } catch (e: Exception) {

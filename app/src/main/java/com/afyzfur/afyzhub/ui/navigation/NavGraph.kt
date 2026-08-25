@@ -10,6 +10,8 @@ import com.afyzfur.afyzhub.ui.settings.AppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ChangelogScreen
 import com.afyzfur.afyzhub.ui.settings.ChatAppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
+import com.afyzfur.afyzhub.ui.settings.ApiProfileEditScreen
+import com.afyzfur.afyzhub.ui.settings.ApiProfilesScreen
 import com.afyzfur.afyzhub.ui.settings.ProviderSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.QuickPromptsSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.RequestLogScreen
@@ -27,6 +29,20 @@ import com.afyzfur.afyzhub.ui.settings.SettingsHomeScreen
 sealed class Screen(val route: String) {
     object Chat : Screen("chat")
     object Settings : Screen("settings")
+    /** API 配置组列表。原「提供商」入口现在指向这里 */
+    object ApiProfiles : Screen("settings/api_profiles")
+
+    /** 单组配置的编辑页，路径参数为组 id */
+    object ApiProfileEdit : Screen("settings/api_profiles/{profileId}") {
+        fun routeFor(profileId: String) = "settings/api_profiles/$profileId"
+    }
+
+    /**
+     * 旧的单组提供商设置页。
+     *
+     * 多组配置上线后不再从任何入口进入，保留是为了不破坏可能存在的
+     * 深链；后续版本确认无用后可删。
+     */
     object ProviderSettings : Screen("settings/provider")
     object AppearanceSettings : Screen("settings/appearance")
     object ChatAppearanceSettings : Screen("settings/chat_appearance")
@@ -51,7 +67,7 @@ fun NavGraph() {
                     navController.navigate(Screen.Settings.route)
                 },
                 onNavigateToProvider = {
-                    navController.navigate(Screen.ProviderSettings.route)
+                    navController.navigate(Screen.ApiProfiles.route)
                 }
             )
         }
@@ -60,7 +76,7 @@ fun NavGraph() {
             SettingsHomeScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToProvider = {
-                    navController.navigate(Screen.ProviderSettings.route)
+                    navController.navigate(Screen.ApiProfiles.route)
                 },
                 onNavigateToAppearance = {
                     navController.navigate(Screen.AppearanceSettings.route)
@@ -80,6 +96,24 @@ fun NavGraph() {
                 onNavigateToAbout = {
                     navController.navigate(Screen.AboutSettings.route)
                 }
+            )
+        }
+
+        composable(Screen.ApiProfiles.route) {
+            ApiProfilesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onEditProfile = { id ->
+                    navController.navigate(Screen.ApiProfileEdit.routeFor(id))
+                }
+            )
+        }
+
+        composable(Screen.ApiProfileEdit.route) { entry ->
+            // id 缺失时给空串，编辑页会显示"已被删除"而不是崩掉
+            val id = entry.arguments?.getString("profileId").orEmpty()
+            ApiProfileEditScreen(
+                profileId = id,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
