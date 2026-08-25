@@ -119,8 +119,13 @@ data class MessageDisplayOptions(
  * 由聊天页整体接收，避免为每项单独穿参。
  */
 data class ChatAppearance(
-    /** 用户消息默认有气泡，符合即时通讯的普遍预期 */
-    val userBubble: BubbleStyle = BubbleStyle.BUBBLE,
+    /**
+     * 用户消息默认无气泡，与助手一致。
+     *
+     * 此前默认有气泡（即时通讯的普遍预期），但两侧形态不同看起来割裂。
+     * 想要气泡的用户可以在设置里单独打开。
+     */
+    val userBubble: BubbleStyle = BubbleStyle.PLAIN,
     /** 助手消息默认无气泡，使代码块与表格能用满宽度 */
     val assistantBubble: BubbleStyle = BubbleStyle.PLAIN,
     val avatarMode: AvatarMode = AvatarMode.DEFAULT,

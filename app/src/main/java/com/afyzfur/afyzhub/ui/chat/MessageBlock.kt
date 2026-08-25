@@ -1,6 +1,8 @@
 package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,13 +46,15 @@ import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
  * 头像位在开启时占据固定宽度，两侧消息各自靠内对齐，
  * 使同一侧的消息主体保持竖直对齐而不因有无头像错开。
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageBlock(
     message: Message,
     displayOptions: MessageDisplayOptions,
     appearance: ChatAppearance,
     providerLabel: String,
-    onRetry: () -> Unit = {}
+    onRetry: () -> Unit = {},
+    onLongPress: () -> Unit = {}
 ) {
     val fromUser = message.isFromUser
     val style = if (fromUser) appearance.userBubble else appearance.assistantBubble
@@ -82,7 +86,12 @@ fun MessageBlock(
         ) {
             when {
                 message.isFailed -> FailedMessage(message = message, onRetry = onRetry)
-                else -> MessageBody(message = message, style = style, fromUser = fromUser)
+                else -> MessageBody(
+                    message = message,
+                    style = style,
+                    fromUser = fromUser,
+                    onLongPress = onLongPress
+                )
             }
 
             // 失败消息已有错误提示与重试按钮，再加元信息只会更乱
@@ -115,10 +124,12 @@ fun MessageBlock(
  * 通常是字面意思，解析反而会吞掉字符。
  */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun MessageBody(
     message: Message,
     style: BubbleStyle,
-    fromUser: Boolean
+    fromUser: Boolean,
+    onLongPress: () -> Unit
 ) {
     val content: @Composable () -> Unit = {
         if (fromUser) {
@@ -143,6 +154,16 @@ private fun MessageBody(
         }
     }
 
+    // 长按挂在正文容器上而非整行：整行包含头像与空白区域，
+    // 在那些位置长按弹菜单会显得没有指向性
+    val longPress = Modifier.combinedClickable(
+        // 单击不做事，但必须提供——combinedClickable 要求有 onClick。
+        // 传空 lambda 的副作用是正文会有涟漪反馈，
+        // 这反而提示了"这里可以按"
+        onClick = {},
+        onLongClick = onLongPress
+    )
+
     when (style) {
         BubbleStyle.BUBBLE -> Surface(
             color = if (fromUser) {
@@ -157,12 +178,18 @@ private fun MessageBody(
                 AppShapeTokens.AssistantMessage
             }
         ) {
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Box(
+                modifier = longPress.padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
                 content()
             }
         }
 
-        BubbleStyle.PLAIN -> Box(modifier = Modifier.fillMaxWidth()) {
+        BubbleStyle.PLAIN -> Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(longPress)
+        ) {
             content()
         }
     }

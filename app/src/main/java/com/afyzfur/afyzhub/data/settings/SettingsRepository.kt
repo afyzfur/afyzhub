@@ -57,6 +57,8 @@ class SettingsRepository(
     private val userBubbleKey = stringPreferencesKey(Constants.KEY_USER_BUBBLE)
     private val assistantBubbleKey = stringPreferencesKey(Constants.KEY_ASSISTANT_BUBBLE)
     private val avatarModeKey = stringPreferencesKey(Constants.KEY_AVATAR_MODE)
+    private val avatarModeMigratedKey =
+        booleanPreferencesKey(Constants.KEY_AVATAR_MODE_MIGRATED)
     private val userAvatarPathKey = stringPreferencesKey(Constants.KEY_USER_AVATAR_PATH)
     private val assistantAvatarPathKey = stringPreferencesKey(Constants.KEY_ASSISTANT_AVATAR_PATH)
     private val backgroundModeKey = stringPreferencesKey(Constants.KEY_BACKGROUND_MODE)
@@ -122,12 +124,15 @@ class SettingsRepository(
             shufflePrompts = prefs[shufflePromptsKey] ?: true,
             palette = ThemePalette.fromId(prefs[paletteKey]),
             chatAppearance = ChatAppearance(
-                userBubble = BubbleStyle.fromId(prefs[userBubbleKey], BubbleStyle.BUBBLE),
+                userBubble = BubbleStyle.fromId(prefs[userBubbleKey], BubbleStyle.PLAIN),
                 assistantBubble = BubbleStyle.fromId(
                     prefs[assistantBubbleKey],
                     BubbleStyle.PLAIN
                 ),
-                avatarMode = AvatarMode.fromId(prefs[avatarModeKey]),
+                // 旧版默认值 NONE 会写进 DataStore，仅改默认值对已装设备无效。
+                // 未迁移过的设备把存下的 NONE 视作未设置一次，
+                // 迁移标记由 migrateAvatarModeIfNeeded 落盘，之后正常读取
+                avatarMode = resolveAvatarMode(prefs),
                 userAvatarPath = prefs[userAvatarPathKey]?.takeIf { it.isNotBlank() },
                 assistantAvatarPath = prefs[assistantAvatarPathKey]?.takeIf { it.isNotBlank() },
                 backgroundMode = ChatBackgroundMode.fromId(prefs[backgroundModeKey]),
@@ -198,7 +203,11 @@ class SettingsRepository(
     }
 
     suspend fun setAvatarMode(mode: AvatarMode) {
-        dataStore.edit { it[avatarModeKey] = mode.id }
+        dataStore.edit {
+            it[avatarModeKey] = mode.id
+            // 用户主动选过就不再迁移，否则选「不显示」会被下次读取改回默认
+            it[avatarModeMigratedKey] = true
+        }
     }
 
     suspend fun setBackgroundMode(mode: ChatBackgroundMode) {
@@ -207,6 +216,41 @@ class SettingsRepository(
 
     suspend fun setBackgroundDim(value: Float) {
         dataStore.edit { it[backgroundDimKey] = value.coerceIn(0f, 1f) }
+    }
+
+    /**
+     * 解析头像模式，处理旧默认值的一次性迁移。
+     *
+     * 迁移标记未落盘时，存下的 NONE 被当作"从未选择"，
+     * 从而让新的默认值生效；标记落盘后按存值原样读取，
+     * 「不显示」这个选项照常可用。
+     */
+    private fun resolveAvatarMode(prefs: Preferences): AvatarMode {
+        val stored = prefs[avatarModeKey]
+        val migrated = prefs[avatarModeMigratedKey] ?: false
+        if (!migrated && (stored == null || stored == AvatarMode.NONE.id)) {
+            return AvatarMode.DEFAULT
+        }
+        return AvatarMode.fromId(stored)
+    }
+
+    /**
+     * 落盘迁移标记，使后续读取不再改写用户的选择。
+     *
+     * 由界面层在首次读到设置后调用一次。不在 [resolveAvatarMode] 里写，
+     * 那是纯读取路径，在 map 里做写入会造成 Flow 自触发。
+     */
+    suspend fun markAvatarModeMigrated() {
+        dataStore.edit { prefs ->
+            if (prefs[avatarModeMigratedKey] != true) {
+                prefs[avatarModeMigratedKey] = true
+                // 同时把当前解析结果固化下来，否则标记落盘后
+                // 又会读回旧的 NONE
+                if (prefs[avatarModeKey].let { it == null || it == AvatarMode.NONE.id }) {
+                    prefs[avatarModeKey] = AvatarMode.DEFAULT.id
+                }
+            }
+        }
     }
 
     suspend fun setShowUserAvatar(enabled: Boolean) {

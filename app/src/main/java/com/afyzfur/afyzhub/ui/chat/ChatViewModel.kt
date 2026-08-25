@@ -56,6 +56,18 @@ class ChatViewModel(
     fun loadMessages(conversationId: Long) {
         currentConversationId = conversationId
         messagesJob?.cancel()
+
+        // 打开会话时先结算残留的「发送中」。
+        //
+        // 进程被杀或异常退出时没有任何代码能收尾，那些消息会永久卡住。
+        // 放在这里是因为打开会话必然经过此处，且此时不可能有进行中的请求——
+        // 发送时 isLoading 会阻止切换会话
+        if (!_isLoading.value) {
+            viewModelScope.launch {
+                repository.settleInterrupted(conversationId)
+            }
+        }
+
         messagesJob = viewModelScope.launch {
             repository.getMessagesByConversationId(conversationId).collect { list ->
                 _messages.value = list
@@ -136,11 +148,22 @@ class ChatViewModel(
         sendJob = null
         job.cancel()
 
-        // 立即复位而不等协程的 finally：取消是异步的，收尾还要写库，
-        // 期间按钮若仍是暂停态，用户会以为没点中而重复点击。
-        // finally 里的复位保留着，两处都置成同一个值，没有竞态问题
+        // 立即复位而不等协程的 finally：取消是异步的，
+        // 期间按钮若仍是暂停态，用户会以为没点中而重复点击
         _isLoading.value = false
         _sendPhase.value = SendPhase.IDLE
+
+        val conversationId = currentConversationId
+        if (conversationId <= 0) return
+
+        // 主动结算，不依赖取消异常在 flow / NonCancellable / Room 之间的传播。
+        // 那条链路任一环节没走到，消息就永久停在「发送中」——实测确实如此。
+        //
+        // 用 viewModelScope 新起协程而非复用 sendJob：后者已被取消，
+        // 其子协程里的挂起调用会立即再次抛出取消异常，写库根本执行不到
+        viewModelScope.launch {
+            repository.settleInterrupted(conversationId)
+        }
     }
 
     /** 重发一条失败的用户消息。 */
@@ -155,6 +178,35 @@ class ChatViewModel(
                     _sendPhase.value = phase
                 }.onFailure { e ->
                     _error.value = e.message ?: "重试失败"
+                }
+            } finally {
+                _isLoading.value = false
+                _sendPhase.value = SendPhase.IDLE
+            }
+        }
+    }
+
+    fun deleteMessage(messageId: Long) {
+        viewModelScope.launch { repository.deleteMessage(messageId) }
+    }
+
+    fun rollbackTo(messageId: Long) {
+        viewModelScope.launch { repository.rollbackTo(messageId) }
+    }
+
+    /** 重新生成某条助手回复。与发送共用忙碌状态与暂停能力。 */
+    fun regenerate(messageId: Long) {
+        if (_isLoading.value) return
+        _isLoading.value = true
+        _sendPhase.value = SendPhase.CONNECTING
+
+        sendJob = viewModelScope.launch {
+            _error.value = null
+            try {
+                repository.regenerate(messageId) { phase ->
+                    _sendPhase.value = phase
+                }.onFailure { e ->
+                    _error.value = e.message ?: "重新生成失败"
                 }
             } finally {
                 _isLoading.value = false
