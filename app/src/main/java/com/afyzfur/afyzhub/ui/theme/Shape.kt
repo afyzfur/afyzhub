@@ -61,6 +61,14 @@ object AppShapeTokens {
     /** 发送按钮 —— 正圆 */
     val CircleButton = RoundedCornerShape(percent = 50)
 
+    /**
+     * 暂停按钮里的方块。
+     *
+     * 略带圆角而非直角：直角方块在圆形按钮内部显得生硬，
+     * 2dp 足够柔化又不至于看成圆形。
+     */
+    val StopSquare = RoundedCornerShape(2.dp)
+
     /** 设置项分组容器 */
     val SettingsGroup = RoundedCornerShape(20.dp)
 

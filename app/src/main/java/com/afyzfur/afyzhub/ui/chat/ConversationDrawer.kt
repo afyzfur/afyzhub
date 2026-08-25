@@ -35,7 +35,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.ConversationItem
+import com.afyzfur.afyzhub.data.settings.ChatAppearance
 import com.afyzfur.afyzhub.ui.components.ModelIcon
+import com.afyzfur.afyzhub.ui.components.UserAvatar
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
 /**
@@ -51,6 +53,8 @@ fun ConversationDrawer(
     conversations: List<ConversationItem>,
     currentConversationId: Long?,
     modelLabel: String,
+    /** 用于取用户头像与显示开关 */
+    appearance: ChatAppearance,
     onConversationClick: (Long) -> Unit,
     onNewConversation: () -> Unit,
     onDeleteConversation: (Long) -> Unit,
@@ -63,12 +67,22 @@ fun ConversationDrawer(
 
     Column(modifier = modifier.fillMaxSize()) {
 
-        Text(
-            text = "AfyzHub",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+        // 头像放在标题左侧：这是抽屉里唯一属于"用户自身"的位置，
+        // 而消息列表里的头像会随滚动移出视野
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 24.dp, top = 28.dp, bottom = 16.dp)
-        )
+        ) {
+            if (appearance.showAvatars && appearance.showUserAvatar) {
+                UserAvatar(appearance = appearance, size = 36.dp)
+                Spacer(Modifier.size(12.dp))
+            }
+            Text(
+                text = "AfyzHub",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
         DrawerActionRow(
             text = "新建对话",

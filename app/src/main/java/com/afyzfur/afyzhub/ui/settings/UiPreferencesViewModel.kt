@@ -81,6 +81,14 @@ class UiPreferencesViewModel(
         viewModelScope.launch { repository.setBackgroundDim(value) }
     }
 
+    fun setShowUserAvatar(enabled: Boolean) {
+        viewModelScope.launch { repository.setShowUserAvatar(enabled) }
+    }
+
+    fun setShowAssistantAvatar(enabled: Boolean) {
+        viewModelScope.launch { repository.setShowAssistantAvatar(enabled) }
+    }
+
     fun setTransparentTopBar(enabled: Boolean) {
         viewModelScope.launch { repository.setTransparentTopBar(enabled) }
     }

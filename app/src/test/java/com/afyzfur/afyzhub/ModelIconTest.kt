@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub
 
+import com.afyzfur.afyzhub.ui.components.MONOCHROME_ICONS
 import com.afyzfur.afyzhub.ui.components.matchModelIcon
 import com.afyzfur.afyzhub.ui.components.referencedIconFiles
 import org.junit.Assert.assertEquals
@@ -77,13 +78,41 @@ class ModelIconTest {
     }
 
     @Test
+    fun `单色图标清单与 SVG 内容一致`() {
+        // 清单是手工维护的，漏一个就导致该图标在深色主题下不可见。
+        // 用实际文件内容反查：含 currentColor 的即为单色图标
+        val dir = iconsDir()
+        val actual = dir.listFiles()
+            ?.filter { it.name.endsWith(".svg") }
+            ?.filter { it.readText().contains("currentColor") }
+            ?.map { it.name }
+            ?.toSet()
+            ?: emptySet()
+
+        assertEquals(
+            "单色图标清单与实际 SVG 内容不符（缺少的图标在深色主题下会看不见）",
+            actual,
+            MONOCHROME_ICONS
+        )
+    }
+
+    @Test
     fun `规则引用的图标文件全部存在`() {
         // 清单与文件分离，漏放文件时匹配成功但显示空白，不易归因
+        val present = iconsDir().listFiles()?.map { it.name }?.toSet() ?: emptySet()
+        val missing = referencedIconFiles - present
+        assertTrue("规则引用但文件缺失：$missing", missing.isEmpty())
+    }
+
+    /**
+     * 图标目录。
+     *
+     * 两个候选路径是因为 runner 的工作目录取决于从仓库根还是 app 模块启动。
+     */
+    private fun iconsDir(): File {
         val dir = listOf(File("app/src/main/assets/icons"), File("src/main/assets/icons"))
             .firstOrNull { it.exists() }
         assertTrue("找不到图标目录", dir != null)
-        val present = dir!!.listFiles()?.map { it.name }?.toSet() ?: emptySet()
-        val missing = referencedIconFiles - present
-        assertTrue("规则引用但文件缺失：$missing", missing.isEmpty())
+        return dir!!
     }
 }

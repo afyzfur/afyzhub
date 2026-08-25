@@ -72,9 +72,13 @@ private fun MarkdownBlockView(block: MarkdownBlock, color: Color) {
         is MarkdownBlock.Heading -> Text(
             text = block.spans.toAnnotatedString(),
             color = color,
+            // 各级差距拉开：原先 titleMedium 与 titleSmall 只差 2sp，
+            // 二级与三级标题几乎看不出层级，更新日志里的版本号
+            // 与其下的分类标题混成一片
             style = when (block.level) {
-                1 -> MaterialTheme.typography.titleLarge
-                2 -> MaterialTheme.typography.titleMedium
+                1 -> MaterialTheme.typography.headlineSmall
+                2 -> MaterialTheme.typography.titleLarge
+                3 -> MaterialTheme.typography.titleMedium
                 else -> MaterialTheme.typography.titleSmall
             },
             fontWeight = FontWeight.Bold
@@ -114,7 +118,12 @@ private fun MarkdownBlockView(block: MarkdownBlock, color: Color) {
             )
         }
 
-        MarkdownBlock.Divider -> HorizontalDivider()
+        // 上下留白：分隔线的作用是划分区块，紧贴文字反而像下划线。
+        // 更新日志里它分隔各个版本，需要明显的呼吸空间
+        MarkdownBlock.Divider -> HorizontalDivider(
+            modifier = Modifier.padding(vertical = 12.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     }
 }
 

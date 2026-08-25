@@ -44,6 +44,8 @@ object Constants {
     const val KEY_BACKGROUND_PATH = "chat_background_path"
     const val KEY_BACKGROUND_DIM = "chat_background_dim"
     const val KEY_IMAGE_VERSION = "chat_image_version"
+    const val KEY_SHOW_USER_AVATAR = "show_user_avatar"
+    const val KEY_SHOW_ASSISTANT_AVATAR = "show_assistant_avatar"
     const val KEY_TRANSPARENT_TOP_BAR = "transparent_top_bar"
     const val KEY_TRANSPARENT_INPUT_BAR = "transparent_input_bar"
 

@@ -63,6 +63,10 @@ class SettingsRepository(
     private val backgroundPathKey = stringPreferencesKey(Constants.KEY_BACKGROUND_PATH)
     private val backgroundDimKey = floatPreferencesKey(Constants.KEY_BACKGROUND_DIM)
     private val imageVersionKey = longPreferencesKey(Constants.KEY_IMAGE_VERSION)
+    private val showUserAvatarKey =
+        booleanPreferencesKey(Constants.KEY_SHOW_USER_AVATAR)
+    private val showAssistantAvatarKey =
+        booleanPreferencesKey(Constants.KEY_SHOW_ASSISTANT_AVATAR)
     private val transparentTopBarKey =
         booleanPreferencesKey(Constants.KEY_TRANSPARENT_TOP_BAR)
     private val transparentInputBarKey =
@@ -129,6 +133,8 @@ class SettingsRepository(
                 backgroundMode = ChatBackgroundMode.fromId(prefs[backgroundModeKey]),
                 backgroundPath = prefs[backgroundPathKey]?.takeIf { it.isNotBlank() },
                 backgroundDim = prefs[backgroundDimKey] ?: 0.35f,
+                showUserAvatar = prefs[showUserAvatarKey] ?: true,
+                showAssistantAvatar = prefs[showAssistantAvatarKey] ?: true,
                 transparentTopBar = prefs[transparentTopBarKey] ?: true,
                 transparentInputBar = prefs[transparentInputBarKey] ?: false,
                 imageVersion = prefs[imageVersionKey] ?: 0L
@@ -201,6 +207,14 @@ class SettingsRepository(
 
     suspend fun setBackgroundDim(value: Float) {
         dataStore.edit { it[backgroundDimKey] = value.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setShowUserAvatar(enabled: Boolean) {
+        dataStore.edit { it[showUserAvatarKey] = enabled }
+    }
+
+    suspend fun setShowAssistantAvatar(enabled: Boolean) {
+        dataStore.edit { it[showAssistantAvatarKey] = enabled }
     }
 
     suspend fun setTransparentTopBar(enabled: Boolean) {

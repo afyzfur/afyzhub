@@ -152,9 +152,30 @@ fun ChatAppearanceSettingsScreen(
                     }
                 }
 
-                // 仅在自定义模式下显示图片选择：其他模式下这两行没有作用。
+                // 显示开关对所有模式都有效，因此不放在自定义模式的条件里。
                 // 与上一组之间需要间距——SettingsGroup 自身不带外边距，
                 // 其他页面靠分类标题分隔，这里两组之间没有标题会贴在一起
+                if (appearance.showAvatars) {
+                    Spacer(Modifier.height(12.dp))
+                    SettingsGroup {
+                        SettingsSwitchItem(
+                            icon = Icons.Default.Person,
+                            title = "显示我的头像",
+                            subtitle = "在抽屉顶部与自己的消息旁显示",
+                            checked = appearance.showUserAvatar,
+                            onCheckedChange = viewModel::setShowUserAvatar
+                        )
+                        SettingsSwitchItem(
+                            icon = Icons.Default.Face,
+                            title = "显示助手头像",
+                            subtitle = "在助手消息旁显示模型厂商图标",
+                            checked = appearance.showAssistantAvatar,
+                            onCheckedChange = viewModel::setShowAssistantAvatar
+                        )
+                    }
+                }
+
+                // 仅在自定义模式下显示图片选择：其他模式下这两行没有作用
                 if (appearance.avatarMode == AvatarMode.CUSTOM) {
                     Spacer(Modifier.height(12.dp))
                     SettingsGroup {

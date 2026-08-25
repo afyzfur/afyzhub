@@ -15,6 +15,10 @@ import com.afyzfur.afyzhub.data.settings.SettingsProvider
 import com.afyzfur.afyzhub.domain.model.Conversation
 import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.domain.model.Message
+import com.afyzfur.afyzhub.domain.model.SendPhase
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -53,7 +57,11 @@ class ChatRepositoryImpl(
     override suspend fun createConversation(title: String): Long =
         conversationDao.insertConversation(ConversationEntity(title = title))
 
-    override suspend fun sendMessage(conversationId: Long, content: String): Result<Message> {
+    override suspend fun sendMessage(
+        conversationId: Long,
+        content: String,
+        onPhase: (SendPhase) -> Unit
+    ): Result<Message> {
         val userMessageId = messageDao.insertMessage(
             MessageEntity(
                 conversationId = conversationId,
@@ -62,17 +70,20 @@ class ChatRepositoryImpl(
                 status = Constants.STATUS_SENDING
             )
         )
-        return requestCompletion(conversationId, userMessageId)
+        return requestCompletion(conversationId, userMessageId, onPhase)
     }
 
-    override suspend fun retryMessage(messageId: Long): Result<Message> {
+    override suspend fun retryMessage(
+        messageId: Long,
+        onPhase: (SendPhase) -> Unit
+    ): Result<Message> {
         val message = messageDao.getMessageById(messageId)
             ?: return Result.failure(IllegalStateException("消息不存在"))
         if (message.role != Constants.ROLE_USER) {
             return Result.failure(IllegalStateException("只能重试用户消息"))
         }
         messageDao.updateStatus(messageId, Constants.STATUS_SENDING, null)
-        return requestCompletion(message.conversationId, messageId)
+        return requestCompletion(message.conversationId, messageId, onPhase)
     }
 
     /**
@@ -84,10 +95,12 @@ class ChatRepositoryImpl(
      */
     private suspend fun requestCompletion(
         conversationId: Long,
-        userMessageId: Long
+        userMessageId: Long,
+        onPhase: (SendPhase) -> Unit
     ): Result<Message> {
         var assistantId: Long? = null
         return try {
+            onPhase(SendPhase.CONNECTING)
             val settings = settingsProvider.current()
             if (settings.apiKey.isBlank()) {
                 throw IllegalStateException("请先在设置中配置 API Key")
@@ -98,6 +111,7 @@ class ChatRepositoryImpl(
 
             // 耗时从发出请求前开始计，包含网络往返与模型生成
             val startedAt = System.currentTimeMillis()
+            onPhase(SendPhase.WAITING)
 
             val outcome = if (settings.streamEnabled) {
                 // 先占位再逐段填充，界面即可实时看到增量文本。
@@ -110,7 +124,7 @@ class ChatRepositoryImpl(
                     )
                 )
                 assistantId = placeholderId
-                collectStream(client, turns, settings, placeholderId)
+                collectStream(client, turns, settings, placeholderId, onPhase)
             } else {
                 client.complete(turns, settings)
             }
@@ -158,12 +172,51 @@ class ChatRepositoryImpl(
                     latencyMs = latencyMs
                 )
             )
+        } catch (e: CancellationException) {
+            // 用户主动暂停。与失败不同，已生成的内容要保留——
+            // 暂停的本意是"到此为止"，不是"作废重来"。
+            //
+            // 收尾操作必须放在 NonCancellable 里：当前协程已进入取消状态，
+            // 任何挂起的数据库写入会立刻再次抛出取消异常，状态就落不了盘，
+            // 消息会永久停在"发送中"。
+            withContext(NonCancellable) {
+                finalizeCancelled(conversationId, userMessageId, assistantId)
+            }
+            // 继续向上抛：取消异常不该被吞掉，否则协程框架无法
+            // 正确结束这条协程链
+            throw e
         } catch (e: Exception) {
             val reason = e.message ?: "发送失败"
             // 流式中断时删除半截的占位回复，避免留下无意义的残片。
             assistantId?.let { messageDao.deleteMessageById(it) }
             messageDao.updateStatus(userMessageId, Constants.STATUS_FAILED, reason)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * 暂停后的收尾。
+     *
+     * 用户消息标记成功——它确实发出去了。助手回复若已有内容则保留并
+     * 标记成功，使其能进入后续对话的上下文；若一个字都没收到就删掉占位，
+     * 留一条空消息没有意义。
+     */
+    private suspend fun finalizeCancelled(
+        conversationId: Long,
+        userMessageId: Long,
+        assistantId: Long?
+    ) {
+        messageDao.updateStatus(userMessageId, Constants.STATUS_SUCCESS, null)
+
+        if (assistantId == null) {
+            return
+        }
+        val partial = messageDao.getMessageById(assistantId)?.content.orEmpty()
+        if (partial.isBlank()) {
+            messageDao.deleteMessageById(assistantId)
+        } else {
+            messageDao.updateStatus(assistantId, Constants.STATUS_SUCCESS, null)
+            touchConversation(conversationId)
         }
     }
 
@@ -177,7 +230,8 @@ class ChatRepositoryImpl(
         client: ChatClient,
         turns: List<ChatTurn>,
         settings: AppSettings,
-        placeholderId: Long
+        placeholderId: Long,
+        onPhase: (SendPhase) -> Unit
     ): CompletionResult {
         val builder = StringBuilder()
         var usage: TokenUsage? = null
@@ -185,6 +239,9 @@ class ChatRepositoryImpl(
         client.stream(turns, settings).collect { event ->
             when (event) {
                 is StreamEvent.TextDelta -> {
+                    // 首个片段到达即离开等待阶段。此后内容在陆续显现，
+                    // 用户能直接看到进展，状态文字的作用就减弱了
+                    if (builder.isEmpty()) onPhase(SendPhase.RECEIVING)
                     builder.append(event.delta)
                     messageDao.updateContent(placeholderId, builder.toString())
                 }

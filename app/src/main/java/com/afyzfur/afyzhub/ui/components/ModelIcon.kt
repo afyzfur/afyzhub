@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -37,6 +38,14 @@ fun ModelIcon(
             model = "file:///android_asset/$ICON_DIR/$asset",
             contentDescription = null,
             contentScale = ContentScale.Fit,
+            // 单色图标用 currentColor 填充，独立加载时会落到黑色，
+            // 深色主题下不可见。用 onSurface 让它跟随主题翻转，
+            // 比硬编码黑白更稳——换配色方案时也不用跟着改
+            colorFilter = if (needsThemeTint(asset)) {
+                ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
+            } else {
+                null
+            },
             modifier = modifier.size(size)
         )
     } else {

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
+import com.afyzfur.afyzhub.domain.model.SendPhase
 import com.afyzfur.afyzhub.ui.components.LocalImage
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.domain.model.Message
@@ -46,6 +47,7 @@ fun ChatScreen(
     val currentConversationId by hostViewModel.currentConversationId.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val sendPhase by viewModel.sendPhase.collectAsState()
     val error by viewModel.error.collectAsState()
     val listState = rememberLazyListState()
     var inputText by remember { mutableStateOf("") }
@@ -85,6 +87,7 @@ fun ChatScreen(
                     conversations = conversations,
                     currentConversationId = currentConversationId,
                     modelLabel = settings.model,
+                    appearance = uiPreferences.chatAppearance,
                     onConversationClick = { id ->
                         hostViewModel.openConversation(id)
                         scope.launch { drawerState.close() }
@@ -118,6 +121,7 @@ fun ChatScreen(
             displayOptions = uiPreferences.messageDisplay,
             messages = messages,
             isLoading = isLoading,
+            sendPhase = sendPhase,
             error = error,
             listState = listState,
             inputText = inputText,
@@ -132,6 +136,7 @@ fun ChatScreen(
                     viewModel.sendMessage(text) { hostViewModel.ensureConversation() }
                 }
             },
+            onStop = { viewModel.stopGenerating() },
             onPromptClick = { prompt -> inputText = prompt },
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
@@ -161,12 +166,14 @@ private fun ChatContent(
     displayOptions: MessageDisplayOptions,
     messages: List<Message>,
     isLoading: Boolean,
+    sendPhase: SendPhase,
     error: String?,
     listState: LazyListState,
     inputText: String,
     onInputChange: (String) -> Unit,
     onOpenDrawer: () -> Unit,
     onSend: () -> Unit,
+    onStop: () -> Unit,
     onPromptClick: (String) -> Unit,
     onRetry: (Long) -> Unit,
     onClearError: () -> Unit
@@ -325,8 +332,10 @@ private fun ChatContent(
                     value = inputText,
                     onValueChange = onInputChange,
                     onSend = onSend,
+                    onStop = onStop,
                     providerLabel = providerLabel,
-                    isLoading = isLoading
+                    isLoading = isLoading,
+                    statusLabel = sendPhase.label
                 )
             }
         }

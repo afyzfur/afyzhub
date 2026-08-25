@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -44,8 +44,11 @@ fun ChatInputBar(
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
+    onStop: () -> Unit,
     providerLabel: String,
     isLoading: Boolean,
+    /** 进行中的具体阶段文字。为空时显示提供商名 */
+    statusLabel: String = "",
     transparent: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -107,10 +110,16 @@ fun ChatInputBar(
                     .padding(start = 20.dp, end = 8.dp, bottom = 8.dp)
             ) {
                 // 当前提供商暴露在此处，使"这条消息以何配置发出"一眼可见
+                // 生成中显示具体阶段，替代提供商名——后者在等待期间
+                // 不提供任何新信息，而用户此时最想知道的是进行到哪一步
                 Text(
-                    text = providerLabel,
+                    text = statusLabel.ifEmpty { providerLabel },
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (statusLabel.isEmpty()) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    }
                 )
 
                 Box(modifier = Modifier.weight(1f))
@@ -118,7 +127,8 @@ fun ChatInputBar(
                 SendButton(
                     canSend = canSend,
                     isLoading = isLoading,
-                    onSend = onSend
+                    onSend = onSend,
+                    onStop = onStop
                 )
             }
         }
@@ -126,21 +136,32 @@ fun ChatInputBar(
 }
 
 /**
- * 发送按钮。正圆，不可用时降低对比度而非隐藏，
- * 保持布局稳定并暗示"补全输入即可发送"。
+ * 发送按钮，生成中切换为暂停。
+ *
+ * 复用同一位置而非另设一个按钮：生成中不可能同时需要发送，
+ * 两个功能互斥；就地切换也让用户不必寻找暂停在哪。
+ *
+ * 不可用时降低对比度而非隐藏，保持布局稳定并暗示"补全输入即可发送"。
  */
 @Composable
 private fun SendButton(
     canSend: Boolean,
     isLoading: Boolean,
-    onSend: () -> Unit
+    onSend: () -> Unit,
+    onStop: () -> Unit
 ) {
-    val container =
-        if (canSend) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.surfaceContainerHighest
-    val content =
-        if (canSend) MaterialTheme.colorScheme.onPrimary
-        else MaterialTheme.colorScheme.onSurfaceVariant
+    // 暂停用 error 色：它是一个中断性操作，与发送的正向语义相反，
+    // 用主色会让两种状态难以区分
+    val container = when {
+        isLoading -> MaterialTheme.colorScheme.error
+        canSend -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val content = when {
+        isLoading -> MaterialTheme.colorScheme.onError
+        canSend -> MaterialTheme.colorScheme.onPrimary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Surface(
         color = container,
@@ -150,14 +171,16 @@ private fun SendButton(
         // 用 IconButton 承接点击，以获得涟漪反馈与无障碍语义。
         // 若改用 Modifier.clickable 需自行处理这两点
         IconButton(
-            onClick = onSend,
-            enabled = canSend
+            onClick = if (isLoading) onStop else onSend,
+            enabled = isLoading || canSend
         ) {
             if (isLoading) {
-                CircularProgressIndicator(
-                    strokeWidth = 2.dp,
-                    color = content,
-                    modifier = Modifier.size(20.dp)
+                // 方块而非图标：material-icons-core 里没有 stop 图标，
+                // 而实心方块是停止的通用表意，也不需要额外依赖
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .background(content, AppShapeTokens.StopSquare)
                 )
             } else {
                 Icon(

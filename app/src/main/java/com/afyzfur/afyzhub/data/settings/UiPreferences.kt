@@ -121,6 +121,18 @@ data class ChatAppearance(
     val userAvatarPath: String? = null,
     /** 自定义助手头像的本地文件路径，未设置为 null */
     val assistantAvatarPath: String? = null,
+    /**
+     * 是否显示用户头像。
+     *
+     * 与 [avatarMode] 分工：模式决定"用什么图"（默认图标还是自定义图片），
+     * 这两个开关决定"哪一侧显示"。分开是因为两个诉求正交——
+     * 有人只想看助手头像，不希望自己的重复出现在每条消息旁。
+     *
+     * 默认开启：用户设置了自定义头像却看不到它在哪，会以为没生效。
+     */
+    val showUserAvatar: Boolean = true,
+    /** 是否显示助手头像。默认开启 */
+    val showAssistantAvatar: Boolean = true,
     val backgroundMode: ChatBackgroundMode = ChatBackgroundMode.DEFAULT,
     /** 背景图的本地文件路径 */
     val backgroundPath: String? = null,

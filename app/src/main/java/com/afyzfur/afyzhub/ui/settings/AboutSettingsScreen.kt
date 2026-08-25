@@ -77,7 +77,7 @@ fun AboutSettingsScreen(
                     SettingsNavItem(
                         icon = Icons.Default.List,
                         title = "更新日志",
-                        subtitle = "在应用内查看各版本的变更内容",
+                        subtitle = "查看各版本的变更内容",
                         onClick = onNavigateToChangelog
                     )
                 }

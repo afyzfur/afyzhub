@@ -30,6 +30,7 @@ import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.ui.components.LocalImage
 import com.afyzfur.afyzhub.ui.components.ModelIcon
+import com.afyzfur.afyzhub.ui.components.UserAvatar
 import com.afyzfur.afyzhub.ui.components.MarkdownText
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
@@ -60,7 +61,7 @@ fun MessageBlock(
         horizontalArrangement = if (fromUser) Arrangement.End else Arrangement.Start
     ) {
         // 助手头像在消息左侧
-        if (appearance.showAvatars && !fromUser) {
+        if (appearance.showAvatars && appearance.showAssistantAvatar && !fromUser) {
             MessageAvatar(
                 appearance = appearance,
                 fromUser = false,
@@ -95,7 +96,7 @@ fun MessageBlock(
         }
 
         // 用户头像在消息右侧
-        if (appearance.showAvatars && fromUser) {
+        if (appearance.showAvatars && appearance.showUserAvatar && fromUser) {
             Spacer(Modifier.size(8.dp))
             MessageAvatar(
                 appearance = appearance,
@@ -166,7 +167,9 @@ private fun MessageBody(
         }
     }
 
-    if (message.isSending) {
+    // 只在用户侧显示。助手侧的进度已由输入栏的阶段文字承担，
+    // 且流式回复本身在逐字呈现，气泡下再挂一行"发送中"是重复信息
+    if (message.isSending && message.isFromUser) {
         Spacer(Modifier.height(4.dp))
         Text(
             text = "发送中",
@@ -190,7 +193,13 @@ private fun MessageAvatar(
     /** 该条消息使用的模型名，用于匹配厂商图标；v3 之前的消息为 null */
     modelName: String?
 ) {
-    val path = if (fromUser) appearance.userAvatarPath else appearance.assistantAvatarPath
+    // 用户侧直接复用共用组件，与抽屉顶部保持一致
+    if (fromUser) {
+        UserAvatar(appearance = appearance, size = 32.dp)
+        return
+    }
+
+    val path = appearance.assistantAvatarPath
     val useCustom = appearance.avatarMode == AvatarMode.CUSTOM && !path.isNullOrBlank()
 
     Box(
@@ -208,31 +217,18 @@ private fun MessageAvatar(
             )
         } else {
             Surface(
-                color = if (fromUser) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.tertiaryContainer
-                },
+                color = MaterialTheme.colorScheme.tertiaryContainer,
                 shape = CircleShape,
                 modifier = Modifier.size(32.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    if (fromUser) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    } else {
-                        // 优先用消息自身记录的模型名——历史消息可能来自
-                        // 与当前配置不同的模型。缺失时退回提供商名，
-                        // 两者都匹配不到时 ModelIcon 内部会显示首字母
-                        ModelIcon(
-                            modelName = modelName ?: providerLabel,
-                            size = 24.dp
-                        )
-                    }
+                    // 优先用消息自身记录的模型名——历史消息可能来自
+                    // 与当前配置不同的模型。缺失时退回提供商名，
+                    // 两者都匹配不到时 ModelIcon 内部会显示首字母
+                    ModelIcon(
+                        modelName = modelName ?: providerLabel,
+                        size = 24.dp
+                    )
                 }
             }
         }
