@@ -4,7 +4,11 @@ import com.afyzfur.afyzhub.data.log.RequestLogEntry
 import com.afyzfur.afyzhub.data.log.RequestLogStore
 import com.afyzfur.afyzhub.data.log.redactHeaders
 import com.afyzfur.afyzhub.data.log.redactUrl
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -87,8 +91,14 @@ class HttpTransport(
         val request = buildRequest(url, headers, body)
 
         var logged = false
+        // 同 postForSse：execute() 阻塞，协程取消不会打断它，
+        // 需显式 cancel 才能让非流式请求也响应暂停
+        val call = client.newCall(request)
+        val cancelHandle = currentCoroutineContext()[Job]?.invokeOnCompletion {
+            call.cancel()
+        }
         try {
-            client.newCall(request).execute().use { response ->
+            call.execute().use { response ->
                 val text = response.body?.string().orEmpty()
                 val failure = if (response.isSuccessful) {
                     null
@@ -101,10 +111,16 @@ class HttpTransport(
                 text
             }
         } catch (e: IOException) {
+            // 暂停引起的中断不记为网络错误，换回取消异常让上层正确处理
+            if (!currentCoroutineContext().isActive) {
+                throw CancellationException("已暂停")
+            }
             if (!logged) {
                 log(startedAt, "POST", url, headers, body, null, null, e.message ?: "网络错误")
             }
             throw e
+        } finally {
+            cancelHandle?.dispose()
         }
     }
 
@@ -127,8 +143,19 @@ class HttpTransport(
         var statusCode: Int? = null
         var logged = false
 
+        // 持有 Call 以便协程取消时主动断开。
+        //
+        // execute() 与 readUtf8Line() 都是阻塞调用，协程取消只设标记，
+        // 不会打断阻塞在 socket 上的线程。不显式 cancel 的话用户按暂停后
+        // 请求仍会跑到超时才结束，界面一直停在「发送中」。
+        val call = client.newCall(request)
+        val cancelHandle = currentCoroutineContext()[Job]?.invokeOnCompletion {
+            // 已结束的 Call 再 cancel 是空操作，无需区分正常完成与取消
+            call.cancel()
+        }
+
         try {
-            client.newCall(request).execute().use { response ->
+            call.execute().use { response ->
                 statusCode = response.code
                 if (!response.isSuccessful) {
                     val detail = response.body?.string().orEmpty()
@@ -178,6 +205,13 @@ class HttpTransport(
             log(startedAt, "POST", url, sseHeaders, body, statusCode, collected.toString(), null)
             logged = true
         } catch (e: Exception) {
+            // 用户暂停导致的中断不算错误。call.cancel() 会让阻塞的读取抛
+            // IOException，若照常记为失败并原样上抛，仓库层的取消分支就接不到，
+            // 会走"删除内容并标记失败"的路径——与暂停意图相反。
+            // 这里换回 CancellationException，让协程框架正常收束。
+            if (!currentCoroutineContext().isActive) {
+                throw CancellationException("已暂停")
+            }
             // 也捕获非 IOException：流式过程中的解析异常同样需要留痕
             if (!logged) {
                 log(
@@ -192,6 +226,9 @@ class HttpTransport(
                 )
             }
             throw e
+        } finally {
+            // 释放监听，否则每次请求都会在 ViewModel 的 Job 上留一个回调
+            cancelHandle?.dispose()
         }
     }.flowOn(Dispatchers.IO)
 

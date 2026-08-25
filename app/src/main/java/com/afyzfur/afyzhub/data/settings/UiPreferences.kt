@@ -45,7 +45,14 @@ enum class AvatarMode(val id: String, val label: String) {
     CUSTOM("custom", "自定义图片");
 
     companion object {
-        val DEFAULT = NONE
+        /**
+         * 默认显示内置图标。
+         *
+         * 此前默认 NONE，与「显示我的头像」「显示助手头像」两个开关冲突：
+         * 那两项默认开启，却被这里的 NONE 全部拦住，
+         * 用户设了自定义头像也看不到变化，只会以为功能没生效。
+         */
+        val DEFAULT = BUILTIN
 
         fun fromId(id: String?): AvatarMode =
             entries.firstOrNull { it.id == id } ?: DEFAULT

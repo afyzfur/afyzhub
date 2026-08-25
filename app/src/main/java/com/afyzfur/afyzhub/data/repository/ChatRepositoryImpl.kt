@@ -70,7 +70,16 @@ class ChatRepositoryImpl(
                 status = Constants.STATUS_SENDING
             )
         )
-        return requestCompletion(conversationId, userMessageId, onPhase)
+        // 兜底：插库返回后到 requestCompletion 的 try 之间若被取消，
+        // 这条消息就没人收尾，会永久停在「发送中」。窗口很窄但确实存在
+        try {
+            return requestCompletion(conversationId, userMessageId, onPhase)
+        } catch (e: CancellationException) {
+            withContext(NonCancellable) {
+                messageDao.updateStatus(userMessageId, Constants.STATUS_SUCCESS, null)
+            }
+            throw e
+        }
     }
 
     override suspend fun retryMessage(
