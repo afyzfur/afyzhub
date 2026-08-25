@@ -81,14 +81,6 @@ class UiPreferencesViewModel(
         viewModelScope.launch { repository.setBackgroundDim(value) }
     }
 
-    init {
-        // 一次性落盘头像模式的迁移标记。
-        //
-        // 放在 init 而非读取路径里：读取是 Flow 的 map，在其中写入
-        // 会触发新一轮发射，造成自循环
-        viewModelScope.launch { repository.markAvatarModeMigrated() }
-    }
-
     fun setShowUserAvatar(enabled: Boolean) {
         viewModelScope.launch { repository.setShowUserAvatar(enabled) }
     }
