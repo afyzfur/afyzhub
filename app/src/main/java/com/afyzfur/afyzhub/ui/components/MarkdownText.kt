@@ -76,10 +76,10 @@ private fun MarkdownBlockView(block: MarkdownBlock, color: Color) {
             // 二级与三级标题几乎看不出层级，更新日志里的版本号
             // 与其下的分类标题混成一片
             style = when (block.level) {
-                1 -> MaterialTheme.typography.headlineSmall
-                2 -> MaterialTheme.typography.titleLarge
-                3 -> MaterialTheme.typography.titleMedium
-                else -> MaterialTheme.typography.titleSmall
+                1 -> MaterialTheme.typography.headlineMedium
+                2 -> MaterialTheme.typography.headlineSmall
+                3 -> MaterialTheme.typography.titleLarge
+                else -> MaterialTheme.typography.titleMedium
             },
             fontWeight = FontWeight.Bold
         )
