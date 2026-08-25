@@ -132,8 +132,15 @@ class ChatViewModel(
      * 并把消息置为终态，不会留下停在"发送中"的残留。
      */
     fun stopGenerating() {
-        sendJob?.cancel()
+        val job = sendJob ?: return
         sendJob = null
+        job.cancel()
+
+        // 立即复位而不等协程的 finally：取消是异步的，收尾还要写库，
+        // 期间按钮若仍是暂停态，用户会以为没点中而重复点击。
+        // finally 里的复位保留着，两处都置成同一个值，没有竞态问题
+        _isLoading.value = false
+        _sendPhase.value = SendPhase.IDLE
     }
 
     /** 重发一条失败的用户消息。 */
