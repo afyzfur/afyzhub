@@ -171,7 +171,7 @@ private fun MessageBody(
             } else {
                 MaterialTheme.colorScheme.surfaceContainerHigh
             },
-            // 气泡在靠内的下角收窄，指示消息来源方向
+            // 两侧形状一致，来源方向由对齐与底色区分
             shape = if (fromUser) {
                 AppShapeTokens.UserMessage
             } else {
@@ -185,10 +185,16 @@ private fun MessageBody(
             }
         }
 
+        // 助手侧撑满宽度让代码块与表格完整展开；用户侧不撑满，
+        // 否则容器占满整行后文本会从左边缘开始排，与靠右的意图相反
         BubbleStyle.PLAIN -> Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(longPress)
+            modifier = if (fromUser) {
+                longPress
+            } else {
+                Modifier
+                    .fillMaxWidth()
+                    .then(longPress)
+            }
         ) {
             content()
         }
