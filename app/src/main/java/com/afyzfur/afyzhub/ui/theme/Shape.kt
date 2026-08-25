@@ -45,13 +45,15 @@ object AppShapeTokens {
     val AssistantMessage = RoundedCornerShape(20.dp)
 
     /**
-     * 用户消息块。与助手一致的四角统一圆角。
-     *
-     * 此前右下角收窄至 4dp 作为"气泡尾巴的克制版本"，
-     * 但两侧形状不同看起来割裂——来源方向已由对齐与底色区分，
-     * 不需要再靠形状表达。
+     * 用户消息块。右下角收窄至 4dp 指示消息来源方向，
+     * 这是气泡尾巴的克制版本，不画三角
      */
-    val UserMessage = RoundedCornerShape(20.dp)
+    val UserMessage = RoundedCornerShape(
+        topStart = 20.dp,
+        topEnd = 20.dp,
+        bottomStart = 20.dp,
+        bottomEnd = 4.dp
+    )
 
     /** chip、选中态、筛选器 —— 全圆角胶囊 */
     val Pill = RoundedCornerShape(percent = 50)

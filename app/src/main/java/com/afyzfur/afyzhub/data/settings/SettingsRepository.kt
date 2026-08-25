@@ -122,15 +122,12 @@ class SettingsRepository(
             shufflePrompts = prefs[shufflePromptsKey] ?: true,
             palette = ThemePalette.fromId(prefs[paletteKey]),
             chatAppearance = ChatAppearance(
-                userBubble = BubbleStyle.fromId(prefs[userBubbleKey], BubbleStyle.PLAIN),
+                userBubble = BubbleStyle.fromId(prefs[userBubbleKey], BubbleStyle.BUBBLE),
                 assistantBubble = BubbleStyle.fromId(
                     prefs[assistantBubbleKey],
                     BubbleStyle.PLAIN
                 ),
-                // 旧版默认值 NONE 会写进 DataStore，仅改默认值对已装设备无效。
-                // 未迁移过的设备把存下的 NONE 视作未设置一次，
-                // 迁移标记由 migrateAvatarModeIfNeeded 落盘，之后正常读取
-                avatarMode = resolveAvatarMode(prefs),
+                avatarMode = AvatarMode.fromId(prefs[avatarModeKey]),
                 userAvatarPath = prefs[userAvatarPathKey]?.takeIf { it.isNotBlank() },
                 assistantAvatarPath = prefs[assistantAvatarPathKey]?.takeIf { it.isNotBlank() },
                 backgroundMode = ChatBackgroundMode.fromId(prefs[backgroundModeKey]),
@@ -210,21 +207,6 @@ class SettingsRepository(
 
     suspend fun setBackgroundDim(value: Float) {
         dataStore.edit { it[backgroundDimKey] = value.coerceIn(0f, 1f) }
-    }
-
-    /**
-     * 解析头像模式。
-     *
-     * 旧存值里的 NONE 规整为 BUILTIN：该项已不作为可选项，
-     * 保留它会让 avatarMode == CUSTOM 的判断落空，自定义图片用不上。
-     * 是否显示头像现在由两个独立开关决定，与这里无关。
-     *
-     * 不再依赖迁移标记——那个方案在"标记已置而值未改"的状态下
-     * 无法自愈，而这种状态确实会出现。这里每次读取都规整，无状态可言。
-     */
-    private fun resolveAvatarMode(prefs: Preferences): AvatarMode {
-        val mode = AvatarMode.fromId(prefs[avatarModeKey])
-        return if (mode == AvatarMode.NONE) AvatarMode.BUILTIN else mode
     }
 
     suspend fun setShowUserAvatar(enabled: Boolean) {

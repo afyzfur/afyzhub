@@ -1,7 +1,6 @@
 package com.afyzfur.afyzhub.ui.components
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -39,9 +38,7 @@ fun UserAvatar(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            // requiredSize 而非 size：后者只是"建议"，父级约束更紧时会被压扁。
-            // 消息行里头像与正文竞争宽度，正文占满后头像会被压成一条
-            .requiredSize(size)
+            .size(size)
             .clip(CircleShape)
     ) {
         if (useCustom) {

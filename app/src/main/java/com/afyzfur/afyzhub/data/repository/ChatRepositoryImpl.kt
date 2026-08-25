@@ -70,16 +70,7 @@ class ChatRepositoryImpl(
                 status = Constants.STATUS_SENDING
             )
         )
-        // 兜底：插库返回后到 requestCompletion 的 try 之间若被取消，
-        // 这条消息就没人收尾，会永久停在「发送中」。窗口很窄但确实存在
-        try {
-            return requestCompletion(conversationId, userMessageId, onPhase)
-        } catch (e: CancellationException) {
-            withContext(NonCancellable) {
-                messageDao.updateStatus(userMessageId, Constants.STATUS_SUCCESS, null)
-            }
-            throw e
-        }
+        return requestCompletion(conversationId, userMessageId, onPhase)
     }
 
     override suspend fun retryMessage(
@@ -200,69 +191,6 @@ class ChatRepositoryImpl(
             assistantId?.let { messageDao.deleteMessageById(it) }
             messageDao.updateStatus(userMessageId, Constants.STATUS_FAILED, reason)
             Result.failure(e)
-        }
-    }
-
-    override suspend fun deleteMessage(messageId: Long) {
-        messageDao.deleteMessageById(messageId)
-    }
-
-    override suspend fun rollbackTo(messageId: Long) {
-        val message = messageDao.getMessageById(messageId) ?: return
-        messageDao.deleteFrom(
-            conversationId = message.conversationId,
-            createdAt = message.createdAt,
-            id = messageId
-        )
-        touchConversation(message.conversationId)
-    }
-
-    override suspend fun regenerate(
-        assistantMessageId: Long,
-        onPhase: (SendPhase) -> Unit
-    ): Result<Message> {
-        val assistant = messageDao.getMessageById(assistantMessageId)
-            ?: return Result.failure(IllegalStateException("消息不存在"))
-        if (assistant.role != Constants.ROLE_ASSISTANT) {
-            return Result.failure(IllegalStateException("只能重新生成助手回复"))
-        }
-
-        // 找到这条回复对应的用户提问：同会话中排在它之前的最后一条用户消息
-        val history = messageDao.getMessagesOnce(assistant.conversationId)
-        val userMessage = history
-            .filter { it.role == Constants.ROLE_USER }
-            .lastOrNull {
-                it.createdAt < assistant.createdAt ||
-                    (it.createdAt == assistant.createdAt && it.id < assistant.id)
-            }
-            ?: return Result.failure(IllegalStateException("找不到对应的提问"))
-
-        // 先删旧回复，否则它会进入新请求的上下文，
-        // 模型会看到自己刚说过的话
-        messageDao.deleteMessageById(assistantMessageId)
-        return requestCompletion(assistant.conversationId, userMessage.id, onPhase)
-    }
-
-    override suspend fun settleInterrupted(conversationId: Long) {
-        // 先删空占位再归位：顺序反了的话空消息已不是 SENDING，
-        // 删除条件就匹配不到，会留下一条空白气泡
-        val deleted = messageDao.deleteEmptyMessagesByStatus(
-            conversationId,
-            Constants.STATUS_SENDING
-        )
-        val settled = messageDao.settlePendingMessages(
-            conversationId = conversationId,
-            fromStatus = Constants.STATUS_SENDING,
-            toStatus = Constants.STATUS_SUCCESS
-        )
-
-        // 只在确实改动过数据时更新时间戳。
-        //
-        // 无条件 touch 是个严重问题：这个方法在每次打开会话时都会调用，
-        // 于是所有会话的 updatedAt 都被刷成当前时间，
-        // 抽屉里的时间分组全部塌成「今天」
-        if (deleted > 0 || settled > 0) {
-            touchConversation(conversationId)
         }
     }
 

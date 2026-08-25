@@ -38,38 +38,6 @@ interface ChatRepository {
         onPhase: (SendPhase) -> Unit = {}
     ): Result<Message>
 
-    /**
-     * 结算该会话中所有仍在「发送中」的消息。
-     *
-     * 暂停后由界面层主动调用，不依赖取消异常的传播——那条链路要穿过
-     * flow、NonCancellable 与 Room 三层，任一环节没走到就会留下
-     * 永久停在「发送中」的消息。这里以数据库当前状态为准直接归位，
-     * 与取消时序无关，也能清理历史遗留的卡住消息。
-     */
-    suspend fun settleInterrupted(conversationId: Long)
-
-    /** 删除单条消息。 */
-    suspend fun deleteMessage(messageId: Long)
-
-    /**
-     * 删除这条消息及其之后的全部消息。
-     *
-     * 「回滚到此处」用它把对话退回到该消息之前的状态。
-     */
-    suspend fun rollbackTo(messageId: Long)
-
-    /**
-     * 重新生成某条助手回复。
-     *
-     * 实现上是删掉这条回复，再以它前面那条用户消息重新请求。
-     * 不复用 [retryMessage]：那个针对的是发送失败的用户消息，
-     * 而这里的用户消息本身是成功的，只是要换一个回答。
-     */
-    suspend fun regenerate(
-        assistantMessageId: Long,
-        onPhase: (SendPhase) -> Unit = {}
-    ): Result<Message>
-
     suspend fun renameConversation(conversationId: Long, title: String)
 
     suspend fun deleteConversation(conversationId: Long)
