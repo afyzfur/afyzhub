@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +32,7 @@ import com.afyzfur.afyzhub.data.settings.BubbleStyle
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.domain.model.Message
+import com.afyzfur.afyzhub.domain.model.parseThinking
 import com.afyzfur.afyzhub.ui.components.LocalImage
 import com.afyzfur.afyzhub.ui.components.ModelIcon
 import com.afyzfur.afyzhub.ui.components.UserAvatar
@@ -77,12 +80,21 @@ fun MessageBlock(
 
         Column(
             horizontalAlignment = if (fromUser) Alignment.End else Alignment.Start,
-            // 无气泡的助手消息要占满剩余宽度，其余情况随内容
-            modifier = if (style == BubbleStyle.PLAIN && !fromUser) {
-                Modifier.weight(1f)
-            } else {
-                Modifier.widthIn(max = 320.dp)
-            }
+            // 一律用 weight 让正文占据剩余空间，而不是让它按内容取宽。
+            //
+            // 原先用户侧走 widthIn：Row 会先满足正文的宽度诉求，
+            // 长消息把可用宽度吃光后头像只剩零宽，表现为一条竖线或干脆不见。
+            // weight 使正文只拿"扣除头像后"的剩余部分。
+            // 上限仍需要，否则短消息的气泡会被拉成整行宽
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .then(
+                    if (style == BubbleStyle.PLAIN && !fromUser) {
+                        Modifier.fillMaxWidth()
+                    } else {
+                        Modifier.widthIn(max = 320.dp)
+                    }
+                )
         ) {
             when {
                 message.isFailed -> FailedMessage(message = message, onRetry = onRetry)
@@ -131,6 +143,13 @@ private fun MessageBody(
     fromUser: Boolean,
     onLongPress: () -> Unit
 ) {
+    // 只有助手回复会带思考标签，用户消息不必解析。
+    // remember 以内容为键：流式输出时每个增量都会重组，
+    // 每次重跑正则在长回复上是可观的开销
+    val parsed = remember(message.content, fromUser) {
+        if (fromUser) null else parseThinking(message.content)
+    }
+
     val content: @Composable () -> Unit = {
         if (fromUser) {
             Text(
@@ -144,7 +163,8 @@ private fun MessageBody(
             )
         } else {
             MarkdownText(
-                text = message.content,
+                // 用剥掉标签后的正文，否则 <think> 会原样显示
+                text = parsed?.answer ?: message.content,
                 color = if (style == BubbleStyle.BUBBLE) {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 } else {
@@ -163,6 +183,22 @@ private fun MessageBody(
         onClick = {},
         onLongClick = onLongPress
     )
+
+    // 思考块在气泡之外单独成栏：它与正式回答是并列关系，
+    // 塞进同一个气泡里会让两种内容混为一体
+    if (parsed?.hasReasoning == true) {
+        ReasoningBlock(
+            reasoning = parsed.reasoning ?: "",
+            thinking = parsed.thinking,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+    }
+
+    // 思考进行中而正文尚未开始时不渲染气泡，否则会出现一个空容器。
+    // 这正是截图里那条空白圆角块的来源
+    if (parsed != null && parsed.answer.isBlank() && parsed.hasReasoning) {
+        return
+    }
 
     when (style) {
         BubbleStyle.BUBBLE -> Surface(
@@ -238,7 +274,8 @@ private fun MessageAvatar(
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(32.dp)
+            // 同 UserAvatar：requiredSize 防止被正文挤压变形
+            .requiredSize(32.dp)
             .clip(CircleShape)
     ) {
         if (useCustom) {
