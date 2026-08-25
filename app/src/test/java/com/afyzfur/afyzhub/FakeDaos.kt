@@ -76,6 +76,35 @@ class FakeMessageDao : MessageDao {
         }
     }
 
+    override suspend fun deleteEmptyMessagesByStatus(conversationId: Long, status: String) {
+        state.value = state.value.filterNot {
+            it.conversationId == conversationId &&
+                it.status == status &&
+                it.content.isBlank()
+        }
+    }
+
+    override suspend fun settlePendingMessages(
+        conversationId: Long,
+        fromStatus: String,
+        toStatus: String
+    ) {
+        state.value = state.value.map {
+            if (it.conversationId == conversationId && it.status == fromStatus) {
+                it.copy(status = toStatus, errorMessage = null)
+            } else {
+                it
+            }
+        }
+    }
+
+    override suspend fun deleteFrom(conversationId: Long, createdAt: Long, id: Long) {
+        state.value = state.value.filterNot {
+            it.conversationId == conversationId &&
+                (it.createdAt > createdAt || (it.createdAt == createdAt && it.id >= id))
+        }
+    }
+
     override suspend fun deleteMessageById(id: Long) {
         state.value = state.value.filterNot { it.id == id }
     }

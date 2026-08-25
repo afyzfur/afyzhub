@@ -44,6 +44,14 @@ object Constants {
     const val KEY_BACKGROUND_PATH = "chat_background_path"
     const val KEY_BACKGROUND_DIM = "chat_background_dim"
     const val KEY_IMAGE_VERSION = "chat_image_version"
+    /**
+     * 头像模式是否已做过一次性迁移。
+     *
+     * 旧版默认值 NONE 会写进 DataStore，仅改默认值对已装设备无效。
+     * 用独立标记而非直接把 NONE 视作未设置——后者会让「不显示」
+     * 这个选项永久失效，每次重启都被重置。
+     */
+    const val KEY_AVATAR_MODE_MIGRATED = "avatar_mode_migrated"
     const val KEY_SHOW_USER_AVATAR = "show_user_avatar"
     const val KEY_SHOW_ASSISTANT_AVATAR = "show_assistant_avatar"
     const val KEY_TRANSPARENT_TOP_BAR = "transparent_top_bar"

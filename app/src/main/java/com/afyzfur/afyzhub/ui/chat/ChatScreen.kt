@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import com.afyzfur.afyzhub.domain.model.SendPhase
 import com.afyzfur.afyzhub.ui.components.LocalImage
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
@@ -48,6 +50,14 @@ fun ChatScreen(
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val sendPhase by viewModel.sendPhase.collectAsState()
+
+    /** 长按选中的消息，非空时显示操作表 */
+    var actionTarget by remember { mutableStateOf<Message?>(null) }
+
+    /** 「信息」选中的消息，与操作表分开以便先关表再开对话框 */
+    var infoTarget by remember { mutableStateOf<Message?>(null) }
+
+    val clipboard = LocalClipboardManager.current
     val error by viewModel.error.collectAsState()
     val listState = rememberLazyListState()
     var inputText by remember { mutableStateOf("") }
@@ -137,10 +147,50 @@ fun ChatScreen(
                 }
             },
             onStop = { viewModel.stopGenerating() },
+            onLongPress = { message -> actionTarget = message },
             onPromptClick = { prompt -> inputText = prompt },
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
         )
+    }
+
+    actionTarget?.let { target ->
+        val dismiss = { actionTarget = null }
+        MessageActionSheet(
+            fromUser = target.isFromUser,
+            onDismiss = dismiss,
+            onCopy = {
+                clipboard.setText(AnnotatedString(target.content))
+                dismiss()
+            },
+            onDelete = {
+                viewModel.deleteMessage(target.id)
+                dismiss()
+            },
+            onInfo = {
+                // 先关操作表再开对话框，两者同时存在会叠在一起
+                dismiss()
+                infoTarget = target
+            },
+            onRegenerate = {
+                viewModel.regenerate(target.id)
+                dismiss()
+            },
+            onEditResend = {
+                // 回填输入框并删掉原消息及其后续，用户改完直接发送
+                inputText = target.content
+                viewModel.rollbackTo(target.id)
+                dismiss()
+            },
+            onRollback = {
+                viewModel.rollbackTo(target.id)
+                dismiss()
+            }
+        )
+    }
+
+    infoTarget?.let { target ->
+        MessageInfoDialog(message = target, onDismiss = { infoTarget = null })
     }
 }
 
@@ -174,6 +224,7 @@ private fun ChatContent(
     onOpenDrawer: () -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
+    onLongPress: (Message) -> Unit,
     onPromptClick: (String) -> Unit,
     onRetry: (Long) -> Unit,
     onClearError: () -> Unit
@@ -283,7 +334,8 @@ private fun ChatContent(
                                 displayOptions = displayOptions,
                                 appearance = appearance,
                                 providerLabel = providerLabel,
-                                onRetry = { onRetry(message.id) }
+                                onRetry = { onRetry(message.id) },
+                                onLongPress = { onLongPress(message) }
                             )
                         }
                         // 流式回复已在正文内逐字呈现，无需额外的等待指示
