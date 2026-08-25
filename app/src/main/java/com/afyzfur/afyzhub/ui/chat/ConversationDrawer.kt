@@ -100,7 +100,7 @@ fun ConversationDrawer(
 
         LazyColumn(modifier = Modifier.weight(1f)) {
             grouped.forEach { (group, items) ->
-                item(key = "header-${group.name}") {
+                item(key = "header-${group.label}") {
                     Text(
                         text = group.label,
                         style = MaterialTheme.typography.labelMedium,

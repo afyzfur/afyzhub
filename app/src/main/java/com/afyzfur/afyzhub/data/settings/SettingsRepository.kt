@@ -57,8 +57,6 @@ class SettingsRepository(
     private val userBubbleKey = stringPreferencesKey(Constants.KEY_USER_BUBBLE)
     private val assistantBubbleKey = stringPreferencesKey(Constants.KEY_ASSISTANT_BUBBLE)
     private val avatarModeKey = stringPreferencesKey(Constants.KEY_AVATAR_MODE)
-    private val avatarModeMigratedKey =
-        booleanPreferencesKey(Constants.KEY_AVATAR_MODE_MIGRATED)
     private val userAvatarPathKey = stringPreferencesKey(Constants.KEY_USER_AVATAR_PATH)
     private val assistantAvatarPathKey = stringPreferencesKey(Constants.KEY_ASSISTANT_AVATAR_PATH)
     private val backgroundModeKey = stringPreferencesKey(Constants.KEY_BACKGROUND_MODE)
@@ -203,11 +201,7 @@ class SettingsRepository(
     }
 
     suspend fun setAvatarMode(mode: AvatarMode) {
-        dataStore.edit {
-            it[avatarModeKey] = mode.id
-            // 用户主动选过就不再迁移，否则选「不显示」会被下次读取改回默认
-            it[avatarModeMigratedKey] = true
-        }
+        dataStore.edit { it[avatarModeKey] = mode.id }
     }
 
     suspend fun setBackgroundMode(mode: ChatBackgroundMode) {
@@ -219,38 +213,18 @@ class SettingsRepository(
     }
 
     /**
-     * 解析头像模式，处理旧默认值的一次性迁移。
+     * 解析头像模式。
      *
-     * 迁移标记未落盘时，存下的 NONE 被当作"从未选择"，
-     * 从而让新的默认值生效；标记落盘后按存值原样读取，
-     * 「不显示」这个选项照常可用。
+     * 旧存值里的 NONE 规整为 BUILTIN：该项已不作为可选项，
+     * 保留它会让 avatarMode == CUSTOM 的判断落空，自定义图片用不上。
+     * 是否显示头像现在由两个独立开关决定，与这里无关。
+     *
+     * 不再依赖迁移标记——那个方案在"标记已置而值未改"的状态下
+     * 无法自愈，而这种状态确实会出现。这里每次读取都规整，无状态可言。
      */
     private fun resolveAvatarMode(prefs: Preferences): AvatarMode {
-        val stored = prefs[avatarModeKey]
-        val migrated = prefs[avatarModeMigratedKey] ?: false
-        if (!migrated && (stored == null || stored == AvatarMode.NONE.id)) {
-            return AvatarMode.DEFAULT
-        }
-        return AvatarMode.fromId(stored)
-    }
-
-    /**
-     * 落盘迁移标记，使后续读取不再改写用户的选择。
-     *
-     * 由界面层在首次读到设置后调用一次。不在 [resolveAvatarMode] 里写，
-     * 那是纯读取路径，在 map 里做写入会造成 Flow 自触发。
-     */
-    suspend fun markAvatarModeMigrated() {
-        dataStore.edit { prefs ->
-            if (prefs[avatarModeMigratedKey] != true) {
-                prefs[avatarModeMigratedKey] = true
-                // 同时把当前解析结果固化下来，否则标记落盘后
-                // 又会读回旧的 NONE
-                if (prefs[avatarModeKey].let { it == null || it == AvatarMode.NONE.id }) {
-                    prefs[avatarModeKey] = AvatarMode.DEFAULT.id
-                }
-            }
-        }
+        val mode = AvatarMode.fromId(prefs[avatarModeKey])
+        return if (mode == AvatarMode.NONE) AvatarMode.BUILTIN else mode
     }
 
     suspend fun setShowUserAvatar(enabled: Boolean) {

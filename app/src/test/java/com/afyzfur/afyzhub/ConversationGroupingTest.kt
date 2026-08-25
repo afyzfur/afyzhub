@@ -1,7 +1,6 @@
 package com.afyzfur.afyzhub
 
 import com.afyzfur.afyzhub.domain.model.ConversationItem
-import com.afyzfur.afyzhub.ui.chat.ConversationGroup
 import com.afyzfur.afyzhub.ui.chat.groupConversations
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -28,6 +27,12 @@ class ConversationGroupingTest {
         add(Calendar.DAY_OF_YEAR, days)
     }.timeInMillis
 
+    /** 取分组标签，便于断言 */
+    private fun labels(
+        items: List<ConversationItem>,
+        now: Long
+    ): List<String> = groupConversations(items, now).keys.map { it.label }
+
     @Test
     fun `空列表返回空分组`() {
         assertTrue(groupConversations(emptyList(), baseTime()).isEmpty())
@@ -36,7 +41,6 @@ class ConversationGroupingTest {
     @Test
     fun `同一天的会话归入今天`() {
         val now = baseTime()
-        // 当天更早的时刻，仍属今天
         val morning = Calendar.getInstance().apply {
             timeInMillis = now
             set(Calendar.HOUR_OF_DAY, 1)
@@ -44,50 +48,66 @@ class ConversationGroupingTest {
 
         val result = groupConversations(listOf(item(1, now), item(2, morning)), now)
 
-        assertEquals(setOf(ConversationGroup.TODAY), result.keys)
-        assertEquals(2, result[ConversationGroup.TODAY]?.size)
+        assertEquals(listOf("今天"), result.keys.map { it.label })
+        assertEquals(2, result.values.first().size)
     }
 
     @Test
-    fun `前一天的会话归入昨天`() {
+    fun `前一天与前两天分别归入昨天与前天`() {
         val now = baseTime()
-        val result = groupConversations(listOf(item(1, shiftDays(now, -1))), now)
-
-        assertEquals(setOf(ConversationGroup.YESTERDAY), result.keys)
+        val result = labels(
+            listOf(item(1, shiftDays(now, -1)), item(2, shiftDays(now, -2))),
+            now
+        )
+        assertEquals(listOf("昨天", "前天"), result)
     }
 
     @Test
-    fun `跨月的旧会话归入更早`() {
+    fun `本周内更早的日子显示星期几`() {
+        // 基准是周四，回退 3 天为周一，仍在本周内（周日为一周之首时）
         val now = baseTime()
-        // 两个月前，必然落在本月之前
-        val old = Calendar.getInstance().apply {
-            timeInMillis = now
-            add(Calendar.MONTH, -2)
-        }.timeInMillis
+        val result = labels(listOf(item(1, shiftDays(now, -3))), now)
 
-        val result = groupConversations(listOf(item(1, old)), now)
-
-        assertEquals(setOf(ConversationGroup.EARLIER), result.keys)
+        assertEquals(1, result.size)
+        assertTrue("应显示星期几，实际为 ${result[0]}", result[0].startsWith("星期"))
     }
 
     @Test
-    fun `分组顺序固定为今天在前更早在后`() {
+    fun `跨周的会话显示日期`() {
         val now = baseTime()
-        val old = Calendar.getInstance().apply {
-            timeInMillis = now
-            add(Calendar.MONTH, -2)
-        }.timeInMillis
+        // 回退 10 天必然跨周
+        val result = labels(listOf(item(1, shiftDays(now, -10))), now)
 
-        // 故意把旧会话放在列表首位，验证输出顺序由枚举决定而非输入顺序
-        val result = groupConversations(
-            listOf(item(1, old), item(2, now)),
+        assertEquals(1, result.size)
+        assertTrue("应显示日期，实际为 ${result[0]}", result[0].contains("月"))
+    }
+
+    @Test
+    fun `同年不带年份跨年才带`() {
+        val now = baseTime()
+        val sameYear = labels(listOf(item(1, shiftDays(now, -30))), now)
+        assertTrue("同年不该带年份：${sameYear[0]}", !sameYear[0].contains("年"))
+
+        val lastYear = labels(listOf(item(1, shiftDays(now, -400))), now)
+        assertTrue("跨年应带年份：${lastYear[0]}", lastYear[0].contains("年"))
+    }
+
+    @Test
+    fun `分组按时间从近到远排列`() {
+        val now = baseTime()
+        // 故意打乱输入顺序，验证输出由档位序号决定
+        val result = labels(
+            listOf(
+                item(1, shiftDays(now, -10)),
+                item(2, now),
+                item(3, shiftDays(now, -2)),
+                item(4, shiftDays(now, -1))
+            ),
             now
         )
 
-        assertEquals(
-            listOf(ConversationGroup.TODAY, ConversationGroup.EARLIER),
-            result.keys.toList()
-        )
+        assertEquals("今天", result.first())
+        assertEquals(listOf("今天", "昨天", "前天"), result.take(3))
     }
 
     @Test
@@ -98,21 +118,17 @@ class ConversationGroupingTest {
             set(Calendar.HOUR_OF_DAY, 9)
         }.timeInMillis
 
-        // 输入已按 updatedAt 倒序（新的在前）
         val result = groupConversations(listOf(item(10, now), item(11, earlier)), now)
 
-        assertEquals(listOf(10L, 11L), result[ConversationGroup.TODAY]?.map { it.id })
+        assertEquals(listOf(10L, 11L), result.values.first().map { it.id })
     }
 
     @Test
-    fun `本周与本月的边界不会互相吞并`() {
+    fun `每条会话必须且只能属于一个组`() {
         val now = baseTime()
-
-        // 逐天回溯 40 天，确认每个时间点都能落进某个组且不重复
         val items = (1..40).map { item(it.toLong(), shiftDays(now, -it)) }
         val result = groupConversations(items, now)
 
-        val total = result.values.sumOf { it.size }
-        assertEquals("每条会话必须且只能属于一个组", 40, total)
+        assertEquals(40, result.values.sumOf { it.size })
     }
 }

@@ -35,7 +35,14 @@ enum class BubbleStyle(val id: String, val label: String) {
  * 用户也可以自选图片。
  */
 enum class AvatarMode(val id: String, val label: String) {
-    /** 不显示头像，靠对齐与容器区分双方 */
+    /**
+     * 不显示头像。
+     *
+     * 保留以兼容旧存值，但不再作为可选项呈现——"是否显示"已由
+     * showUserAvatar / showAssistantAvatar 两个开关表达，
+     * 三处控制同一件事会互相干扰：此前 NONE 会静默拦住那两个开关，
+     * 用户打开开关却看不到任何变化。
+     */
     NONE("none", "不显示"),
 
     /** 内置图标：助手按当前提供商取标识，用户用通用人形图标 */
@@ -180,8 +187,14 @@ data class ChatAppearance(
     val hasBackgroundImage: Boolean
         get() = backgroundMode == ChatBackgroundMode.IMAGE && !backgroundPath.isNullOrBlank()
 
-    /** 是否需要为消息预留头像位 */
-    val showAvatars: Boolean get() = avatarMode != AvatarMode.NONE
+    /**
+     * 是否需要为消息预留头像位。
+     *
+     * 只看两个显示开关，不再看 [avatarMode]。后者现在只决定"用什么图"，
+     * 旧存值里的 NONE 不再拦住显示——那个耦合导致开关看似无效，
+     * 且靠迁移修复的方案在标记已置而值未改的状态下无法自愈。
+     */
+    val showAvatars: Boolean get() = showUserAvatar || showAssistantAvatar
 }
 
 /**
