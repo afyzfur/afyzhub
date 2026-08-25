@@ -54,14 +54,7 @@ class ChatHostViewModel(
             }
         }
 
-        // 头像模式的一次性迁移放在这里而非设置页的 ViewModel：
-        // 后者只在打开聊天外观页时才创建，没进过那个页面的用户
-        // 永远等不到迁移执行，头像也就一直不显示
-        viewModelScope.launch {
-            settingsRepository.markAvatarModeMigrated()
-        }
     }
-
     /** 打开已有会话 */
     fun openConversation(conversationId: Long) {
         _currentConversationId.value = conversationId

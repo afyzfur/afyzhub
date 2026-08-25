@@ -143,7 +143,9 @@ fun ChatAppearanceSettingsScreen(
 
                 SettingsCategoryTitle("头像")
                 SettingsGroup {
-                    AvatarMode.entries.forEach { mode ->
+                    // 排除 NONE：是否显示已由下面两个开关表达，
+                    // 这里只选"用什么图"
+                    AvatarMode.entries.filter { it != AvatarMode.NONE }.forEach { mode ->
                         SettingsRadioItem(
                             title = mode.label,
                             selected = appearance.avatarMode == mode,

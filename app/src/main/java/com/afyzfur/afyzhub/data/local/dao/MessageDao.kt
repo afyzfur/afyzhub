@@ -72,7 +72,7 @@ interface MessageDao {
         "DELETE FROM messages WHERE conversationId = :conversationId " +
             "AND status = :status AND TRIM(content) = ''"
     )
-    suspend fun deleteEmptyMessagesByStatus(conversationId: Long, status: String)
+    suspend fun deleteEmptyMessagesByStatus(conversationId: Long, status: String): Int
 
     /**
      * 把该会话中仍处于 [fromStatus] 的消息全部改为 [toStatus]。
@@ -89,7 +89,7 @@ interface MessageDao {
         conversationId: Long,
         fromStatus: String,
         toStatus: String
-    )
+    ): Int
 
     @Query("DELETE FROM messages WHERE id = :id")
     suspend fun deleteMessageById(id: Long)

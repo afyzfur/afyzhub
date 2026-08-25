@@ -246,13 +246,24 @@ class ChatRepositoryImpl(
     override suspend fun settleInterrupted(conversationId: Long) {
         // 先删空占位再归位：顺序反了的话空消息已不是 SENDING，
         // 删除条件就匹配不到，会留下一条空白气泡
-        messageDao.deleteEmptyMessagesByStatus(conversationId, Constants.STATUS_SENDING)
-        messageDao.settlePendingMessages(
+        val deleted = messageDao.deleteEmptyMessagesByStatus(
+            conversationId,
+            Constants.STATUS_SENDING
+        )
+        val settled = messageDao.settlePendingMessages(
             conversationId = conversationId,
             fromStatus = Constants.STATUS_SENDING,
             toStatus = Constants.STATUS_SUCCESS
         )
-        touchConversation(conversationId)
+
+        // 只在确实改动过数据时更新时间戳。
+        //
+        // 无条件 touch 是个严重问题：这个方法在每次打开会话时都会调用，
+        // 于是所有会话的 updatedAt 都被刷成当前时间，
+        // 抽屉里的时间分组全部塌成「今天」
+        if (deleted > 0 || settled > 0) {
+            touchConversation(conversationId)
+        }
     }
 
     /**
