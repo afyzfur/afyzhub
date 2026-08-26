@@ -2,6 +2,15 @@ package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import com.afyzfur.afyzhub.domain.model.ThinkingEffort
+import com.afyzfur.afyzhub.ui.components.ModelIcon
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -49,6 +58,12 @@ fun ChatInputBar(
     isLoading: Boolean,
     /** 进行中的具体阶段文字。为空时显示提供商名 */
     statusLabel: String = "",
+    /** 当前模型名，用于显示模型图标 */
+    modelName: String = "",
+    /** 当前思考程度 */
+    thinkingEffort: ThinkingEffort = ThinkingEffort.OFF,
+    /** 点击思考程度按钮时的回调 */
+    onCycleThinkingEffort: () -> Unit = {},
     transparent: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -109,7 +124,23 @@ fun ChatInputBar(
                     .fillMaxWidth()
                     .padding(start = 20.dp, end = 8.dp, bottom = 8.dp)
             ) {
-                // 当前提供商暴露在此处，使"这条消息以何配置发出"一眼可见
+                // 最左是模型图标，其次思考程度，与 statusLabel 同一行。
+                // 把"以什么模型、想多久"放在离发送键最远的一侧：
+                // 它们是发送前要确认的信息，不该和发送键挤在一起误触
+                ModelIcon(modelName = modelName, size = 18.dp)
+
+                Spacer(Modifier.width(8.dp))
+
+                ThinkingEffortButton(
+                    effort = thinkingEffort,
+                    // 生成中不允许改：这次请求已经发出，改了会让人
+                    // 以为对当前回复生效
+                    enabled = !isLoading,
+                    onClick = onCycleThinkingEffort
+                )
+
+                Spacer(Modifier.width(8.dp))
+
                 // 生成中显示具体阶段，替代提供商名——后者在等待期间
                 // 不提供任何新信息，而用户此时最想知道的是进行到哪一步
                 Text(
@@ -119,7 +150,11 @@ fun ChatInputBar(
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else {
                         MaterialTheme.colorScheme.primary
-                    }
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    // 可压缩：模型图标与思考程度优先保证完整显示
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
                 Box(modifier = Modifier.weight(1f))
@@ -129,6 +164,64 @@ fun ChatInputBar(
                     isLoading = isLoading,
                     onSend = onSend,
                     onStop = onStop
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 思考程度按钮。
+ *
+ * 点击循环切换档位而非弹菜单：只有四档，循环比"点开、选、关掉"更快，
+ * 而输入栏这个位置本来就该是轻量操作。
+ *
+ * 关闭时用低对比度的边框样式，开启后填充主色——不看文字也能判断
+ * 现在到底开没开。
+ */
+@Composable
+private fun ThinkingEffortButton(
+    effort: ThinkingEffort,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val active = effort.enabled
+    Surface(
+        color = if (active) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            Color.Transparent
+        },
+        contentColor = if (active) {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        shape = AppShapeTokens.Pill,
+        border = if (active) {
+            null
+        } else {
+            BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+        },
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.alpha(if (enabled) 1f else 0.5f)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Build,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp)
+            )
+            // 关闭时只显示图标，省下的横向空间留给状态文字
+            if (active) {
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = effort.label,
+                    style = MaterialTheme.typography.labelSmall
                 )
             }
         }

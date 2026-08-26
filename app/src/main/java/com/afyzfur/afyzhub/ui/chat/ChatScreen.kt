@@ -22,6 +22,7 @@ import androidx.compose.ui.text.AnnotatedString
 import com.afyzfur.afyzhub.domain.model.SendPhase
 import com.afyzfur.afyzhub.ui.components.LocalImage
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
+import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 import kotlinx.coroutines.launch
@@ -125,6 +126,9 @@ fun ChatScreen(
             title = currentTitle,
             modelLabel = "${settings.model} · ${settings.provider.displayName}",
             providerLabel = settings.provider.displayName,
+            modelName = settings.model,
+            thinkingEffort = settings.thinkingEffort,
+            onCycleThinkingEffort = hostViewModel::cycleThinkingEffort,
             appearance = uiPreferences.chatAppearance,
             quickPrompts = uiPreferences.quickPrompts,
             shufflePrompts = uiPreferences.shufflePrompts,
@@ -210,6 +214,9 @@ private fun ChatContent(
     title: String?,
     modelLabel: String,
     providerLabel: String,
+    modelName: String,
+    thinkingEffort: ThinkingEffort,
+    onCycleThinkingEffort: () -> Unit,
     appearance: ChatAppearance,
     quickPrompts: List<String>,
     shufflePrompts: Boolean,
@@ -387,7 +394,10 @@ private fun ChatContent(
                     onStop = onStop,
                     providerLabel = providerLabel,
                     isLoading = isLoading,
-                    statusLabel = sendPhase.label
+                    statusLabel = sendPhase.label,
+                    modelName = modelName,
+                    thinkingEffort = thinkingEffort,
+                    onCycleThinkingEffort = onCycleThinkingEffort
                 )
             }
         }

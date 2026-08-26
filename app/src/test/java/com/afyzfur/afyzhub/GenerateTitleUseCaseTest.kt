@@ -94,6 +94,34 @@ class GenerateTitleUseCaseTest {
     }
 
     @Test
+    fun `清洗去掉落单的思考标签`() {
+        // 被 token 上限截断时只剩开标签或闭标签，parseThinking 不认成对，
+        // 残留就会显示在预览里
+        val close = "</" + "think" + ">"
+        assertEquals("天气查询", cleanTitle("$close 天气查询"))
+        assertEquals("天气查询", cleanTitle("天气查询$close"))
+    }
+
+    @Test
+    fun `清洗去掉 Markdown 强调标记`() {
+        assertEquals("天气查询", cleanTitle("**天气查询**"))
+        assertEquals("天气查询", cleanTitle("## 天气查询"))
+        assertEquals("天气查询", cleanTitle("`天气查询`"))
+    }
+
+    @Test
+    fun `清洗去掉开头的列表序号`() {
+        assertEquals("天气查询", cleanTitle("1. 天气查询"))
+        assertEquals("天气查询", cleanTitle("2、天气查询"))
+    }
+
+    @Test
+    fun `清洗处理多层叠加的包装`() {
+        // 实际见过的形态：加粗套前缀套引号
+        assertEquals("天气查询", cleanTitle("**标题：「天气查询」**"))
+    }
+
+    @Test
     fun `总结允许比标题更长`() {
         val raw = "解释了如何在设置里配置中转地址并验证密钥是否有效"
         val cleaned = cleanSummary(raw)

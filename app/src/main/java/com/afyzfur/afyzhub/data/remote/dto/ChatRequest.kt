@@ -17,7 +17,14 @@ data class ChatRequest(
      * 部分中转服务拒绝。序列化配置已开启 explicitNulls = false，
      * 因此 null 不会出现在请求体中。
      */
-    val stream_options: StreamOptions? = null
+    val stream_options: StreamOptions? = null,
+    /**
+     * 思考程度，取 low/medium/high。
+     *
+     * 与 stream_options 同理，为 null 时会被省略——不支持思考的模型
+     * 收到这个字段可能直接报错，所以"不思考"必须是不发，而非发个最低值。
+     */
+    val reasoning_effort: String? = null
 )
 
 /** OpenAI 流式选项。目前只用到索取 usage。 */

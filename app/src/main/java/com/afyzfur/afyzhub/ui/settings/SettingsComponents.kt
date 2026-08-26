@@ -24,7 +24,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
@@ -127,9 +133,28 @@ fun SettingsTextFieldItem(
 
         Spacer(Modifier.height(4.dp))
 
+        // 用 TextFieldValue 而非 String：String 重载在外部值回填时会把
+        // 选区重置到 0。这里的值要经过 DataStore 往返才回来，于是每敲
+        // 一个字光标就跳回开头，下一个字符插到最前面——表现为
+        // "第一个字符被挤到最后"。
+        //
+        // 本地持有选区，仅当外部文本与本地文本确实不同时才同步
+        // （如切换配置组导致的整体替换），打字过程中不受回填干扰。
+        var field by remember { mutableStateOf(TextFieldValue(value)) }
+        if (field.text != value) {
+            field = TextFieldValue(
+                text = value,
+                // 光标放在末尾：外部替换多为整体换值，停在旧位置没有意义
+                selection = TextRange(value.length)
+            )
+        }
+
         BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
+            value = field,
+            onValueChange = {
+                field = it
+                onValueChange(it.text)
+            },
             singleLine = singleLine,
             textStyle = MaterialTheme.typography.bodyLarge.copy(
                 color = MaterialTheme.colorScheme.onSurface

@@ -7,6 +7,7 @@ import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsRepository
 import com.afyzfur.afyzhub.data.settings.UiPreferences
 import com.afyzfur.afyzhub.domain.model.ConversationItem
+import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +27,7 @@ import kotlinx.coroutines.launch
  */
 class ChatHostViewModel(
     private val repository: ChatRepository,
-    settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _conversations = MutableStateFlow<List<ConversationItem>>(emptyList())
@@ -42,6 +43,19 @@ class ChatHostViewModel(
 
     /** 界面偏好，当前用于首屏提示词与消息元信息显示 */
     val uiPreferences: StateFlow<UiPreferences> = settingsRepository.uiPreferences
+
+    /**
+     * 循环切换思考程度。
+     *
+     * 存进设置而非留在界面状态：切到别的会话或重启应用后，
+     * 用户预期这个选择还在。
+     */
+    fun cycleThinkingEffort() {
+        viewModelScope.launch {
+            val current = settingsRepository.settings.value.thinkingEffort
+            settingsRepository.setThinkingEffort(ThinkingEffort.next(current))
+        }
+    }
 
     /** null 表示当前是尚未落库的空白新会话 */
     private val _currentConversationId = MutableStateFlow<Long?>(null)

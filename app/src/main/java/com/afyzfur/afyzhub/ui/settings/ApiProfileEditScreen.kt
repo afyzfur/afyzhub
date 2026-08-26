@@ -13,6 +13,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import com.afyzfur.afyzhub.ui.components.ModelIcon
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -85,6 +93,11 @@ fun ApiProfileEditScreen(
 
     val loading by modelsViewModel.loading.collectAsState()
     val error by modelsViewModel.error.collectAsState()
+    val testing by modelsViewModel.testing.collectAsState()
+    val testResult by modelsViewModel.testResult.collectAsState()
+
+    // 换到另一组配置时清掉上一组的测试结果，否则会被误读成当前组的
+    LaunchedEffect(profileId) { modelsViewModel.clearTestResult() }
     var pageIndex by remember(profileId) { mutableIntStateOf(0) }
 
     Surface(
@@ -162,6 +175,20 @@ fun ApiProfileEditScreen(
                     )
                 }
 
+                SettingsCategoryTitle("连接测试")
+                SettingsGroup {
+                    SettingsActionItem(
+                        icon = Icons.Default.PlayArrow,
+                        title = if (testing) "测试中…" else "测试这组配置",
+                        subtitle = "发一次最小请求，确认能否正常对话",
+                        onClick = { modelsViewModel.testConnection(profile) }
+                    )
+                    testResult?.let { result ->
+                        SettingsItemDivider()
+                        TestResultRow(result)
+                    }
+                }
+
                 SettingsCategoryTitle("模型")
                 SettingsGroup {
                     SettingsTextFieldItem(
@@ -214,7 +241,7 @@ fun ApiProfileEditScreen(
                                 top = 12.dp
                             )
                         )
-                        ModelPickerChips(
+                        ModelPickerList(
                             models = page.models,
                             selected = profile.model,
                             onSelect = {
@@ -275,6 +302,59 @@ fun ApiProfileEditScreen(
     }
 }
 
+/**
+ * 连接测试的结果行。
+ *
+ * 失败原因完整显示、不截断：服务端返回的原文往往直接指出问题
+ * （密钥无效、模型不存在、额度耗尽），截断反而要用户去别处翻日志。
+ */
+@Composable
+private fun TestResultRow(result: TestResult) {
+    val (color, title, detail) = when (result) {
+        is TestResult.Success -> Triple(
+            MaterialTheme.colorScheme.primary,
+            "连接正常",
+            "${result.model} · ${result.elapsedMs} ms"
+        )
+        is TestResult.Failure -> Triple(
+            MaterialTheme.colorScheme.error,
+            "连接失败",
+            result.reason
+        )
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+        Icon(
+            imageVector = if (result is TestResult.Success) {
+                Icons.Default.Check
+            } else {
+                Icons.Default.Close
+            },
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(Modifier.size(12.dp))
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = color
+            )
+            Spacer(Modifier.size(2.dp))
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 /** 拉取模型列表的操作行 */
 @Composable
 private fun ModelFetchRow(
@@ -311,48 +391,64 @@ private fun ModelFetchRow(
     }
 }
 
-/** 模型选择胶囊，与提供商页一致的实心样式 */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * 模型列表，每项占满一行。
+ *
+ * 此前用 FlowRow 排胶囊，宽度随模型名长短变化：短名字的点击区只有
+ * 一小块，长名字被截断看不全，找目标时还得在不规则的排布里扫视。
+ * 整宽竖排让每一项的点击区一致，名字也能完整显示。
+ */
 @Composable
-private fun ModelPickerChips(
+private fun ModelPickerList(
     models: List<String>,
     selected: String,
     onSelect: (String) -> Unit
 ) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
-    ) {
-        models.forEach { model ->
+    Column(modifier = Modifier.fillMaxWidth()) {
+        models.forEachIndexed { index, model ->
+            if (index > 0) SettingsItemDivider()
             val isSelected = model == selected
-            Surface(
-                color = if (isSelected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerHighest
-                },
-                shape = AppShapeTokens.Pill,
-                // 用 Surface 的 onClick 而非外层 modifier.clickable：
-                // 后者在 Surface 裁剪之外，涟漪拿不到 shape 会显示成方形
-                onClick = { onSelect(model) }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(model) }
+                    .background(
+                        // 选中项用淡色底而非实心主色：整宽的实心色块
+                        // 在列表里过于抢眼，压过其余内容
+                        if (isSelected) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            Color.Transparent
+                        }
+                    )
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
+                ModelIcon(modelName = model, size = 20.dp)
+                Spacer(Modifier.size(12.dp))
                 Text(
                     text = model,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimary
+                        MaterialTheme.colorScheme.onSecondaryContainer
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        MaterialTheme.colorScheme.onSurface
                     },
-                    maxLines = 1,
+                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                    // 允许两行：中转的模型名常带前缀，一行放不下
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .heightIn(min = 32.dp)
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                    modifier = Modifier.weight(1f)
                 )
+                if (isSelected) {
+                    Spacer(Modifier.size(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "当前使用",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }

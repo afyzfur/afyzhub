@@ -42,15 +42,25 @@ private fun clean(raw: String, maxLength: Int): String {
     // 思考过程可能混在返回里，即使是这种小任务
     var text = parseThinking(raw).answer.ifBlank { raw }
 
+    // parseThinking 只认成对标签。模型偶尔输出落单的开/闭标签
+    // （被 token 上限截断，或干脆写错），残留下来就会显示在预览里
+    text = text.replace(STRAY_TAG, " ")
+
     text = text.trim().replace(WHITESPACE, " ")
 
-    // 前缀可能叠加，如"标题：「x」"，循环剥到不再变化
+    // 前缀、引号、标点、Markdown 标记可能叠加，如 `**标题：「x」**`，
+    // 循环剥到不再变化为止
     var changed = true
     while (changed) {
         val before = text
         PREFIXES.forEach { text = text.removePrefix(it) }
         text = text.trim()
+            // Markdown 强调标记：提示词没要求 Markdown，但模型习惯加
+            .trim('*', '#', '`', '_', '-')
+            .trim()
             .trim(*QUOTES)
+            // 列表序号，如 "1. " "1、"
+            .replace(LEADING_INDEX, "")
             .trimEnd(*TAIL_PUNCTUATION)
             .trim()
         changed = text != before
@@ -62,6 +72,17 @@ private fun clean(raw: String, maxLength: Int): String {
 private const val DEFAULT_TITLE = "新对话"
 
 private val WHITESPACE = Regex("\\s+")
+
+/**
+ * 落单的思考标签。
+ *
+ * 覆盖 think / thinking / reasoning 三种命名的开闭标签：
+ * 各家用词不一，而这里只是要把它清掉，不需要区分。
+ */
+private val STRAY_TAG = Regex("</?(?:think|thinking|reasoning)>", RegexOption.IGNORE_CASE)
+
+/** 开头的列表序号，如 "1. " "2、" */
+private val LEADING_INDEX = Regex("^\\d+\\s*[.、）)]\\s*")
 
 private val PREFIXES = listOf(
     "标题：", "标题:", "摘要：", "摘要:", "总结：", "总结:"

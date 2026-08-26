@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.afyzfur.afyzhub.domain.model.AiProvider
 import com.afyzfur.afyzhub.domain.model.ApiProfileStore
+import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.theme.ThemePalette
 import kotlinx.serialization.json.Json
 import com.afyzfur.afyzhub.util.Constants
@@ -27,7 +28,14 @@ data class AppSettings(
     val model: String = AiProvider.DEFAULT.fallbackModel,
     val baseUrl: String = AiProvider.DEFAULT.defaultBaseUrl,
     /** 是否使用流式输出，默认开启。 */
-    val streamEnabled: Boolean = true
+    val streamEnabled: Boolean = true,
+    /**
+     * 思考程度。全局项，不随配置组切换。
+     *
+     * 放在 AppSettings 而非 ApiProfile：它更像"这次想让模型想多久"的
+     * 临时选择，用户会频繁在输入栏切换，而不是某组配置的固定属性。
+     */
+    val thinkingEffort: ThinkingEffort = ThinkingEffort.DEFAULT
 )
 
 /**
@@ -54,6 +62,7 @@ class SettingsRepository(
 
     private val providerKey = stringPreferencesKey(Constants.KEY_PROVIDER)
     private val streamKey = booleanPreferencesKey(Constants.KEY_STREAM_ENABLED)
+    private val thinkingEffortKey = stringPreferencesKey(Constants.KEY_THINKING_EFFORT)
 
     // 界面偏好，全局项
     private val colorModeKey = stringPreferencesKey(Constants.KEY_COLOR_MODE)
@@ -202,7 +211,8 @@ class SettingsRepository(
                 apiKey = active.apiKey,
                 model = active.effectiveModel,
                 baseUrl = normalizeBaseUrl(active.effectiveBaseUrl, active.provider),
-                streamEnabled = prefs[streamKey] ?: true
+                streamEnabled = prefs[streamKey] ?: true,
+                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey])
             )
         } else {
             val provider = AiProvider.fromId(prefs[providerKey])
@@ -211,7 +221,8 @@ class SettingsRepository(
                 apiKey = readApiKey(prefs, provider),
                 model = readModel(prefs, provider),
                 baseUrl = readBaseUrl(prefs, provider),
-                streamEnabled = prefs[streamKey] ?: true
+                streamEnabled = prefs[streamKey] ?: true,
+                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey])
             )
         }
     }
@@ -414,6 +425,10 @@ class SettingsRepository(
      * 会连带写入 Key、地址、模型——设置首页只想改开关时用 save
      * 会把界面上那份可能已过时的快照写回去。
      */
+    suspend fun setThinkingEffort(effort: ThinkingEffort) {
+        dataStore.edit { it[thinkingEffortKey] = effort.id }
+    }
+
     suspend fun setStreamEnabled(enabled: Boolean) {
         dataStore.edit { it[streamKey] = enabled }
     }

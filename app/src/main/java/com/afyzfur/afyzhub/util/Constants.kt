@@ -64,6 +64,9 @@ object Constants {
      */
     const val KEY_PREFIX_MODEL_LIST = "model_list"
 
+    /** 思考程度。全局项，不随配置组切换 */
+    const val KEY_THINKING_EFFORT = "thinking_effort"
+
     /** 多组 API 配置，整体以 JSON 存一个键 */
     const val KEY_API_PROFILES = "api_profiles"
 

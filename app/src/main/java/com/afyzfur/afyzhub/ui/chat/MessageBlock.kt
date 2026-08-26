@@ -97,7 +97,13 @@ fun MessageBlock(
                 )
         ) {
             when {
-                message.isFailed -> FailedMessage(message = message, onRetry = onRetry)
+                message.isFailed -> FailedMessage(
+                    message = message,
+                    onRetry = onRetry,
+                    // 失败消息此前没接长按，导致发失败的消息既删不掉
+                    // 也复制不了，只能一直留在会话里
+                    onLongPress = onLongPress
+                )
                 else -> MessageBody(
                     message = message,
                     style = style,
@@ -312,13 +318,22 @@ private fun MessageAvatar(
  * 无容器的错误文本容易被当成正常回复。
  */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun FailedMessage(
     message: Message,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onLongPress: () -> Unit
 ) {
     Surface(
         color = MaterialTheme.colorScheme.errorContainer,
-        shape = AppShapeTokens.AssistantMessage
+        shape = AppShapeTokens.AssistantMessage,
+        // clip 在 combinedClickable 之前，涟漪才会跟随气泡圆角
+        modifier = Modifier
+            .clip(AppShapeTokens.AssistantMessage)
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onLongPress
+            )
     ) {
         Text(
             text = message.content,
