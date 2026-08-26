@@ -159,14 +159,22 @@ fun ApiProfileEditScreen(
                     SettingsTextFieldItem(
                         title = "API Key",
                         value = profile.apiKey,
-                        onValueChange = { viewModel.updateProfile(profile.copy(apiKey = it)) },
+                        // 改动后清掉上次的测试结果：否则那条「连接正常」会
+                        // 留在界面上，让人以为改完的配置也已经验证过
+                        onValueChange = {
+                            modelsViewModel.clearTestResult()
+                            viewModel.updateProfile(profile.copy(apiKey = it))
+                        },
                         placeholder = apiKeyHint(profile.provider)
                     )
                     SettingsItemDivider()
                     SettingsTextFieldItem(
                         title = "API 地址",
                         value = profile.baseUrl,
-                        onValueChange = { viewModel.updateProfile(profile.copy(baseUrl = it)) },
+                        onValueChange = {
+                            modelsViewModel.clearTestResult()
+                            viewModel.updateProfile(profile.copy(baseUrl = it))
+                        },
                         placeholder = profile.provider.defaultBaseUrl,
                         // 不放「恢复默认」按钮：实际多数是填中转地址，
                         // 那个按钮几乎不会用到，还占掉一行的右半边。

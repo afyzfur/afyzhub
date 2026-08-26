@@ -134,25 +134,29 @@ fun SettingsTextFieldItem(
         Spacer(Modifier.height(4.dp))
 
         // 用 TextFieldValue 而非 String：String 重载在外部值回填时会把
-        // 选区重置到 0。这里的值要经过 DataStore 往返才回来，于是每敲
+        // 选区重置到 0。这里的值要经过 DataStore 异步往返才回来，于是每敲
         // 一个字光标就跳回开头，下一个字符插到最前面——表现为
         // "第一个字符被挤到最后"。
         //
-        // 本地持有选区，仅当外部文本与本地文本确实不同时才同步
-        // （如切换配置组导致的整体替换），打字过程中不受回填干扰。
-        var field by remember { mutableStateOf(TextFieldValue(value)) }
-        if (field.text != value) {
-            field = TextFieldValue(
-                text = value,
-                // 光标放在末尾：外部替换多为整体换值，停在旧位置没有意义
-                selection = TextRange(value.length)
-            )
+        // 同步条件必须是"外部值自己变了"，不能是"外部值和本地文本不同"。
+        // 后者在 DataStore 还没回填时永远成立，会把刚敲进去的字符用旧值
+        // 覆盖掉，表现为输入框卡住、打不进字。
+        var field by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+        var lastExternal by remember { mutableStateOf(value) }
+        if (value != lastExternal) {
+            lastExternal = value
+            // 只有外部确实换了值（切换配置组等整体替换）才重建，
+            // 光标放末尾——停在旧位置没有意义。
+            if (value != field.text) {
+                field = TextFieldValue(text = value, selection = TextRange(value.length))
+            }
         }
 
         BasicTextField(
             value = field,
             onValueChange = {
                 field = it
+                lastExternal = it.text
                 onValueChange(it.text)
             },
             singleLine = singleLine,

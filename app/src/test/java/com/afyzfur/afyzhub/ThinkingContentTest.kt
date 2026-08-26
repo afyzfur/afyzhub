@@ -79,4 +79,38 @@ class ThinkingContentTest {
         assertEquals("思考中", result.reasoning)
         assertTrue(result.thinking)
     }
+
+    @Test
+    fun `thinking 命名的标签也能解析`() {
+        // 网络层统一拼 think，但模型可能自己在 content 里内嵌别的命名
+        val raw = "<thinking>推理</thinking>答案"
+        val result = parseThinking(raw)
+        assertEquals("推理", result.reasoning)
+        assertEquals("答案", result.answer)
+        assertFalse(result.thinking)
+    }
+
+    @Test
+    fun `reasoning 命名的标签也能解析`() {
+        val raw = "<reasoning>推理</reasoning>答案"
+        val result = parseThinking(raw)
+        assertEquals("推理", result.reasoning)
+        assertEquals("答案", result.answer)
+    }
+
+    @Test
+    fun `标签名大小写不敏感`() {
+        val raw = "<THINK>推理</THINK>答案"
+        val result = parseThinking(raw)
+        assertEquals("推理", result.reasoning)
+        assertEquals("答案", result.answer)
+    }
+
+    @Test
+    fun `不同命名的开闭标签不配对`() {
+        // 反向引用要求同名闭合，否则应落到未闭合分支
+        val raw = "<thinking>推理</reasoning>"
+        val result = parseThinking(raw)
+        assertTrue(result.thinking)
+    }
 }

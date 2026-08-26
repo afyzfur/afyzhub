@@ -3,7 +3,7 @@ package com.afyzfur.afyzhub.ui.chat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.material.icons.filled.Build
+import com.afyzfur.afyzhub.ui.components.ThinkingLightbulb
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -120,9 +120,11 @@ fun ChatInputBar(
             // 下层：功能行
             Row(
                 verticalAlignment = Alignment.CenterVertically,
+                // 左右都用 20dp 与上方文本对齐。此前右侧是 8dp，
+                // 发送键因此比文本右边缘更靠外，整栏看着没有对齐
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 8.dp, bottom = 8.dp)
+                    .padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
             ) {
                 // 最左是模型图标，其次思考程度，与 statusLabel 同一行。
                 // 把"以什么模型、想多久"放在离发送键最远的一侧：
@@ -152,13 +154,13 @@ fun ChatInputBar(
                         MaterialTheme.colorScheme.primary
                     },
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    // 可压缩：模型图标与思考程度优先保证完整显示
-                    modifier = Modifier.weight(1f, fill = false)
+                    overflow = TextOverflow.Ellipsis
                 )
-
-                Box(modifier = Modifier.weight(1f))
-
+                // 单个带 weight 的 Spacer 吃掉剩余宽度。此前这里是
+                // 文字带 weight(1f, fill = false) 再跟一个 Box(weight(1f))，
+                // 两个 weight 争抢剩余空间，Row 的高度与基线对齐都被打乱，
+                // 发送键因此偏离左侧那一行
+                Spacer(modifier = Modifier.weight(1f))
                 SendButton(
                     canSend = canSend,
                     isLoading = isLoading,
@@ -212,7 +214,7 @@ private fun ThinkingEffortButton(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Build,
+                imageVector = ThinkingLightbulb,
                 contentDescription = null,
                 modifier = Modifier.size(14.dp)
             )

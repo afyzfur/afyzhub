@@ -37,7 +37,8 @@ data class ThinkingContent(
 fun parseThinking(content: String): ThinkingContent {
     val closed = CLOSED_THINK.find(content)
     if (closed != null) {
-        val reasoning = closed.groupValues[1].trim()
+        // 组 1 是标签名（反向引用要用它配对闭合标签），组 2 才是内容
+        val reasoning = closed.groupValues[2].trim()
         // 移除整段标签后剩下的就是回答。用 removeRange 而非 replace，
         // 避免回答里恰好含有相同文本时被误删
         val answer = content.removeRange(closed.range).trim()
@@ -62,6 +63,24 @@ fun parseThinking(content: String): ThinkingContent {
     return ThinkingContent(reasoning = null, answer = content, thinking = false)
 }
 
+/**
+ * 标签名。
+ *
+ * 本项目的网络层统一把独立的推理字段拼成 think 标签，但模型也可能
+ * 直接在 content 里内嵌 thinking 或 reasoning 命名的标签——各家用词
+ * 不一。认不出来的标签会原样显示在气泡里，所以三种都收。
+ *
+ * 与 TitleCleanup 的 STRAY_TAG 保持同一组命名：一边能解析、另一边
+ * 才清得掉，两处不一致会让标题重新出现残留字符。
+ */
+private const val TAG_NAMES = "think|thinking|reasoning"
+
 /** DOT_MATCHES_ALL 使 . 能跨行匹配，思考内容通常是多行 */
-private val CLOSED_THINK = Regex("<think>(.*?)</think>", RegexOption.DOT_MATCHES_ALL)
-private val OPEN_THINK = Regex("<think>(.*)", RegexOption.DOT_MATCHES_ALL)
+private val CLOSED_THINK = Regex(
+    "<($TAG_NAMES)>(.*?)</\\1>",
+    setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+)
+private val OPEN_THINK = Regex(
+    "<(?:$TAG_NAMES)>(.*)",
+    setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+)
