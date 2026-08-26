@@ -18,7 +18,7 @@ interface ConversationDao {
      */
     @Query(
         """
-        SELECT c.id, c.title, c.createdAt, c.updatedAt,
+        SELECT c.id, c.title, c.createdAt, c.updatedAt, c.summary,
                (SELECT m.content FROM messages m
                 WHERE m.conversationId = c.id
                 ORDER BY m.id DESC LIMIT 1) AS lastMessage
@@ -27,6 +27,15 @@ interface ConversationDao {
         """
     )
     fun getConversationSummaries(): Flow<List<ConversationSummary>>
+
+    /**
+     * 只更新总结，不动 updatedAt。
+     *
+     * 保持 updatedAt 不变很重要：抽屉按它排序并分组，总结是回复完成后
+     * 异步写入的，若一并刷新时间会把会话挪到"今天"，破坏时间分组。
+     */
+    @Query("UPDATE conversations SET summary = :summary WHERE id = :id")
+    suspend fun updateSummary(id: Long, summary: String)
 
     @Query("SELECT * FROM conversations WHERE id = :id")
     suspend fun getConversationById(id: Long): ConversationEntity?

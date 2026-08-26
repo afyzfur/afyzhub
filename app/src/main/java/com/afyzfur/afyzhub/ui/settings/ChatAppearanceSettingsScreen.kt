@@ -298,7 +298,8 @@ private fun BubbleStyleItem(
                         MaterialTheme.colorScheme.surfaceContainerHighest
                     },
                     shape = AppShapeTokens.Pill,
-                    modifier = Modifier.clickable { onSelect(style) }
+                    // 涟漪要跟随胶囊形状，必须走 Surface 的 onClick
+                    onClick = { onSelect(style) }
                 ) {
                     Text(
                         text = style.label,

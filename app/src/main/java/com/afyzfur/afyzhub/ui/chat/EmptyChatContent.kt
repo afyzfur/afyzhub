@@ -104,7 +104,8 @@ private fun PromptRow(
             Surface(
                 shape = AppShapeTokens.Pill,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.clickable { onPromptClick(prompt) }
+                // 涟漪要跟随胶囊形状，必须走 Surface 的 onClick
+                onClick = { onPromptClick(prompt) }
             ) {
                 Text(
                     text = prompt,

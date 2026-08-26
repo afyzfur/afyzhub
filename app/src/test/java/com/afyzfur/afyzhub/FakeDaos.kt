@@ -144,6 +144,7 @@ class FakeConversationDao(
                     title = conversation.title,
                     createdAt = conversation.createdAt,
                     updatedAt = conversation.updatedAt,
+                    summary = conversation.summary,
                     // 与 SQL 中的子查询一致：按 id 取该会话最后插入的一条
                     lastMessage = messageDao?.current
                         ?.filter { it.conversationId == conversation.id }
@@ -164,6 +165,13 @@ class FakeConversationDao(
 
     override suspend fun updateConversation(conversation: ConversationEntity) {
         state.value = state.value.map { if (it.id == conversation.id) conversation else it }
+    }
+
+    /** 与真实实现一致：只改 summary，不动 updatedAt */
+    override suspend fun updateSummary(id: Long, summary: String) {
+        state.value = state.value.map {
+            if (it.id == id) it.copy(summary = summary) else it
+        }
     }
 
     override suspend fun deleteConversation(conversation: ConversationEntity) {

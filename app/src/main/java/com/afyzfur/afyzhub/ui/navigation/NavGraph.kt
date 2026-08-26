@@ -12,7 +12,6 @@ import com.afyzfur.afyzhub.ui.settings.ChatAppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfileEditScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfilesScreen
-import com.afyzfur.afyzhub.ui.settings.ProviderSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.QuickPromptsSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.RequestLogScreen
 import com.afyzfur.afyzhub.ui.settings.SettingsHomeScreen
@@ -37,13 +36,6 @@ sealed class Screen(val route: String) {
         fun routeFor(profileId: String) = "settings/api_profiles/$profileId"
     }
 
-    /**
-     * 旧的单组提供商设置页。
-     *
-     * 多组配置上线后不再从任何入口进入，保留是为了不破坏可能存在的
-     * 深链；后续版本确认无用后可删。
-     */
-    object ProviderSettings : Screen("settings/provider")
     object AppearanceSettings : Screen("settings/appearance")
     object ChatAppearanceSettings : Screen("settings/chat_appearance")
     object MessageDisplaySettings : Screen("settings/message_display")
@@ -115,10 +107,6 @@ fun NavGraph() {
                 profileId = id,
                 onNavigateBack = { navController.popBackStack() }
             )
-        }
-
-        composable(Screen.ProviderSettings.route) {
-            ProviderSettingsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.AppearanceSettings.route) {

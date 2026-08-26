@@ -19,6 +19,7 @@ class ConversationGroupingTest {
         id = id,
         title = "会话 $id",
         updatedAt = updatedAt,
+        summary = null,
         lastMessage = null
     )
 

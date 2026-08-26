@@ -3,6 +3,7 @@ package com.afyzfur.afyzhub.di
 import com.afyzfur.afyzhub.data.repository.ChatRepository
 import com.afyzfur.afyzhub.data.repository.ChatRepositoryImpl
 import com.afyzfur.afyzhub.data.image.ImageStore
+import com.afyzfur.afyzhub.domain.usecase.GenerateTitleUseCase
 import com.afyzfur.afyzhub.domain.usecase.SendMessageUseCase
 import com.afyzfur.afyzhub.ui.chat.ChatViewModel
 import com.afyzfur.afyzhub.ui.chat.ChatHostViewModel
@@ -22,10 +23,12 @@ val appModule = module {
 
     // UseCases
     single { SendMessageUseCase(get()) }
+    // 标题与总结生成：需要网络客户端与当前设置
+    single { GenerateTitleUseCase(get(), get()) }
 
     // ViewModels
     viewModel { ChatHostViewModel(get(), get()) }
-    viewModel { ChatViewModel(get(), get()) }
+    viewModel { ChatViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { ApiProfilesViewModel(get()) }
     viewModel { ProfileModelsViewModel(get()) }

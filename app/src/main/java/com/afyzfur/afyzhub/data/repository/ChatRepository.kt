@@ -72,5 +72,13 @@ interface ChatRepository {
 
     suspend fun renameConversation(conversationId: Long, title: String)
 
+    /**
+     * 写入模型生成的会话总结。
+     *
+     * 不改 updatedAt：总结是回复完成后异步生成的，刷新时间会让
+     * 会话在抽屉里跳到"今天"，破坏时间分组。
+     */
+    suspend fun updateSummary(conversationId: Long, summary: String)
+
     suspend fun deleteConversation(conversationId: Long)
 }

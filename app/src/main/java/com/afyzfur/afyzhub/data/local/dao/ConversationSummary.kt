@@ -13,6 +13,14 @@ data class ConversationSummary(
     val title: String,
     val createdAt: Long,
     val updatedAt: Long,
+    /**
+     * 模型生成的一句话总结，未生成或生成失败时为 null。
+     *
+     * 这一列是冗余存储，与上面注释所说的"不加冗余列"看似矛盾：
+     * 区别在于它不是消息内容的副本，而是一次不可重现的模型输出，
+     * 除了存下来别无办法。
+     */
+    val summary: String?,
     /** 末条消息正文，会话尚无消息时为 null */
     val lastMessage: String?
 )

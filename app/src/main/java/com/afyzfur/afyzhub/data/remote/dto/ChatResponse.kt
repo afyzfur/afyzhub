@@ -26,8 +26,27 @@ data class Choice(
 @Serializable
 data class ResponseMessage(
     val role: String = "",
-    val content: String = ""
-)
+    val content: String = "",
+    /**
+     * 思考过程。与流式的 [StreamDelta] 同理，DeepSeek 系走独立字段。
+     * 两种拼法都接受。
+     */
+    val reasoning_content: String? = null,
+    val reasoning: String? = null
+) {
+    /**
+     * 拼成与内嵌形式一致的正文。
+     *
+     * 统一在 DTO 这层转换，上层就只需要认 think 标签一种形式。
+     */
+    val contentWithThinking: String
+        get() {
+            val thinking = reasoning_content?.takeIf { it.isNotBlank() }
+                ?: reasoning?.takeIf { it.isNotBlank() }
+                ?: return content
+            return "<think>$thinking</think>$content"
+        }
+}
 
 @Serializable
 data class Usage(

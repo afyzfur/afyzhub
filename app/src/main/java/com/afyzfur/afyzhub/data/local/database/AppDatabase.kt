@@ -11,7 +11,7 @@ import com.afyzfur.afyzhub.data.local.entity.MessageEntity
 
 @Database(
     entities = [ConversationEntity::class, MessageEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -41,6 +41,18 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE messages ADD COLUMN promptTokens INTEGER")
                 db.execSQL("ALTER TABLE messages ADD COLUMN completionTokens INTEGER")
                 db.execSQL("ALTER TABLE messages ADD COLUMN latencyMs INTEGER")
+            }
+        }
+
+        /**
+         * v3 -> v4：会话表新增模型生成的总结，可空。
+         *
+         * 已有会话的该列为 null，界面会退回显示末条消息，
+         * 不需要为历史数据补生成——那要为每个会话各发一次请求。
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE conversations ADD COLUMN summary TEXT")
             }
         }
     }

@@ -224,8 +224,12 @@ private fun ConversationRow(
             overflow = TextOverflow.Ellipsis
         )
 
+        // 优先显示模型生成的总结，没有则退回末条消息。
+        // 总结是对整轮问答的概括，比末条消息更能说明这个会话在谈什么
+        val previewSource = conversation.summary?.takeIf { it.isNotBlank() }
+            ?: conversation.lastMessage
         // 无消息的会话不显示空摘要行，避免行高不齐
-        conversation.lastMessage?.let { raw ->
+        previewSource?.let { raw ->
             // 摘要取的是原始正文，带思考标签的模型会让预览全是
             // 标签内容，看不到实际回答。
             //

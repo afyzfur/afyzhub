@@ -7,7 +7,8 @@ import com.afyzfur.afyzhub.domain.model.SendPhase
 /**
  * 发送消息。
  *
- * 若该会话此前没有有效标题，会用首条用户消息自动命名。
+ * 标题生成已移到 [GenerateTitleUseCase]：它需要发一次模型请求，
+ * 与发送消息是两件独立的事，混在一起会让这里也依赖网络客户端。
  */
 class SendMessageUseCase(
     private val repository: ChatRepository
@@ -22,20 +23,5 @@ class SendMessageUseCase(
             return Result.failure(IllegalArgumentException("消息内容不能为空"))
         }
         return repository.sendMessage(conversationId, trimmed, onPhase)
-    }
-
-    companion object {
-        private const val TITLE_MAX_LENGTH = 20
-
-        /** 用首条消息生成简短标题。 */
-        fun generateTitle(firstMessage: String): String {
-            val oneLine = firstMessage.trim().replace(Regex("\\s+"), " ")
-            if (oneLine.isEmpty()) return "新对话"
-            return if (oneLine.length <= TITLE_MAX_LENGTH) {
-                oneLine
-            } else {
-                oneLine.take(TITLE_MAX_LENGTH) + "…"
-            }
-        }
     }
 }

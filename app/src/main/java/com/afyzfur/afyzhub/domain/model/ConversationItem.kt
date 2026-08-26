@@ -11,6 +11,8 @@ data class ConversationItem(
     val id: Long,
     val title: String,
     val updatedAt: Long,
+    /** 模型生成的一句话总结，未生成时为 null */
+    val summary: String?,
     /** 末条消息正文，无消息时为 null。已在数据层截断 */
     val lastMessage: String?
 )

@@ -387,11 +387,13 @@ fun SettingsPageHeader(
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = AppShapeTokens.CircleButton,
+            // onClick 交给 Surface：此前点击加在内部的 Box 上，
+            // 涟漪取 Box 的矩形边界，在圆形按钮上显示为方块
+            onClick = onNavigateBack,
             modifier = Modifier.size(40.dp)
         ) {
             Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.clickable(onClick = onNavigateBack)
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowLeft,

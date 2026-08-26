@@ -194,8 +194,10 @@ class SettingsViewModel(
 
     fun updateStreamEnabled(value: Boolean) {
         _streamEnabled.value = value
-        // 开关类改动无需防抖，立即生效。
-        saveNow()
+        // 只写这一项，不走 saveNow()：后者会把 Key、地址、模型一并
+        // 写回旧键位，而那些值是本 ViewModel 初始化时的快照，
+        // 用户之后在配置组里改过的话会被这次写入覆盖成旧值
+        viewModelScope.launch { settingsRepository.setStreamEnabled(value) }
     }
 
     fun updateApiKey(value: String) {

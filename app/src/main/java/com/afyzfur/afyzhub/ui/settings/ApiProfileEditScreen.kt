@@ -335,7 +335,9 @@ private fun ModelPickerChips(
                     MaterialTheme.colorScheme.surfaceContainerHighest
                 },
                 shape = AppShapeTokens.Pill,
-                modifier = Modifier.clickable { onSelect(model) }
+                // 用 Surface 的 onClick 而非外层 modifier.clickable：
+                // 后者在 Surface 裁剪之外，涟漪拿不到 shape 会显示成方形
+                onClick = { onSelect(model) }
             ) {
                 Text(
                     text = model,

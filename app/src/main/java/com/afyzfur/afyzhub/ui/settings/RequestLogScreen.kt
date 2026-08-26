@@ -73,7 +73,10 @@ fun RequestLogScreen(
                 text = if (entries.isEmpty()) {
                     "暂无记录"
                 } else {
-                    "共 ${entries.size} 条，仅保存在本机内存，重启应用后清空"
+                    // 成功与失败的留存规则不同，这里如实说明，
+                    // 否则用户会以为失败记录也会在重启后消失
+                    "共 ${entries.size} 条。失败记录会保留到下次启动，" +
+                        "成功记录仅存于本次运行。全部只在本机"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -111,9 +114,9 @@ private fun LogCard(entry: RequestLogEntry) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = AppShapeTokens.SettingsGroup,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded }
+        // 涟漪要跟随卡片圆角，走 Surface 的 onClick
+        onClick = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

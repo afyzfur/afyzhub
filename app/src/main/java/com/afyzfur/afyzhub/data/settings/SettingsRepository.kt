@@ -407,6 +407,17 @@ class SettingsRepository(
         )
     }
 
+    /**
+     * 只写流式开关。
+     *
+     * 它是全局项，不属于任何配置组。单独提供这个方法是因为 [save]
+     * 会连带写入 Key、地址、模型——设置首页只想改开关时用 save
+     * 会把界面上那份可能已过时的快照写回去。
+     */
+    suspend fun setStreamEnabled(enabled: Boolean) {
+        dataStore.edit { it[streamKey] = enabled }
+    }
+
     suspend fun save(
         provider: AiProvider,
         apiKey: String,

@@ -46,11 +46,14 @@ fun SettingsHomeScreen(
     onNavigateToRequestLog: () -> Unit,
     onNavigateToAbout: () -> Unit,
     uiPreferencesViewModel: UiPreferencesViewModel = koinViewModel(),
-    settingsViewModel: SettingsViewModel = koinViewModel()
+    settingsViewModel: SettingsViewModel = koinViewModel(),
+    apiProfilesViewModel: ApiProfilesViewModel = koinViewModel()
 ) {
     val prefs by uiPreferencesViewModel.preferences.collectAsState()
-    val provider by settingsViewModel.provider.collectAsState()
-    val model by settingsViewModel.selectedModel.collectAsState()
+    // 当前生效的配置组。流式开关仍走 SettingsViewModel——它是全局项，
+    // 不属于任何一组配置
+    val profileStore by apiProfilesViewModel.store.collectAsState()
+    val activeProfile = profileStore.active
     val streamEnabled by settingsViewModel.streamEnabled.collectAsState()
 
     Surface(
@@ -92,9 +95,12 @@ fun SettingsHomeScreen(
                 SettingsGroup {
                     SettingsNavItem(
                         icon = Icons.Default.AccountCircle,
-                        title = "提供商",
-                        // 副标题直接显示当前配置，省去进入子页面确认
-                        subtitle = "${provider.displayName} · $model",
+                        title = "API 配置",
+                        // 副标题显示当前生效的那一组，省去进入子页面确认。
+                        // 必须读配置组而非 SettingsViewModel 的单组状态：
+                        // 后者不随配置组切换更新，会显示成另一组的值
+                        subtitle = activeProfile?.let { "${it.displayName} · ${it.effectiveModel}" }
+                            ?: "未配置",
                         onClick = onNavigateToProvider
                     )
                     SettingsNavItem(

@@ -32,7 +32,9 @@ class OpenAiChatClient(
         )
         val response = json.decodeFromString(ChatResponse.serializer(), text)
         return CompletionResult(
-            content = response.choices.firstOrNull()?.message?.content.orEmpty(),
+            // 用 contentWithThinking 而非 content：思考走独立字段的模型
+            // 需要拼成 think 标签，否则思考过程会丢失
+            content = response.choices.firstOrNull()?.message?.contentWithThinking.orEmpty(),
             usage = response.usage?.let {
                 TokenUsage(it.prompt_tokens, it.completion_tokens)
             }
@@ -42,6 +44,8 @@ class OpenAiChatClient(
     override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> = flow {
         val body = json.encodeToString(ChatRequest.serializer(), buildRequest(turns, settings, true))
         var usage: TokenUsage? = null
+        // 思考是否已开始/已结束，用于把独立字段拼成 think 标签
+        var thinkingOpen = false
 
         transport.postForSse(
             baseUrl = settings.baseUrl,
@@ -54,10 +58,31 @@ class OpenAiChatClient(
             chunk.usage?.let {
                 usage = TokenUsage(it.prompt_tokens, it.completion_tokens)
             }
-            chunk.choices.firstOrNull()?.delta?.content
-                ?.takeIf { it.isNotEmpty() }
-                ?.let { emit(StreamEvent.TextDelta(it)) }
+            val delta = chunk.choices.firstOrNull()?.delta ?: return@collect
+
+            // 思考走独立字段的模型（DeepSeek 系等）：包成 think 标签发出，
+            // 这样下游只需要认一种形式，不必区分思考来自哪里
+            delta.thinkingDelta?.let { piece ->
+                if (!thinkingOpen) {
+                    thinkingOpen = true
+                    emit(StreamEvent.TextDelta("<think>"))
+                }
+                emit(StreamEvent.TextDelta(piece))
+            }
+
+            delta.content?.takeIf { it.isNotEmpty() }?.let { piece ->
+                // 正文开始意味着思考结束，先补上闭合标签
+                if (thinkingOpen) {
+                    thinkingOpen = false
+                    emit(StreamEvent.TextDelta("</think>"))
+                }
+                emit(StreamEvent.TextDelta(piece))
+            }
         }
+
+        // 只有思考没有正文时（异常中断或纯推理响应）也要闭合，
+        // 否则留下未闭合标签，界面会一直显示为"思考中"
+        if (thinkingOpen) emit(StreamEvent.TextDelta("</think>"))
 
         emit(StreamEvent.Finished(usage))
     }

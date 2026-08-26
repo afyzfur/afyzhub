@@ -29,5 +29,21 @@ data class StreamChoice(
 @Serializable
 data class StreamDelta(
     val role: String? = null,
-    val content: String? = null
-)
+    val content: String? = null,
+    /**
+     * 思考过程的增量。
+     *
+     * DeepSeek 系与部分中转把推理放在这个独立字段里，而不是像
+     * 有些模型那样内嵌 `<think>` 标签到 content。不读它的话
+     * 这些模型的思考过程在应用里完全看不到。
+     *
+     * `reasoning` 是另一种常见拼法（OpenRouter 等），一并接受。
+     */
+    val reasoning_content: String? = null,
+    val reasoning: String? = null
+) {
+    /** 两种字段名取先有值的那个 */
+    val thinkingDelta: String?
+        get() = reasoning_content?.takeIf { it.isNotEmpty() }
+            ?: reasoning?.takeIf { it.isNotEmpty() }
+}

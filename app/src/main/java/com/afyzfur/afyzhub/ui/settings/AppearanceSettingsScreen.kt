@@ -63,15 +63,16 @@ private fun PaletteRow(
             val isSelected = palette == selected
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .alpha(if (enabled) 1f else 0.4f)
-                    .clickable(enabled = enabled) { onSelect(palette) }
+                modifier = Modifier.alpha(if (enabled) 1f else 0.4f)
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
+                        // 点击放在 clip 之后：加在外层 Column 上时
+                        // 涟漪会覆盖色块加名称的整个矩形，形状不对
+                        .clickable(enabled = enabled) { onSelect(palette) }
                         .background(palette.swatch)
                         .then(
                             // 选中态用主题色描边而非勾选图标：

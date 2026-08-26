@@ -2,6 +2,7 @@ package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -63,6 +64,9 @@ fun ReasoningBlock(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
+                    // clip 必须在 clickable 之前：否则涟漪按矩形绘制，
+                    // 会溢出容器的上方圆角
+                    .clip(AppShapeTokens.SettingsGroup)
                     .clickable { manualExpanded = !expanded }
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {

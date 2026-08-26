@@ -42,6 +42,7 @@ class ChatRepositoryImpl(
                     updatedAt = summary.updatedAt,
                     // 在此处截断而不是留给 UI：摘要只用于一行预览，
                     // 长文本传到 UI 层再截断没有意义，还会白占内存
+                    summary = summary.summary,
                     lastMessage = summary.lastMessage
                         ?.replace('\n', ' ')
                         ?.trim()
@@ -349,6 +350,12 @@ class ChatRepositoryImpl(
                 entity.copy(updatedAt = System.currentTimeMillis())
             )
         }
+    }
+
+    override suspend fun updateSummary(conversationId: Long, summary: String) {
+        val trimmed = summary.trim()
+        if (trimmed.isEmpty()) return
+        conversationDao.updateSummary(conversationId, trimmed)
     }
 
     override suspend fun renameConversation(conversationId: Long, title: String) {

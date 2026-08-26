@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.afyzfur.afyzhub.data.repository.ChatRepository
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.domain.model.SendPhase
+import com.afyzfur.afyzhub.domain.usecase.GenerateTitleUseCase
+import com.afyzfur.afyzhub.domain.usecase.fallbackTitle
 import com.afyzfur.afyzhub.domain.usecase.SendMessageUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +16,8 @@ import kotlinx.coroutines.launch
 
 class ChatViewModel(
     private val repository: ChatRepository,
-    private val sendMessageUseCase: SendMessageUseCase
+    private val sendMessageUseCase: SendMessageUseCase,
+    private val generateTitleUseCase: GenerateTitleUseCase
 ) : ViewModel() {
 
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
@@ -116,16 +119,28 @@ class ChatViewModel(
             // 收尾放在 finally：暂停时取消异常会直接穿出这个协程，
             // 写在末尾的复位执行不到，输入框会永久停在禁用状态
             try {
+                // 先用本地规则命名，避免抽屉里短暂显示"新对话"。
+                // 模型生成的标题稍后覆盖它
+                if (isFirstMessage) {
+                    repository.renameConversation(
+                        conversationId,
+                        fallbackTitle(text)
+                    )
+                }
+
                 sendMessageUseCase(conversationId, text) { phase ->
                     _sendPhase.value = phase
                 }
-                    .onSuccess {
-                        if (isFirstMessage) {
-                            repository.renameConversation(
-                                conversationId,
-                                SendMessageUseCase.generateTitle(text)
-                            )
-                        }
+                    .onSuccess { reply ->
+                        // 标题与总结各发一次请求，放到独立协程里：
+                        // 它们失败或慢都不该影响这次对话，也不该让
+                        // 输入框继续处于禁用状态
+                        launchMetadataUpdate(
+                            conversationId = conversationId,
+                            userText = text,
+                            replyContent = reply.content,
+                            needTitle = isFirstMessage
+                        )
                     }
                     .onFailure { e ->
                         _error.value = e.message ?: "发送失败"
@@ -133,6 +148,32 @@ class ChatViewModel(
             } finally {
                 _isLoading.value = false
                 _sendPhase.value = SendPhase.IDLE
+            }
+        }
+    }
+
+    /**
+     * 生成标题与总结。
+     *
+     * 用独立协程而非跟在发送后面：这两件事各要发一次请求，串在
+     * 主流程里会让输入框多禁用几秒。它们失败也不提示——附加信息
+     * 缺失时界面有兜底，为此弹错误反而打扰。
+     *
+     * 不放进 sendJob：暂停回复不该连带取消已完成回复的总结。
+     */
+    private fun launchMetadataUpdate(
+        conversationId: Long,
+        userText: String,
+        replyContent: String,
+        needTitle: Boolean
+    ) {
+        viewModelScope.launch {
+            if (needTitle) {
+                val title = generateTitleUseCase.title(userText)
+                repository.renameConversation(conversationId, title)
+            }
+            generateTitleUseCase.summary(userText, replyContent)?.let { summary ->
+                repository.updateSummary(conversationId, summary)
             }
         }
     }
