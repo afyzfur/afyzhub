@@ -4,7 +4,11 @@ import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.SvgDecoder
+import com.afyzfur.afyzhub.data.log.RequestLogStore
 import com.afyzfur.afyzhub.di.appModule
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.afyzfur.afyzhub.di.databaseModule
 import com.afyzfur.afyzhub.di.networkModule
 import org.koin.android.ext.koin.androidContext
@@ -22,11 +26,17 @@ class AfyzHubApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
 
-        startKoin {
+        val koin = startKoin {
             androidLogger(Level.ERROR)
             androidContext(this@AfyzHubApplication)
             modules(appModule, databaseModule, networkModule)
-        }
+        }.koin
+
+        // 载入上次运行留下的失败请求记录。
+        // 放在后台协程里：读文件不该拖慢冷启动，而日志页也不会
+        // 在启动后的头几毫秒内被打开
+        val logStore = koin.get<RequestLogStore>()
+        CoroutineScope(Dispatchers.IO).launch { logStore.restore() }
     }
 
     override fun newImageLoader(): ImageLoader =

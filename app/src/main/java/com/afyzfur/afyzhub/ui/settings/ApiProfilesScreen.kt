@@ -103,7 +103,9 @@ fun ApiProfilesScreen(
                     SettingsActionItem(
                         icon = Icons.Default.Add,
                         title = "新建配置",
-                        onClick = { viewModel.addProfile() }
+                        subtitle = "建好后直接进入编辑",
+                        // 建完就跳进去填 Key，省一次点击
+                        onClick = { viewModel.addProfile(onCreated = onEditProfile) }
                     )
                     store.active?.let { active ->
                         SettingsItemDivider()

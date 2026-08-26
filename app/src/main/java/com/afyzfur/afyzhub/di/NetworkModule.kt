@@ -71,8 +71,9 @@ val networkModule = module {
             .build()
     }
 
-    // 日志存储须为单例：请求在网络层写入，日志页在另一处读取
-    single { RequestLogStore() }
+    // 日志存储须为单例：请求在网络层写入，日志页在另一处读取。
+    // 传入 filesDir 让失败记录落盘，重启后仍可查看
+    single { RequestLogStore(persistDir = androidContext().filesDir) }
     single<Transport> { HttpTransport(get(), get()) }
 
     single {

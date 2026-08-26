@@ -84,7 +84,9 @@ fun ChangelogScreen(onNavigateBack: () -> Unit) {
                 ) {
                     MarkdownText(
                         text = current.markdown,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        // 版本号放大并在版本之间分隔
+                        documentMode = true
                     )
                     Spacer(Modifier.height(32.dp))
                 }

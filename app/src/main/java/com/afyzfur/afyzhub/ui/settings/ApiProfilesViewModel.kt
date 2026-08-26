@@ -48,7 +48,9 @@ class ApiProfilesViewModel(
     fun addProfile(
         name: String = "",
         group: String = "",
-        provider: AiProvider = AiProvider.DEFAULT
+        provider: AiProvider = AiProvider.DEFAULT,
+        /** 新建完成后回调新组 id，界面据此跳转到编辑页 */
+        onCreated: (String) -> Unit = {}
     ) {
         viewModelScope.launch {
             val current = settingsRepository.currentProfiles()
@@ -65,6 +67,8 @@ class ApiProfilesViewModel(
                     activeId = profile.id
                 )
             )
+            // 落盘后再跳转，否则编辑页可能读不到这一组
+            onCreated(profile.id)
         }
     }
 

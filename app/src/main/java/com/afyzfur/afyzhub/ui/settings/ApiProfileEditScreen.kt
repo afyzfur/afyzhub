@@ -155,14 +155,10 @@ fun ApiProfileEditScreen(
                         value = profile.baseUrl,
                         onValueChange = { viewModel.updateProfile(profile.copy(baseUrl = it)) },
                         placeholder = profile.provider.defaultBaseUrl,
-                        subtitle = "使用中转服务时填入对应地址",
-                        trailing = {
-                            TextButton(onClick = {
-                                viewModel.updateProfile(profile.copy(baseUrl = ""))
-                            }) {
-                                Text("恢复默认")
-                            }
-                        }
+                        // 不放「恢复默认」按钮：实际多数是填中转地址，
+                        // 那个按钮几乎不会用到，还占掉一行的右半边。
+                        // 想回官方地址清空即可，占位符已提示默认值
+                        subtitle = "留空则用官方地址，中转服务填对应地址"
                     )
                 }
 

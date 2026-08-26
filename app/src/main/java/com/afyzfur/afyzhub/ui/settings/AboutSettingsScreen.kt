@@ -70,10 +70,11 @@ fun AboutSettingsScreen(
                 SettingsGroup {
                     SettingsNavItem(
                         icon = Icons.Default.Share,
-                        title = "源代码",
+                        title = "源仓库",
                         subtitle = REPO_URL.removePrefix("https://"),
                         onClick = { openUrl(REPO_URL) }
                     )
+                    SettingsItemDivider()
                     SettingsNavItem(
                         icon = Icons.Default.List,
                         title = "更新日志",

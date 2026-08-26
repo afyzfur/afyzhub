@@ -136,7 +136,13 @@ private fun LogCard(entry: RequestLogEntry) {
             Spacer(Modifier.height(4.dp))
 
             Text(
-                text = "${formatTime(entry.startedAt)}  ${entry.method}",
+                // 标注来源：不注明的话重启后的旧记录看起来像刚发生的
+                text = buildString {
+                    append(formatTime(entry.startedAt))
+                    append("  ")
+                    append(entry.method)
+                    if (entry.restored) append("  · 上次运行")
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

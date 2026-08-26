@@ -26,7 +26,14 @@ data class RequestLogEntry(
     val responseBody: String?,
     /** 失败原因，成功时为 null */
     val error: String?,
-    val durationMs: Long
+    val durationMs: Long,
+    /**
+     * 是否来自上次运行的落盘记录。
+     *
+     * 界面据此标注，否则重启后旧的失败看起来像刚刚发生的，
+     * 会误导排查方向。
+     */
+    val restored: Boolean = false
 ) {
     val isSuccess: Boolean get() = error == null && statusCode != null && statusCode in 200..299
 }

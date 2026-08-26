@@ -35,7 +35,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.ConversationItem
-import com.afyzfur.afyzhub.domain.model.parseThinking
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
 import com.afyzfur.afyzhub.ui.components.ModelIcon
 import com.afyzfur.afyzhub.ui.components.UserAvatar
@@ -228,11 +227,13 @@ private fun ConversationRow(
         // 无消息的会话不显示空摘要行，避免行高不齐
         conversation.lastMessage?.let { raw ->
             // 摘要取的是原始正文，带思考标签的模型会让预览全是
-            // <think>…，看不到实际回答。这里剥掉思考只留回答；
-            // 若整条都还在思考中（无回答），退回原文而非留空
-            val summary = remember(raw) {
-                parseThinking(raw).answer.ifBlank { raw }
-            }
+            // 标签内容，看不到实际回答。
+            //
+            // 上一版这里在 answer 为空时退回原文，但那正是带标签的
+            // 全文——整条都还在思考中时（回答尚未开始）预览依旧是
+            // 一堆标签。现在改为给一个状态文案：预览的用途是让人
+            // 认出这个会话，标签内容对此毫无帮助
+            val summary = remember(raw) { previewOf(raw) }
             Spacer(Modifier.height(2.dp))
             Text(
                 text = summary,
