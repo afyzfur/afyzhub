@@ -17,6 +17,16 @@ class FakeMessageDao : MessageDao {
 
     val current: List<MessageEntity> get() = state.value
 
+    /**
+     * 供 FakeConversationDao 模拟外键级联删除。
+     *
+     * 真实数据库靠 ForeignKey.CASCADE 自动清理，这里没有外键约束，
+     * 不手动清会留下孤儿消息，让测试与实际行为不一致。
+     */
+    fun removeByConversation(conversationId: Long) {
+        state.value = state.value.filterNot { it.conversationId == conversationId }
+    }
+
     override fun getMessagesByConversationId(conversationId: Long): Flow<List<MessageEntity>> =
         state.map { list -> list.filter { it.conversationId == conversationId } }
 
@@ -138,13 +148,21 @@ class FakeConversationDao(
 
     override fun getConversationSummaries(): Flow<List<ConversationSummary>> =
         state.map { list ->
-            list.sortedByDescending { it.updatedAt }.map { conversation ->
+            // 与 SQL 的 ORDER BY 一致：置顶优先，其次按更新时间
+            list.sortedWith(
+                compareByDescending<ConversationEntity> { it.pinned }
+                    .thenByDescending { it.updatedAt }
+            ).map { conversation ->
                 ConversationSummary(
                     id = conversation.id,
                     title = conversation.title,
                     createdAt = conversation.createdAt,
                     updatedAt = conversation.updatedAt,
                     summary = conversation.summary,
+                    pinned = conversation.pinned,
+                    starred = conversation.starred,
+                    note = conversation.note,
+                    group = conversation.group,
                     // 与 SQL 中的子查询一致：按 id 取该会话最后插入的一条
                     lastMessage = messageDao?.current
                         ?.filter { it.conversationId == conversation.id }
@@ -177,4 +195,46 @@ class FakeConversationDao(
     override suspend fun deleteConversation(conversation: ConversationEntity) {
         state.value = state.value.filterNot { it.id == conversation.id }
     }
+
+    override suspend fun deleteConversationById(id: Long) {
+        state.value = state.value.filterNot { it.id == id }
+        // 真实实现靠外键级联，这里手动清一遍以保持行为一致
+        messageDao?.removeByConversation(id)
+    }
+
+    /** 以下几个与真实实现一致：只改单个字段，不动 updatedAt */
+    override suspend fun updatePinned(id: Long, pinned: Boolean) {
+        state.value = state.value.map {
+            if (it.id == id) it.copy(pinned = pinned) else it
+        }
+    }
+
+    override suspend fun updateStarred(id: Long, starred: Boolean) {
+        state.value = state.value.map {
+            if (it.id == id) it.copy(starred = starred) else it
+        }
+    }
+
+    override suspend fun updateTitle(id: Long, title: String) {
+        state.value = state.value.map {
+            if (it.id == id) it.copy(title = title) else it
+        }
+    }
+
+    override suspend fun updateNote(id: Long, note: String?) {
+        state.value = state.value.map {
+            if (it.id == id) it.copy(note = note) else it
+        }
+    }
+
+    override suspend fun updateGroup(id: Long, group: String) {
+        state.value = state.value.map {
+            if (it.id == id) it.copy(group = group) else it
+        }
+    }
+
+    override fun getGroups(): Flow<List<String>> =
+        state.map { list ->
+            list.map { it.group }.filter { it.isNotEmpty() }.distinct().sorted()
+        }
 }

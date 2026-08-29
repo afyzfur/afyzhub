@@ -21,6 +21,14 @@ data class ConversationSummary(
      * 除了存下来别无办法。
      */
     val summary: String?,
+    /** 置顶，列表里排在最前 */
+    val pinned: Boolean,
+    /** 星标 */
+    val starred: Boolean,
+    /** 用户自己写的简介，与模型生成的 summary 分开 */
+    val note: String?,
+    /** 分组名，空串表示未分组 */
+    val group: String,
     /** 末条消息正文，会话尚无消息时为 null */
     val lastMessage: String?
 )

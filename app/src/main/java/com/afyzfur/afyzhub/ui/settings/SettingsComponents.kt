@@ -1,6 +1,7 @@
 package com.afyzfur.afyzhub.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,7 +72,17 @@ fun SettingsGroup(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
-        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        // 内容层再裁一次圆角。形状定义在 Surface 上时，组内各项的
+        // clickable 拿不到这个形状，涟漪按整行矩形扩散，首尾两项按下
+        // 就会在圆角处露出方角。裁剪把涟漪限制在圆角轮廓内。
+        //
+        // 竖向内边距挪到裁剪之内：留在外面会让涟漪在上下各差 4dp
+        // 触不到边，看着像没盖满
+        Column(
+            modifier = Modifier
+                .clip(AppShapeTokens.SettingsGroup)
+                .padding(vertical = 4.dp)
+        ) {
             content()
         }
     }
@@ -114,6 +125,14 @@ fun SettingsTextFieldItem(
     placeholder: String = "",
     subtitle: String? = null,
     singleLine: Boolean = true,
+    /**
+     * 编辑对象的标识。它变化时输入框才用外部值重建。
+     *
+     * 不传则整个界面生命周期内只初始化一次——对于设置项里那些
+     * 一对一绑定某个键的输入框，这正是想要的。切换配置组这类
+     * "同一个输入框换了编辑对象"的场景必须传，否则会继续显示上一组的值。
+     */
+    identityKey: Any? = Unit,
     trailing: (@Composable () -> Unit)? = null
 ) {
     Column(
@@ -132,31 +151,26 @@ fun SettingsTextFieldItem(
         }
 
         Spacer(Modifier.height(4.dp))
-
         // 用 TextFieldValue 而非 String：String 重载在外部值回填时会把
         // 选区重置到 0。这里的值要经过 DataStore 异步往返才回来，于是每敲
-        // 一个字光标就跳回开头，下一个字符插到最前面——表现为
-        // "第一个字符被挤到最后"。
+        // 一个字光标就跳回开头，下一个字符插到最前面。
         //
-        // 同步条件必须是"外部值自己变了"，不能是"外部值和本地文本不同"。
-        // 后者在 DataStore 还没回填时永远成立，会把刚敲进去的字符用旧值
-        // 覆盖掉，表现为输入框卡住、打不进字。
-        var field by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
-        var lastExternal by remember { mutableStateOf(value) }
-        if (value != lastExternal) {
-            lastExternal = value
-            // 只有外部确实换了值（切换配置组等整体替换）才重建，
-            // 光标放末尾——停在旧位置没有意义。
-            if (value != field.text) {
-                field = TextFieldValue(text = value, selection = TextRange(value.length))
-            }
+        // 本地状态是打字期间的唯一来源，外部值只在 identityKey 变化时
+        // 用来重建。上一版试图比较"外部值是否变了"，但 DataStore 回填的
+        // 是上一次的值，快速连打时回填到达那刻 value 与本地记录必然不等，
+        // 条件再次成立、光标被拉走，于是仍然打不进字。
+        //
+        // 关键在于：外部值在打字期间的每次变化都是我们自己刚写出去的回声，
+        // 没有任何一次需要反向覆盖本地。真正需要重建的只有换了编辑对象
+        // （切换配置组、换一条会话），而那由 identityKey 标识。
+        var field by remember(identityKey) {
+            mutableStateOf(TextFieldValue(value, TextRange(value.length)))
         }
 
         BasicTextField(
             value = field,
             onValueChange = {
                 field = it
-                lastExternal = it.text
                 onValueChange(it.text)
             },
             singleLine = singleLine,

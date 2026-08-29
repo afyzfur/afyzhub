@@ -80,5 +80,22 @@ interface ChatRepository {
      */
     suspend fun updateSummary(conversationId: Long, summary: String)
 
+    /**
+     * 以下几个与 [updateSummary] 同理，都不动 updatedAt——
+     * 置顶、加星、写简介、换分组都不是"对话有了新进展"。
+     */
+    suspend fun setPinned(conversationId: Long, pinned: Boolean)
+
+    suspend fun setStarred(conversationId: Long, starred: Boolean)
+
+    /** 传 null 或空串表示清空简介 */
+    suspend fun updateNote(conversationId: Long, note: String?)
+
+    /** 传空串表示移出分组 */
+    suspend fun updateGroup(conversationId: Long, group: String)
+
+    /** 已存在的分组名，供移动时选择 */
+    fun observeGroups(): Flow<List<String>>
+
     suspend fun deleteConversation(conversationId: Long)
 }

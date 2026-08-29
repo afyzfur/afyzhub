@@ -19,14 +19,46 @@ interface ConversationDao {
     @Query(
         """
         SELECT c.id, c.title, c.createdAt, c.updatedAt, c.summary,
+               c.pinned, c.starred, c.note, c.`group`,
                (SELECT m.content FROM messages m
                 WHERE m.conversationId = c.id
                 ORDER BY m.id DESC LIMIT 1) AS lastMessage
         FROM conversations c
-        ORDER BY c.updatedAt DESC
+        ORDER BY c.pinned DESC, c.updatedAt DESC
         """
     )
     fun getConversationSummaries(): Flow<List<ConversationSummary>>
+
+    /**
+     * 以下几个只改单个字段，不动 updatedAt。
+     *
+     * 与 updateSummary 同理：置顶、加星、改简介都不是"对话有了新进展"，
+     * 刷新时间会把会话挪进「今天」分组，破坏按时间的分组。
+     */
+    @Query("UPDATE conversations SET pinned = :pinned WHERE id = :id")
+    suspend fun updatePinned(id: Long, pinned: Boolean)
+
+    @Query("UPDATE conversations SET starred = :starred WHERE id = :id")
+    suspend fun updateStarred(id: Long, starred: Boolean)
+
+    @Query("UPDATE conversations SET title = :title WHERE id = :id")
+    suspend fun updateTitle(id: Long, title: String)
+
+    @Query("UPDATE conversations SET note = :note WHERE id = :id")
+    suspend fun updateNote(id: Long, note: String?)
+
+    @Query("UPDATE conversations SET `group` = :group WHERE id = :id")
+    suspend fun updateGroup(id: Long, group: String)
+
+    /** 已有的所有分组名，供移动时选择。空串不算分组所以排除 */
+    @Query(
+        "SELECT DISTINCT `group` FROM conversations " +
+            "WHERE `group` != '' ORDER BY `group`"
+    )
+    fun getGroups(): Flow<List<String>>
+
+    @Query("DELETE FROM conversations WHERE id = :id")
+    suspend fun deleteConversationById(id: Long)
 
     /**
      * 只更新总结，不动 updatedAt。

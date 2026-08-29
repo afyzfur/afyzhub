@@ -18,7 +18,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -55,9 +57,16 @@ fun ConversationDrawer(
     modelLabel: String,
     /** 用于取用户头像与显示开关 */
     appearance: ChatAppearance,
+    /** 已存在的分组名，供长按后移动会话时选择 */
+    existingGroups: List<String> = emptyList(),
     onConversationClick: (Long) -> Unit,
     onNewConversation: () -> Unit,
     onDeleteConversation: (Long) -> Unit,
+    onTogglePin: (Long, Boolean) -> Unit = { _, _ -> },
+    onToggleStar: (Long, Boolean) -> Unit = { _, _ -> },
+    onRenameConversation: (Long, String) -> Unit = { _, _ -> },
+    onUpdateNote: (Long, String) -> Unit = { _, _ -> },
+    onMoveToGroup: (Long, String) -> Unit = { _, _ -> },
     onSettingsClick: () -> Unit,
     onModelClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -120,7 +129,19 @@ fun ConversationDrawer(
                     ConversationRow(
                         conversation = conversation,
                         selected = conversation.id == currentConversationId,
+                        existingGroups = existingGroups,
                         onClick = { onConversationClick(conversation.id) },
+                        // 传当前值的反面：操作表显示的是"置顶"还是
+                        // "取消置顶"，点下去就是切到另一个状态
+                        onTogglePin = {
+                            onTogglePin(conversation.id, !conversation.pinned)
+                        },
+                        onToggleStar = {
+                            onToggleStar(conversation.id, !conversation.starred)
+                        },
+                        onRename = { onRenameConversation(conversation.id, it) },
+                        onUpdateNote = { onUpdateNote(conversation.id, it) },
+                        onMoveToGroup = { onMoveToGroup(conversation.id, it) },
                         onDelete = { onDeleteConversation(conversation.id) }
                     )
                 }
@@ -195,10 +216,16 @@ private fun DrawerActionRow(
 private fun ConversationRow(
     conversation: ConversationItem,
     selected: Boolean,
+    existingGroups: List<String>,
     onClick: () -> Unit,
+    onTogglePin: () -> Unit,
+    onToggleStar: () -> Unit,
+    onRename: (String) -> Unit,
+    onUpdateNote: (String) -> Unit,
+    onMoveToGroup: (String) -> Unit,
     onDelete: () -> Unit
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -211,22 +238,46 @@ private fun ConversationRow(
             )
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = { showDeleteDialog = true }
+                onLongClick = { showSheet = true }
             )
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Text(
-            text = conversation.title,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-            else MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // 置顶与星标各用一个小图标标在标题前，不占额外行高
+            if (conversation.pinned) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = "已置顶",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+            }
+            if (conversation.starred) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "已加星标",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+            }
+            Text(
+                text = conversation.title,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
         // 优先显示模型生成的总结，没有则退回末条消息。
         // 总结是对整轮问答的概括，比末条消息更能说明这个会话在谈什么
-        val previewSource = conversation.summary?.takeIf { it.isNotBlank() }
+        // 用户自己写的简介优先于模型生成的总结：他明确写下的东西
+        // 比模型的概括更贴近他想记住的内容
+        val previewSource = conversation.note?.takeIf { it.isNotBlank() }
+            ?: conversation.summary?.takeIf { it.isNotBlank() }
             ?: conversation.lastMessage
         // 无消息的会话不显示空摘要行，避免行高不齐
         previewSource?.let { raw ->
@@ -250,26 +301,17 @@ private fun ConversationRow(
         }
     }
 
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("删除对话") },
-            text = { Text("确定要删除「${conversation.title}」吗？此操作无法撤销。") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDelete()
-                        showDeleteDialog = false
-                    }
-                ) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("取消")
-                }
-            }
+    if (showSheet) {
+        ConversationActionSheet(
+            conversation = conversation,
+            existingGroups = existingGroups,
+            onDismiss = { showSheet = false },
+            onTogglePin = onTogglePin,
+            onToggleStar = onToggleStar,
+            onRename = onRename,
+            onUpdateNote = onUpdateNote,
+            onMoveToGroup = onMoveToGroup,
+            onDelete = onDelete
         )
     }
 }

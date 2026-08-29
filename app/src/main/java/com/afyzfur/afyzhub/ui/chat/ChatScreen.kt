@@ -48,6 +48,7 @@ fun ChatScreen(
 ) {
     val conversations by hostViewModel.conversations.collectAsState()
     val currentConversationId by hostViewModel.currentConversationId.collectAsState()
+    val groups by hostViewModel.groups.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val sendPhase by viewModel.sendPhase.collectAsState()
@@ -95,6 +96,12 @@ fun ChatScreen(
                 drawerShape = AppShapeTokens.Drawer
             ) {
                 ConversationDrawer(
+                    existingGroups = groups,
+                    onTogglePin = hostViewModel::setPinned,
+                    onToggleStar = hostViewModel::setStarred,
+                    onRenameConversation = hostViewModel::renameConversation,
+                    onUpdateNote = hostViewModel::updateNote,
+                    onMoveToGroup = hostViewModel::moveToGroup,
                     conversations = conversations,
                     currentConversationId = currentConversationId,
                     modelLabel = settings.model,

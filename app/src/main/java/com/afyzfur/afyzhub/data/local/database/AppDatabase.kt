@@ -11,7 +11,7 @@ import com.afyzfur.afyzhub.data.local.entity.MessageEntity
 
 @Database(
     entities = [ConversationEntity::class, MessageEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -53,6 +53,27 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE conversations ADD COLUMN summary TEXT")
+            }
+        }
+
+        /**
+         * v4 -> v5：会话表新增置顶、星标、简介与分组。
+         *
+         * 布尔在 SQLite 里是 INTEGER，必须给 NOT NULL DEFAULT，
+         * 否则已有行会是 null，读出来直接崩。group 同理给空串。
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "ALTER TABLE conversations ADD COLUMN starred INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL("ALTER TABLE conversations ADD COLUMN note TEXT")
+                db.execSQL(
+                    "ALTER TABLE conversations ADD COLUMN `group` TEXT NOT NULL DEFAULT ''"
+                )
             }
         }
     }

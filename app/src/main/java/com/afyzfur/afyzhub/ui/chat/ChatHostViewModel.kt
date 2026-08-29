@@ -9,8 +9,10 @@ import com.afyzfur.afyzhub.data.settings.UiPreferences
 import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -110,4 +112,33 @@ class ChatHostViewModel(
             repository.renameConversation(conversationId, title)
         }
     }
+
+    fun setPinned(conversationId: Long, pinned: Boolean) {
+        viewModelScope.launch { repository.setPinned(conversationId, pinned) }
+    }
+
+    fun setStarred(conversationId: Long, starred: Boolean) {
+        viewModelScope.launch { repository.setStarred(conversationId, starred) }
+    }
+
+    fun updateNote(conversationId: Long, note: String) {
+        viewModelScope.launch { repository.updateNote(conversationId, note) }
+    }
+
+    fun moveToGroup(conversationId: Long, group: String) {
+        viewModelScope.launch { repository.updateGroup(conversationId, group) }
+    }
+
+    /**
+     * 已存在的分组名。
+     *
+     * 常驻订阅而非用时再查：移动分组的对话框要立刻显示可选项，
+     * 打开时才发起查询会先闪一下空列表。
+     */
+    val groups: StateFlow<List<String>> = repository.observeGroups()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
 }

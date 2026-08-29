@@ -47,7 +47,11 @@ class ChatRepositoryImpl(
                         ?.replace('\n', ' ')
                         ?.trim()
                         ?.take(SUMMARY_MAX_LENGTH)
-                        ?.takeIf { it.isNotEmpty() }
+                        ?.takeIf { it.isNotEmpty() },
+                    pinned = summary.pinned,
+                    starred = summary.starred,
+                    note = summary.note,
+                    group = summary.group
                 )
             }
         }
@@ -361,17 +365,33 @@ class ChatRepositoryImpl(
     override suspend fun renameConversation(conversationId: Long, title: String) {
         val trimmed = title.trim()
         if (trimmed.isEmpty()) return
-        conversationDao.getConversationById(conversationId)?.let { entity ->
-            conversationDao.updateConversation(
-                entity.copy(title = trimmed, updatedAt = System.currentTimeMillis())
-            )
-        }
+        // 不刷新 updatedAt：改名不是"对话有了新进展"，此前的实现会把
+        // 会话挪进抽屉的「今天」分组，改个错别字就让它跳位
+        conversationDao.updateTitle(conversationId, trimmed)
     }
 
+    override suspend fun setPinned(conversationId: Long, pinned: Boolean) {
+        conversationDao.updatePinned(conversationId, pinned)
+    }
+
+    override suspend fun setStarred(conversationId: Long, starred: Boolean) {
+        conversationDao.updateStarred(conversationId, starred)
+    }
+
+    override suspend fun updateNote(conversationId: Long, note: String?) {
+        // 空串归一成 null，界面判空只需要认一种形式
+        conversationDao.updateNote(conversationId, note?.trim()?.ifBlank { null })
+    }
+
+    override suspend fun updateGroup(conversationId: Long, group: String) {
+        conversationDao.updateGroup(conversationId, group.trim())
+    }
+
+    override fun observeGroups(): Flow<List<String>> = conversationDao.getGroups()
+
     override suspend fun deleteConversation(conversationId: Long) {
-        conversationDao.getConversationById(conversationId)?.let {
-            conversationDao.deleteConversation(it)
-        }
+        // 直接按 id 删，省掉一次先查后删。消息由外键级联清理
+        conversationDao.deleteConversationById(conversationId)
     }
 
     private fun ConversationEntity.toDomain() = Conversation(

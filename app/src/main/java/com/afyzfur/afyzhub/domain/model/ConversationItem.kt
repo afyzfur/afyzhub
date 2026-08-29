@@ -14,5 +14,13 @@ data class ConversationItem(
     /** 模型生成的一句话总结，未生成时为 null */
     val summary: String?,
     /** 末条消息正文，无消息时为 null。已在数据层截断 */
-    val lastMessage: String?
+    val lastMessage: String?,
+    /** 置顶，排在列表最前 */
+    val pinned: Boolean = false,
+    /** 星标 */
+    val starred: Boolean = false,
+    /** 用户自己写的简介。与模型生成的 summary 分开，优先显示 */
+    val note: String? = null,
+    /** 分组名，空串表示未分组 */
+    val group: String = ""
 )

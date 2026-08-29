@@ -122,6 +122,8 @@ fun ApiProfileEditScreen(
                 SettingsCategoryTitle("名称与分组")
                 SettingsGroup {
                     SettingsTextFieldItem(
+                        // 切换配置组时重建输入框，否则会留着上一组的值
+                        identityKey = profileId,
                         title = "名称",
                         value = profile.name,
                         onValueChange = { viewModel.updateProfile(profile.copy(name = it)) },
@@ -129,6 +131,8 @@ fun ApiProfileEditScreen(
                     )
                     SettingsItemDivider()
                     SettingsTextFieldItem(
+                        // 切换配置组时重建输入框，否则会留着上一组的值
+                        identityKey = profileId,
                         title = "分组",
                         value = profile.group,
                         onValueChange = { viewModel.updateProfile(profile.copy(group = it)) },
@@ -157,6 +161,8 @@ fun ApiProfileEditScreen(
                 SettingsGroup {
                     // 明文显示：便于核对与修改，Key 只存在本机
                     SettingsTextFieldItem(
+                        // 切换配置组时重建输入框，否则会留着上一组的值
+                        identityKey = profileId,
                         title = "API Key",
                         value = profile.apiKey,
                         // 改动后清掉上次的测试结果：否则那条「连接正常」会
@@ -169,6 +175,8 @@ fun ApiProfileEditScreen(
                     )
                     SettingsItemDivider()
                     SettingsTextFieldItem(
+                        // 切换配置组时重建输入框，否则会留着上一组的值
+                        identityKey = profileId,
                         title = "API 地址",
                         value = profile.baseUrl,
                         onValueChange = {
@@ -200,6 +208,8 @@ fun ApiProfileEditScreen(
                 SettingsCategoryTitle("模型")
                 SettingsGroup {
                     SettingsTextFieldItem(
+                        // 切换配置组时重建输入框，否则会留着上一组的值
+                        identityKey = profileId,
                         title = "模型名称",
                         value = profile.model,
                         onValueChange = { viewModel.updateProfile(profile.copy(model = it)) },
