@@ -3,7 +3,7 @@ package com.afyzfur.afyzhub.ui.chat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.BorderStroke
-import com.afyzfur.afyzhub.ui.components.ThinkingLightbulb
+import com.afyzfur.afyzhub.ui.components.ThinkingBrain
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
@@ -236,21 +236,20 @@ private fun ThinkingEffortButton(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Icon(
-                imageVector = ThinkingLightbulb,
+                imageVector = ThinkingBrain,
                 contentDescription = null,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(18.dp)
             )
-            // 关闭时只显示图标，省下的横向空间留给状态文字
-            if (active) {
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = effort.label,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
+            // 档名始终显示，包括关闭时。此前关闭态只有一个图标，
+            // 既看不出当前是什么状态，点击区域也小得容易点偏
+            Spacer(Modifier.width(5.dp))
+            Text(
+                text = effort.label,
+                style = MaterialTheme.typography.labelMedium
+            )
         }
     }
 }

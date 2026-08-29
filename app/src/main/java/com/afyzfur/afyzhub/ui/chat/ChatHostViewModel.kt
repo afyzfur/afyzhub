@@ -77,6 +77,18 @@ class ChatHostViewModel(
         }
     }
 
+    /**
+     * 直接设为某一档。
+     *
+     * 与 [cycleThinkingEffort] 并存：选择表里是点哪档就是哪档，
+     * 循环切换留给不想展开表的场景。
+     */
+    fun setThinkingEffort(effort: ThinkingEffort) {
+        viewModelScope.launch {
+            settingsRepository.setThinkingEffort(effort)
+        }
+    }
+
     /** null 表示当前是尚未落库的空白新会话 */
     private val _currentConversationId = MutableStateFlow<Long?>(null)
     val currentConversationId: StateFlow<Long?> = _currentConversationId.asStateFlow()

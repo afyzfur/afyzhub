@@ -55,8 +55,20 @@ interface ChatRepository {
      * 删除这条消息及其之后的全部消息。
      *
      * 「回滚到此处」用它把对话退回到该消息之前的状态。
+     *
+     * 返回被删掉的那些消息，按原顺序排列，供撤回时原样插回。
+     * 让删除自己交出快照，而不是让调用方先查一遍再删——两步之间
+     * 若有新消息落库，查到的范围就和实际删掉的不一致了。
      */
-    suspend fun rollbackTo(messageId: Long)
+    suspend fun rollbackTo(messageId: Long): List<Message>
+
+    /**
+     * 把消息原样插回，用于撤回删除。
+     *
+     * 带原 id 插入（DAO 的冲突策略是替换），因此消息在列表中的
+     * 位置、时间戳、与会话的归属都和删除前完全一致。
+     */
+    suspend fun restoreMessages(messages: List<Message>)
 
     /**
      * 重新生成某条助手回复。

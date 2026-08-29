@@ -73,6 +73,11 @@ fun ChatScreen(
     // 记在这里而非直接执行删除，是为了让用户改完不发时消息不会丢
     var editingMessageId by remember { mutableStateOf<Long?>(null) }
 
+    /** 思考程度选择表的开关 */
+    var showEffortSheet by remember { mutableStateOf(false) }
+
+    val undoable by viewModel.undoable.collectAsState()
+
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -144,7 +149,7 @@ fun ChatScreen(
             providerLabel = profileName,
             modelName = settings.model,
             thinkingEffort = settings.thinkingEffort,
-            onCycleThinkingEffort = hostViewModel::cycleThinkingEffort,
+            onCycleThinkingEffort = { showEffortSheet = true },
             appearance = uiPreferences.chatAppearance,
             quickPrompts = uiPreferences.quickPrompts,
             shufflePrompts = uiPreferences.shufflePrompts,
@@ -176,6 +181,9 @@ fun ChatScreen(
             },
             onStop = { viewModel.stopGenerating() },
             onPickModel = onNavigateToModelPicker,
+            undoable = undoable,
+            onUndoRemoval = { viewModel.undoRemoval() },
+            onDismissUndo = { viewModel.dismissUndo() },
             onLongPress = { message -> actionTarget = message },
             onPromptClick = { prompt -> inputText = prompt },
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
@@ -214,7 +222,9 @@ fun ChatScreen(
                 dismiss()
             },
             onRollback = {
-                viewModel.rollbackTo(target.id)
+                // 把被回滚掉的第一条内容填进输入栏。回滚通常是
+                // "这轮问得不好，重新问"，内容还要用
+                viewModel.rollbackTo(target.id) { content -> inputText = content }
                 dismiss()
             }
         )
@@ -222,6 +232,14 @@ fun ChatScreen(
 
     infoTarget?.let { target ->
         MessageInfoDialog(message = target, onDismiss = { infoTarget = null })
+    }
+
+    if (showEffortSheet) {
+        ThinkingEffortSheet(
+            current = settings.thinkingEffort,
+            onSelect = hostViewModel::setThinkingEffort,
+            onDismiss = { showEffortSheet = false }
+        )
     }
 }
 
@@ -260,6 +278,10 @@ private fun ChatContent(
     onStop: () -> Unit,
     /** 点输入栏左下角的模型区域 */
     onPickModel: () -> Unit,
+    /** 可撤回的删除，非空时在输入栏上方显示提示 */
+    undoable: UndoableRemoval? = null,
+    onUndoRemoval: () -> Unit = {},
+    onDismissUndo: () -> Unit = {},
     onLongPress: (Message) -> Unit,
     onPromptClick: (String) -> Unit,
     onRetry: (Long) -> Unit,
@@ -415,6 +437,13 @@ private fun ChatContent(
                     }
                 }
 
+                // 撤回提示紧贴输入栏上方：删除操作与撤回入口在
+                // 同一处视线内，且不遮挡刚被删掉那段内容的位置
+                UndoBar(
+                    removal = undoable,
+                    onUndo = onUndoRemoval,
+                    onDismiss = onDismissUndo
+                )
                 ChatInputBar(
                     transparent = appearance.transparentInputBar,
                     value = inputText,

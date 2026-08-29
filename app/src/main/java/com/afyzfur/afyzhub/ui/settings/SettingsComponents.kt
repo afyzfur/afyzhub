@@ -3,6 +3,8 @@ package com.afyzfur.afyzhub.ui.settings
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -194,7 +196,13 @@ fun SettingsTextFieldItem(
             Text(
                 text = it,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // 说明文字不换行，超出部分横向滑动查看。换行会让每个
+                // 输入项的高度参差不齐，一屏能看到的项数也少掉几个；
+                // 而这些说明本身是一句话，横向读比折成两行更连贯
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.horizontalScroll(rememberScrollState())
             )
         }
     }

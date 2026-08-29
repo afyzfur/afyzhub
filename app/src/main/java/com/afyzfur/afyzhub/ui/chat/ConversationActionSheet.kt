@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -230,7 +231,10 @@ private fun ActionRow(
     }
     Surface(
         onClick = onClick,
-        color = MaterialTheme.colorScheme.surface,
+        // 用透明而非 surface：底部表的容器色是 surfaceContainerLow，
+        // 每行再铺一层 surface 就成了两种深浅，末尾没有行覆盖的那段
+        // 会露出底色，看着像多了一条颜色不同的横带
+        color = Color.Transparent,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(

@@ -212,14 +212,28 @@ class ChatRepositoryImpl(
         messageDao.deleteMessageById(messageId)
     }
 
-    override suspend fun rollbackTo(messageId: Long) {
-        val message = messageDao.getMessageById(messageId) ?: return
+    override suspend fun rollbackTo(messageId: Long): List<Message> {
+        val message = messageDao.getMessageById(messageId) ?: return emptyList()
+        // 先取快照再删。顺序反过来就没得可查了，而快照是撤回的唯一依据
+        val removed = messageDao.getMessagesFrom(
+            conversationId = message.conversationId,
+            createdAt = message.createdAt,
+            id = messageId
+        ).map { it.toDomain() }
         messageDao.deleteFrom(
             conversationId = message.conversationId,
             createdAt = message.createdAt,
             id = messageId
         )
         touchConversation(message.conversationId)
+        return removed
+    }
+
+    override suspend fun restoreMessages(messages: List<Message>) {
+        if (messages.isEmpty()) return
+        // 带原 id 插回，DAO 的冲突策略是替换，因此顺序与元信息都不变
+        messages.forEach { messageDao.insertMessage(it.toEntity()) }
+        touchConversation(messages.first().conversationId)
     }
 
     override suspend fun regenerate(
@@ -399,6 +413,21 @@ class ChatRepositoryImpl(
         title = title,
         createdAt = createdAt,
         updatedAt = updatedAt
+    )
+
+    /** 撤回删除时用：把领域模型还原成实体，保留原 id 以精确插回。 */
+    private fun Message.toEntity() = MessageEntity(
+        id = id,
+        conversationId = conversationId,
+        content = content,
+        role = role,
+        status = status,
+        errorMessage = errorMessage,
+        createdAt = createdAt,
+        model = model,
+        promptTokens = promptTokens,
+        completionTokens = completionTokens,
+        latencyMs = latencyMs
     )
 
     private fun MessageEntity.toDomain() = Message(

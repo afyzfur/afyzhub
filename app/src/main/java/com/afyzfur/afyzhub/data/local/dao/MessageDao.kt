@@ -107,6 +107,24 @@ interface MessageDao {
     )
     suspend fun deleteFrom(conversationId: Long, createdAt: Long, id: Long)
 
+    /**
+     * 查出 [deleteFrom] 将要删除的那些消息。
+     *
+     * 条件与 [deleteFrom] 逐字相同，用于删除前留一份快照供撤回。
+     * 两处条件必须一起改：不一致会让撤回插回的范围与实际删掉的
+     * 不符，表现为撤回后多出或缺少消息。
+     */
+    @Query(
+        "SELECT * FROM messages WHERE conversationId = :conversationId AND (" +
+            "createdAt > :createdAt OR (createdAt = :createdAt AND id >= :id)) " +
+            "ORDER BY createdAt ASC, id ASC"
+    )
+    suspend fun getMessagesFrom(
+        conversationId: Long,
+        createdAt: Long,
+        id: Long
+    ): List<MessageEntity>
+
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
     suspend fun deleteMessagesByConversationId(conversationId: Long)
 }

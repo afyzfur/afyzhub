@@ -23,6 +23,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.Search
+import com.afyzfur.afyzhub.ui.components.IconFolder
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -71,8 +74,23 @@ fun ConversationDrawer(
     onModelClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    /** 搜索关键词，空串表示未搜索 */
+    var query by remember { mutableStateOf("") }
+    /** 是否展开搜索框。收起时让出标题行的空间 */
+    var searching by remember { mutableStateOf(false) }
+    /** 分组筛选，null 表示不筛选 */
+    var groupFilter by remember { mutableStateOf<String?>(null) }
+    /** 是否显示分组选择表 */
+    var showGroupSheet by remember { mutableStateOf(false) }
+
+    // 先筛分组再搜关键词，两者可叠加：在某个分组里再找一条是常见需求
+    val visible = remember(conversations, query, groupFilter) {
+        conversations
+            .filter { groupFilter == null || it.group == groupFilter }
+            .let { list -> if (query.isBlank()) list else searchConversations(list, query) }
+    }
     // 分组结果随列表变化重算，不必每次重组都做
-    val grouped = remember(conversations) { groupConversations(conversations) }
+    val grouped = remember(visible) { groupConversations(visible) }
 
     Column(modifier = modifier.fillMaxSize()) {
 
@@ -80,7 +98,7 @@ fun ConversationDrawer(
         // 而消息列表里的头像会随滚动移出视野
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 24.dp, top = 28.dp, bottom = 16.dp)
+            modifier = Modifier.padding(start = 24.dp, end = 8.dp, top = 28.dp, bottom = 16.dp)
         ) {
             if (appearance.showAvatars && appearance.showUserAvatar) {
                 UserAvatar(appearance = appearance, size = 36.dp)
@@ -89,7 +107,52 @@ fun ConversationDrawer(
             Text(
                 text = "AfyzHub",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            // 搜索与分组：两个最常用的"从一堆会话里找到那一个"的手段
+            IconButton(onClick = { searching = !searching }) {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = "搜索对话",
+                    tint = if (searching) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+            IconButton(onClick = { showGroupSheet = true }) {
+                Icon(
+                    // FolderOpen 比 List 更贴"分组"：后者在这一栏里
+                    // 容易读成"列表视图"
+                    IconFolder,
+                    contentDescription = "按分组查看",
+                    tint = if (groupFilter != null) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        }
+
+        if (searching) {
+            ConversationSearchField(
+                query = query,
+                onQueryChange = { query = it },
+                onClose = {
+                    searching = false
+                    query = ""
+                }
+            )
+        }
+
+        // 正在筛分组时给一条可清除的说明：否则列表少了一半却看不出原因
+        groupFilter?.let { name ->
+            GroupFilterChip(
+                group = name,
+                onClear = { groupFilter = null }
             )
         }
 
@@ -175,6 +238,17 @@ fun ConversationDrawer(
         )
 
         Spacer(Modifier.height(16.dp))
+    }
+
+    if (showGroupSheet) {
+        GroupFilterSheet(
+            groups = existingGroups,
+            current = groupFilter,
+            // 有未分组的会话才给这一项，否则是个点了没结果的选项
+            hasUngrouped = conversations.any { it.group.isEmpty() },
+            onSelect = { groupFilter = it },
+            onDismiss = { showGroupSheet = false }
+        )
     }
 }
 /** 抽屉内的操作行 */

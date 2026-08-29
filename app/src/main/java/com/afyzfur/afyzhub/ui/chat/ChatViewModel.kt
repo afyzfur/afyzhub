@@ -9,10 +9,22 @@ import com.afyzfur.afyzhub.domain.usecase.GenerateTitleUseCase
 import com.afyzfur.afyzhub.domain.usecase.fallbackTitle
 import com.afyzfur.afyzhub.domain.usecase.SendMessageUseCase
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+/**
+ * 一次可撤回的删除。
+ *
+ * 存的是完整的消息快照而非 id：消息已经从库里删掉了，只留 id
+ * 无法还原内容与元信息。
+ */
+data class UndoableRemoval(val messages: List<Message>) {
+    /** 提示文案里要说明撤回的规模，一条与多条的说法不同 */
+    val count: Int get() = messages.size
+}
 
 class ChatViewModel(
     private val repository: ChatRepository,
@@ -47,6 +59,18 @@ class ChatViewModel(
      * 正在进行的请求，两者生命周期不同。
      */
     private var sendJob: Job? = null
+
+    /**
+     * 可撤回的一次删除。
+     *
+     * 只保留最近一次：撤回是"手滑了立刻退回"的补救，不是历史记录。
+     * 保留多次会让人以为可以一路退回去，而那需要完整的操作栈。
+     */
+    private val _undoable = MutableStateFlow<UndoableRemoval?>(null)
+    val undoable: StateFlow<UndoableRemoval?> = _undoable.asStateFlow()
+
+    /** 撤回提示的自动消失计时，换新的删除时要取消旧的 */
+    private var undoTimerJob: Job? = null
 
     /**
      * 当前的消息订阅任务。
@@ -231,8 +255,51 @@ class ChatViewModel(
         viewModelScope.launch { repository.deleteMessage(messageId) }
     }
 
-    fun rollbackTo(messageId: Long) {
-        viewModelScope.launch { repository.rollbackTo(messageId) }
+    /**
+     * 回滚到某条消息之前。
+     *
+     * 被删掉的第一条消息内容通过 [onRestoreToInput] 交回界面填进输入栏——
+     * 回滚往往是"这轮问得不好，重新问"，内容通常还要用；直接删掉的话
+     * 得自己重新打一遍。同时留下撤回快照。
+     */
+    fun rollbackTo(messageId: Long, onRestoreToInput: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            val removed = repository.rollbackTo(messageId)
+            removed.firstOrNull()?.let { onRestoreToInput(it.content) }
+            offerUndo(removed)
+        }
+    }
+
+    /**
+     * 记下一次可撤回的删除，并在若干秒后自动放弃。
+     *
+     * 计时结束只是收起提示，不需要做任何清理——快照存在内存里，
+     * 丢掉引用即可。
+     */
+    private fun offerUndo(removed: List<Message>) {
+        if (removed.isEmpty()) return
+        undoTimerJob?.cancel()
+        _undoable.value = UndoableRemoval(removed)
+        undoTimerJob = viewModelScope.launch {
+            delay(UNDO_WINDOW_MS)
+            _undoable.value = null
+        }
+    }
+
+    /** 撤回上一次删除，把消息原样插回。 */
+    fun undoRemoval() {
+        val pending = _undoable.value ?: return
+        undoTimerJob?.cancel()
+        _undoable.value = null
+        viewModelScope.launch {
+            repository.restoreMessages(pending.messages)
+        }
+    }
+
+    /** 主动放弃撤回，用于用户点掉提示。 */
+    fun dismissUndo() {
+        undoTimerJob?.cancel()
+        _undoable.value = null
     }
 
     /**
@@ -256,8 +323,9 @@ class ChatViewModel(
         sendJob = viewModelScope.launch {
             _error.value = null
             try {
-                // 回滚要在发送之前完成，两者同属一次操作
-                repository.rollbackTo(messageId)
+                // 回滚在发送之前完成，两者同属一次操作。
+                // 留下撤回快照：万一改错了还能退回原样
+                offerUndo(repository.rollbackTo(messageId))
                 val conversationId = resolveConversationId()
                 sendMessageUseCase(conversationId, text) { phase ->
                     _sendPhase.value = phase
@@ -304,5 +372,15 @@ class ChatViewModel(
 
     fun clearError() {
         _error.value = null
+    }
+
+    private companion object {
+        /**
+         * 撤回窗口。
+         *
+         * 5 秒是够看清提示并做决定的下限，再长会让提示一直占着
+         * 输入栏上方的位置。
+         */
+        const val UNDO_WINDOW_MS = 5_000L
     }
 }

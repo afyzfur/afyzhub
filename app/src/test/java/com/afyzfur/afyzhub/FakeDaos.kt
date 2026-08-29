@@ -123,6 +123,18 @@ class FakeMessageDao : MessageDao {
         }
     }
 
+    /** 条件与 deleteFrom 保持一致，否则撤回的范围会与实际删除不符 */
+    override suspend fun getMessagesFrom(
+        conversationId: Long,
+        createdAt: Long,
+        id: Long
+    ): List<MessageEntity> = state.value
+        .filter {
+            it.conversationId == conversationId &&
+                (it.createdAt > createdAt || (it.createdAt == createdAt && it.id >= id))
+        }
+        .sortedWith(compareBy({ it.createdAt }, { it.id }))
+
     override suspend fun deleteMessageById(id: Long) {
         state.value = state.value.filterNot { it.id == id }
     }

@@ -19,6 +19,12 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import com.afyzfur.afyzhub.ui.components.IconBolt
+import com.afyzfur.afyzhub.ui.components.IconChatBubble
+import com.afyzfur.afyzhub.ui.components.IconDocument
+import com.afyzfur.afyzhub.ui.components.IconKey
+import com.afyzfur.afyzhub.ui.components.IconPalette
+import com.afyzfur.afyzhub.ui.components.IconTextLines
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -83,7 +89,7 @@ fun SettingsHomeScreen(
                         onClick = onNavigateToAppearance
                     )
                     SettingsNavItem(
-                        icon = Icons.Default.Favorite,
+                        icon = IconPalette,
                         title = "外观",
                         subtitle = "动态取色与配色来源",
                         onClick = onNavigateToAppearance
@@ -94,7 +100,7 @@ fun SettingsHomeScreen(
 
                 SettingsGroup {
                     SettingsNavItem(
-                        icon = Icons.Default.AccountCircle,
+                        icon = IconKey,
                         title = "API 配置",
                         // 副标题显示当前生效的那一组，省去进入子页面确认。
                         // 必须读配置组而非 SettingsViewModel 的单组状态：
@@ -104,7 +110,7 @@ fun SettingsHomeScreen(
                         onClick = onNavigateToProvider
                     )
                     SettingsNavItem(
-                        icon = Icons.Default.Create,
+                        icon = IconBolt,
                         title = "首屏提示词",
                         subtitle = if (prefs.quickPrompts.isEmpty()) {
                             "未设置"
@@ -119,13 +125,13 @@ fun SettingsHomeScreen(
 
                 SettingsGroup {
                     SettingsNavItem(
-                        icon = Icons.Default.Face,
+                        icon = IconChatBubble,
                         title = "聊天外观",
                         subtitle = "气泡样式、头像与背景",
                         onClick = onNavigateToChatAppearance
                     )
                     SettingsNavItem(
-                        icon = Icons.Default.Email,
+                        icon = IconTextLines,
                         title = "消息显示",
                         subtitle = "时间戳、token 用量等元信息",
                         onClick = onNavigateToMessageDisplay
@@ -142,7 +148,7 @@ fun SettingsHomeScreen(
                 SettingsCategoryTitle("诊断")
                 SettingsGroup {
                     SettingsNavItem(
-                        icon = Icons.Default.Search,
+                        icon = IconDocument,
                         title = "请求日志",
                         subtitle = "查看最近的接口请求与响应，排查失败原因",
                         onClick = onNavigateToRequestLog
