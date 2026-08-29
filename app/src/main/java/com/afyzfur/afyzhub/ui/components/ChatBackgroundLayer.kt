@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
 
@@ -28,7 +29,9 @@ fun ChatBackgroundLayer(
     if (!appearance.hasBackgroundImage) return
     val effect = appearance.backgroundEffect
 
-    Box(modifier = modifier) {
+    // 外层裁剪：LocalImage 在 API 31+ 用 Unbounded 边缘处理，模糊会
+    // 溢出到容器之外，不裁的话会盖住相邻内容
+    Box(modifier = modifier.clipToBounds()) {
         LocalImage(
             path = appearance.backgroundPath!!,
             version = appearance.imageVersion,

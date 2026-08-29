@@ -25,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -104,14 +103,9 @@ fun ImageCropDialog(
                 }
                 Spacer(Modifier.height(16.dp))
                 EdgeSlider("左边界", left, 0f, right - MIN_SIZE) { left = it }
-                // 右与下镜像：让填色的方向与它们控制的那条边一致
-                EdgeSlider(
-                    "右边界", right, left + MIN_SIZE, 1f, mirrored = true
-                ) { right = it }
+                EdgeSlider("右边界", right, left + MIN_SIZE, 1f) { right = it }
                 EdgeSlider("上边界", top, 0f, bottom - MIN_SIZE) { top = it }
-                EdgeSlider(
-                    "下边界", bottom, top + MIN_SIZE, 1f, mirrored = true
-                ) { bottom = it }
+                EdgeSlider("下边界", bottom, top + MIN_SIZE, 1f) { bottom = it }
             }
         },
         confirmButton = {
@@ -128,10 +122,9 @@ fun ImageCropDialog(
 /**
  * 单条边界的滑块。
  *
- * [mirrored] 用于右边界与下边界：Slider 的已选填色恒从左端起，
- * 而这两条控制的是右侧与下侧，填色方向与语义相反——滑块看着像
- * 在"从左往右推"，实际在收右边。整体水平镜像后填色从右端起，
- * 与图片上那条边的位置一致。
+ * 不做水平镜像。右边界与下边界的取值范围上限是 1（不裁剪），
+ * 自然映射下滑块正好停在右端，与图片上那条边的位置本就一致；
+ * 之前加 scaleX = -1 反而把它们翻到了左端。
  *
  * valueRange 的下限可能大于上限——比如上下边界已经贴到最小间距时，
  * 再调另一条边算出的范围会反过来。Slider 遇到这种范围会抛异常，
@@ -143,7 +136,6 @@ private fun EdgeSlider(
     value: Float,
     min: Float,
     max: Float,
-    mirrored: Boolean = false,
     onChange: (Float) -> Unit
 ) {
     val lo = min.coerceIn(0f, 1f)
@@ -164,12 +156,7 @@ private fun EdgeSlider(
             value = value.coerceIn(lo, hi),
             onValueChange = onChange,
             valueRange = lo..hi,
-            modifier = Modifier
-                .weight(1f)
-                // scaleX = -1 把整条滑块左右翻转，填色随之从右端起。
-                // 值本身不用换算：翻转只影响绘制与命中区域的映射，
-                // Slider 内部仍按 lo..hi 线性取值
-                .then(if (mirrored) Modifier.scale(scaleX = -1f, scaleY = 1f) else Modifier)
+            modifier = Modifier.weight(1f)
         )
     }
 }
