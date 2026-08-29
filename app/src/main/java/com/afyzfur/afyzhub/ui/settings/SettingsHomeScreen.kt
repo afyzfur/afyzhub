@@ -83,16 +83,16 @@ fun SettingsHomeScreen(
                 SettingsCategoryTitle("通用")
 
                 SettingsGroup {
-                    // 点击直接循环切换，不再进子页面：三个取值点两次
-                    // 就能到任意一个，而进去选再退出来是四次操作
-                    SettingsValueItem(
+                    // 下拉而非循环点击：循环时点之前看不到有哪些选项，
+                    // 而且从"深色"回到"跟随系统"要连点两次
+                    SettingsDropdownItem(
                         icon = IconContrast,
                         title = "颜色模式",
-                        subtitle = "点击切换：跟随系统、浅色、深色",
-                        value = prefs.colorMode.label,
-                        onClick = {
-                            uiPreferencesViewModel.setColorMode(ColorMode.next(prefs.colorMode))
-                        }
+                        subtitle = prefs.colorMode.label,
+                        options = ColorMode.entries,
+                        selected = prefs.colorMode,
+                        label = { it.label },
+                        onSelect = uiPreferencesViewModel::setColorMode
                     )
                     SettingsNavItem(
                         icon = IconPalette,

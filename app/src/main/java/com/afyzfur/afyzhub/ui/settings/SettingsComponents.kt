@@ -24,6 +24,10 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -329,6 +333,86 @@ fun SettingsValueItem(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
+    }
+}
+
+/**
+ * 下拉选择条目。
+ *
+ * 相比循环点击：取值超过两三个时，循环要点很多次才能到目标，而且
+ * 点之前看不到有哪些选项。相比进子页面：下拉不离开当前页，选完
+ * 立刻能看到效果，适合像颜色模式这种"改完要马上看结果"的项。
+ *
+ * 右侧的胶囊按钮本身显示当前值，兼作展开入口——不额外放一个箭头
+ * 图标是因为按钮自带的下箭头已经表明可展开。
+ */
+@Composable
+fun <T> SettingsDropdownItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    SettingsRowBase(
+        icon = icon,
+        title = title,
+        subtitle = subtitle
+    ) {
+        Box {
+            Surface(
+                onClick = { expanded = true },
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shape = AppShapeTokens.Pill
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 16.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
+                ) {
+                    Text(
+                        text = label(selected),
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(label(option)) },
+                        onClick = {
+                            onSelect(option)
+                            expanded = false
+                        },
+                        trailingIcon = {
+                            // 只给当前项打勾，让展开后一眼看出选的是哪个
+                            if (option == selected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 

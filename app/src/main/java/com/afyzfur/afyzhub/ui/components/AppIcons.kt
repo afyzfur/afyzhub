@@ -487,58 +487,58 @@ val IconStopwatch: ImageVector by lazy {
     }
 }
 /**
- * 思考程度：气泡里的三点。
+ * 思考程度：灯泡。
  *
- * 换掉了先前的大脑轮廓。大脑在 18dp 下线条太密，脑沟与中缝挤在
- * 一起认不出形状；而"气泡 + 省略号"是等待与斟酌的通用表意，
- * 笔画少、小尺寸下依然清楚，也和聊天场景本身贴合。
+ * 绕了一圈回到灯泡。中间试过大脑（脑沟在 18dp 下糊成一团）和
+ * 气泡加省略号（与聊天气泡本身太像，容易读成"消息"）。灯泡的
+ * 好处是轮廓极好认，即使只剩几笔也不会误认成别的东西。
+ *
+ * 只画三部分：泡身、底座的两道螺纹、内部一道灯丝。不画周围的
+ * 放射线——那几笔在小尺寸下会和泡身粘成一块黑斑。
  */
 val IconThinking: ImageVector by lazy {
     icon("Thinking") {
-        // 圆角气泡，尾巴在左下
+        // 泡身：上部圆、下部收窄接到底座
         path(
             stroke = SolidColor(Color.Black),
             strokeLineWidth = STROKE,
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
         ) {
-            moveTo(6.5f, 4f)
-            lineTo(17.5f, 4f)
-            curveTo(18.9f, 4f, 20f, 5.1f, 20f, 6.5f)
-            lineTo(20f, 13.5f)
-            curveTo(20f, 14.9f, 18.9f, 16f, 17.5f, 16f)
-            lineTo(9.5f, 16f)
-            lineTo(5.5f, 20f)
-            lineTo(5.5f, 16f)
-            curveTo(4.7f, 15.7f, 4f, 14.7f, 4f, 13.5f)
-            lineTo(4f, 6.5f)
-            curveTo(4f, 5.1f, 5.1f, 4f, 6.5f, 4f)
+            moveTo(9.2f, 16.5f)
+            curveTo(9.2f, 14.8f, 8.2f, 14.2f, 7.2f, 12.9f)
+            curveTo(6.5f, 12f, 6.1f, 10.8f, 6.1f, 9.6f)
+            curveTo(6.1f, 6.4f, 8.7f, 3.8f, 12f, 3.8f)
+            curveTo(15.3f, 3.8f, 17.9f, 6.4f, 17.9f, 9.6f)
+            curveTo(17.9f, 10.8f, 17.5f, 12f, 16.8f, 12.9f)
+            curveTo(15.8f, 14.2f, 14.8f, 14.8f, 14.8f, 16.5f)
             close()
         }
-        // 三个点表示正在斟酌
-        path(fill = SolidColor(Color.Black)) {
-            moveTo(8.4f, 11.2f)
-            curveTo(9.1f, 11.2f, 9.6f, 10.7f, 9.6f, 10f)
-            curveTo(9.6f, 9.3f, 9.1f, 8.8f, 8.4f, 8.8f)
-            curveTo(7.7f, 8.8f, 7.2f, 9.3f, 7.2f, 10f)
-            curveTo(7.2f, 10.7f, 7.7f, 11.2f, 8.4f, 11.2f)
-            close()
+        // 底座两道螺纹
+        path(
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = STROKE,
+            strokeLineCap = StrokeCap.Round
+        ) {
+            moveTo(9.6f, 18.6f)
+            lineTo(14.4f, 18.6f)
         }
-        path(fill = SolidColor(Color.Black)) {
-            moveTo(12f, 11.2f)
-            curveTo(12.7f, 11.2f, 13.2f, 10.7f, 13.2f, 10f)
-            curveTo(13.2f, 9.3f, 12.7f, 8.8f, 12f, 8.8f)
-            curveTo(11.3f, 8.8f, 10.8f, 9.3f, 10.8f, 10f)
-            curveTo(10.8f, 10.7f, 11.3f, 11.2f, 12f, 11.2f)
-            close()
+        path(
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = STROKE,
+            strokeLineCap = StrokeCap.Round
+        ) {
+            moveTo(10.4f, 20.7f)
+            lineTo(13.6f, 20.7f)
         }
-        path(fill = SolidColor(Color.Black)) {
-            moveTo(15.6f, 11.2f)
-            curveTo(16.3f, 11.2f, 16.8f, 10.7f, 16.8f, 10f)
-            curveTo(16.8f, 9.3f, 16.3f, 8.8f, 15.6f, 8.8f)
-            curveTo(14.9f, 8.8f, 14.4f, 9.3f, 14.4f, 10f)
-            curveTo(14.4f, 10.7f, 14.9f, 11.2f, 15.6f, 11.2f)
-            close()
+        // 灯丝：一道竖线，暗示"亮着"
+        path(
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 1.4f,
+            strokeLineCap = StrokeCap.Round
+        ) {
+            moveTo(12f, 8f)
+            lineTo(12f, 13.5f)
         }
     }
 }

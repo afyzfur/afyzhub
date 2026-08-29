@@ -177,19 +177,24 @@ private fun ProfileRow(
     onSelect: () -> Unit,
     onEdit: () -> Unit
 ) {
+    // clickable 加在最外层：此前它在内层的 weight(1f) 那个 Row 上，
+    // 右侧箭头落在可点区域之外——涟漪到箭头前就断了，点箭头也没反应。
+    // 勾选区的 IconButton 在这一层之内，它自己的点击会先被消费掉，
+    // 因此不会连带触发进入编辑
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onEdit)
+            .padding(top = 12.dp, bottom = 12.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .weight(1f)
-                .clickable(onClick = onEdit)
-                .padding(start = 8.dp, top = 12.dp, bottom = 12.dp)
+                .padding(start = 8.dp)
         ) {
-            // 勾选区单独可点，用来切换生效组；整行则是进入编辑。
-            // 未选中时也要占位并可点，否则只有选中的那行能点勾
+            // 勾选区单独可点，用来切换生效组；整行则是进入编辑
             IconButton(onClick = onSelect, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Default.Check,
@@ -231,7 +236,7 @@ private fun ProfileRow(
                 )
             }
         }
-        // 保留一个箭头提示这一行可以进去，但不再是唯一入口
+        // 箭头只作提示，点击由整行承接
         Icon(
             imageVector = Icons.Default.KeyboardArrowRight,
             contentDescription = null,
