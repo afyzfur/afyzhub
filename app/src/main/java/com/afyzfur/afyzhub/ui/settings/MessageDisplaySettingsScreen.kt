@@ -18,6 +18,12 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.afyzfur.afyzhub.ui.components.IconClock
+import com.afyzfur.afyzhub.ui.components.IconActions
+import com.afyzfur.afyzhub.ui.components.IconTag
+import com.afyzfur.afyzhub.ui.components.IconBarChart
+import com.afyzfur.afyzhub.ui.components.IconSpeed
+import com.afyzfur.afyzhub.ui.components.IconStopwatch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -59,7 +65,7 @@ fun MessageDisplaySettingsScreen(
 
                 SettingsGroup {
                     SettingsSwitchItem(
-                        icon = Icons.Default.DateRange,
+                        icon = IconClock,
                         title = "时间戳",
                         subtitle = "同日只显示时分，跨日带日期",
                         checked = display.showTimestamp,
@@ -68,7 +74,7 @@ fun MessageDisplaySettingsScreen(
                         }
                     )
                     SettingsSwitchItem(
-                        icon = Icons.Default.Build,
+                        icon = IconActions,
                         title = "操作按钮",
                         subtitle = "复制、重新生成等",
                         checked = display.showActions,
@@ -77,7 +83,7 @@ fun MessageDisplaySettingsScreen(
                         }
                     )
                     SettingsSwitchItem(
-                        icon = Icons.Default.Face,
+                        icon = IconTag,
                         title = "模型名称",
                         subtitle = "标注每条回复由哪个模型生成",
                         checked = display.showModelName,
@@ -91,7 +97,7 @@ fun MessageDisplaySettingsScreen(
 
                 SettingsGroup {
                     SettingsSwitchItem(
-                        icon = Icons.Default.List,
+                        icon = IconBarChart,
                         title = "Token 用量",
                         subtitle = "输入与输出的 token 数",
                         checked = display.showTokenUsage,
@@ -100,7 +106,7 @@ fun MessageDisplaySettingsScreen(
                         }
                     )
                     SettingsSwitchItem(
-                        icon = Icons.Default.PlayArrow,
+                        icon = IconSpeed,
                         title = "生成速度",
                         subtitle = "每秒输出的 token 数",
                         checked = display.showSpeed,
@@ -109,7 +115,7 @@ fun MessageDisplaySettingsScreen(
                         }
                     )
                     SettingsSwitchItem(
-                        icon = Icons.Default.Refresh,
+                        icon = IconStopwatch,
                         title = "耗时",
                         subtitle = "从发出请求到回复结束",
                         checked = display.showLatency,

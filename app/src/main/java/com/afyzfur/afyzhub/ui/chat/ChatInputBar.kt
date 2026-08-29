@@ -3,7 +3,7 @@ package com.afyzfur.afyzhub.ui.chat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.BorderStroke
-import com.afyzfur.afyzhub.ui.components.ThinkingBrain
+import com.afyzfur.afyzhub.ui.components.IconThinking
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
@@ -164,23 +164,19 @@ fun ChatInputBar(
 
                 // 生成中显示具体阶段，替代提供商名——后者在等待期间
                 // 不提供任何新信息，而用户此时最想知道的是进行到哪一步
-                Text(
-                    text = statusLabel.ifEmpty { providerLabel },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (statusLabel.isEmpty()) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    // 空闲时这里显示配置组名，点它同样进模型页；生成中
-                    // 显示的是阶段文字，点了没有意义所以不可点
-                    modifier = Modifier
-                        .clip(AppShapeTokens.CircleButton)
-                        .clickable(enabled = !isLoading, onClick = onPickModel)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                // 只在生成中显示阶段文字。空闲时这里曾显示配置组名，
+                // 但那个信息在顶栏副标题里已经有了，重复占位还容易
+                // 被误当成可切换的按钮
+                if (statusLabel.isNotEmpty()) {
+                    Text(
+                        text = statusLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 6.dp)
+                    )
+                }
                 // 单个带 weight 的 Spacer 吃掉剩余宽度。此前这里是
                 // 文字带 weight(1f, fill = false) 再跟一个 Box(weight(1f))，
                 // 两个 weight 争抢剩余空间，Row 的高度与基线对齐都被打乱，
@@ -239,7 +235,7 @@ private fun ThinkingEffortButton(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Icon(
-                imageVector = ThinkingBrain,
+                imageVector = IconThinking,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp)
             )

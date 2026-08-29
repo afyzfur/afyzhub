@@ -19,7 +19,7 @@ enum class ThinkingEffort(
     /** Anthropic 与 Gemini 的 token 预算，OFF 时为 null */
     val tokenBudget: Int?
 ) {
-    OFF(id = "off", label = "不思考", openAiEffort = null, tokenBudget = null),
+    OFF(id = "off", label = "关闭", openAiEffort = null, tokenBudget = null),
     LOW(id = "low", label = "低", openAiEffort = "low", tokenBudget = 1024),
     MEDIUM(id = "medium", label = "中", openAiEffort = "medium", tokenBudget = 4096),
     HIGH(id = "high", label = "高", openAiEffort = "high", tokenBudget = 16384);

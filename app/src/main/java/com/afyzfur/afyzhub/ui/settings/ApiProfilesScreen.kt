@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -162,8 +164,11 @@ fun ApiProfilesScreen(
 /**
  * 配置组的一行。
  *
- * 左侧点击区选中该组，右侧「编辑」进入详情。两块分开是因为切换
- * 配置的频率远高于修改配置。
+ * 点整行进入编辑，点左侧的勾选区把这组设为生效。
+ *
+ * 此前是反过来的——整行选中、右侧按钮进编辑。但改 Key、换模型
+ * 这些事都在编辑页里，而"仅仅切换生效组"更多是在模型选择页顺手
+ * 完成的，所以把进入编辑放在整行这个更大的点击区上。
  */
 @Composable
 private fun ProfileRow(
@@ -180,22 +185,24 @@ private fun ProfileRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .weight(1f)
-                .clickable(onClick = onSelect)
-                .padding(start = 20.dp, top = 12.dp, bottom = 12.dp)
+                .clickable(onClick = onEdit)
+                .padding(start = 8.dp, top = 12.dp, bottom = 12.dp)
         ) {
-            // 选中态用对勾而非单选圆点：这一行同时承载"选中"和"进入编辑"
-            // 两个动作，单选圆点会让人以为整行只能选
-            if (selected) {
+            // 勾选区单独可点，用来切换生效组；整行则是进入编辑。
+            // 未选中时也要占位并可点，否则只有选中的那行能点勾
+            IconButton(onClick = onSelect, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "已选中",
-                    tint = MaterialTheme.colorScheme.primary,
+                    contentDescription = if (selected) "已生效" else "设为生效",
+                    tint = if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    },
                     modifier = Modifier.size(18.dp)
                 )
-            } else {
-                Spacer(Modifier.size(18.dp))
             }
-            Spacer(Modifier.size(12.dp))
+            Spacer(Modifier.size(8.dp))
             ModelIcon(modelName = profile.effectiveModel, size = 22.dp)
             Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f, fill = false)) {
@@ -224,7 +231,13 @@ private fun ProfileRow(
                 )
             }
         }
-        TextButton(onClick = onEdit) { Text("编辑") }
-        Spacer(Modifier.size(4.dp))
+        // 保留一个箭头提示这一行可以进去，但不再是唯一入口
+        Icon(
+            imageVector = Icons.Default.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.size(16.dp))
     }
 }

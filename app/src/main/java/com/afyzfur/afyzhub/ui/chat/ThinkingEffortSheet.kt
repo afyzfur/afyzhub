@@ -5,14 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
-import com.afyzfur.afyzhub.ui.components.ThinkingBrain
+import com.afyzfur.afyzhub.ui.components.IconThinking
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
 /**
@@ -71,22 +67,27 @@ fun ThinkingEffortSheet(
             )
             Spacer(Modifier.height(16.dp))
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    horizontal = 24.dp
-                ),
-                modifier = Modifier.fillMaxWidth()
+            // 两行两列铺满宽度，四档一屏全在，不需要横向滑动。
+            // 此前用 LazyRow 固定卡片宽度，第四档会被推到屏幕外，
+            // 而"有哪些档位"恰恰是这个面板要回答的问题
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(horizontal = 24.dp)
             ) {
-                items(ThinkingEffort.entries) { effort ->
-                    EffortCard(
-                        effort = effort,
-                        selected = effort == current,
-                        onClick = {
-                            onSelect(effort)
-                            onDismiss()
+                ThinkingEffort.entries.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        row.forEach { effort ->
+                            EffortCard(
+                                effort = effort,
+                                selected = effort == current,
+                                onClick = {
+                                    onSelect(effort)
+                                    onDismiss()
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
-                    )
+                    }
                 }
             }
         }
@@ -103,7 +104,8 @@ fun ThinkingEffortSheet(
 private fun EffortCard(
     effort: ThinkingEffort,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
         onClick = onClick,
@@ -123,7 +125,7 @@ private fun EffortCard(
         } else {
             BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
         },
-        modifier = Modifier.width(96.dp)
+        modifier = modifier
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -134,7 +136,7 @@ private fun EffortCard(
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 repeat(effort.iconCount()) {
                     Icon(
-                        imageVector = ThinkingBrain,
+                        imageVector = IconThinking,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )

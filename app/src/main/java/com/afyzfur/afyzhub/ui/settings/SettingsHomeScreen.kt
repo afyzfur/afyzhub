@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import com.afyzfur.afyzhub.data.settings.ColorMode
+import com.afyzfur.afyzhub.ui.components.IconContrast
 import com.afyzfur.afyzhub.ui.components.IconBolt
 import com.afyzfur.afyzhub.ui.components.IconChatBubble
 import com.afyzfur.afyzhub.ui.components.IconDocument
@@ -81,12 +83,16 @@ fun SettingsHomeScreen(
                 SettingsCategoryTitle("通用")
 
                 SettingsGroup {
+                    // 点击直接循环切换，不再进子页面：三个取值点两次
+                    // 就能到任意一个，而进去选再退出来是四次操作
                     SettingsValueItem(
-                        icon = Icons.Default.Star,
+                        icon = IconContrast,
                         title = "颜色模式",
-                        subtitle = "浅色、深色或跟随系统",
+                        subtitle = "点击切换：跟随系统、浅色、深色",
                         value = prefs.colorMode.label,
-                        onClick = onNavigateToAppearance
+                        onClick = {
+                            uiPreferencesViewModel.setColorMode(ColorMode.next(prefs.colorMode))
+                        }
                     )
                     SettingsNavItem(
                         icon = IconPalette,

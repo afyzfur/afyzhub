@@ -1,6 +1,7 @@
 package com.afyzfur.afyzhub.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -453,10 +454,14 @@ private fun ModelPickerList(
                         MaterialTheme.colorScheme.onSurface
                     },
                     fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                    // 允许两行：中转的模型名常带前缀，一行放不下
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    // 固定一行，过长的名字横向滑动查看。允许两行时
+                    // 每项高度会随名字长短变化，整页高度跟着变，
+                    // 「上一页 / 下一页」按钮的位置也跟着上下跳
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState())
                 )
                 if (isSelected) {
                     Spacer(Modifier.size(8.dp))

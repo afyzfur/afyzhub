@@ -93,6 +93,12 @@ class SettingsRepository(
         booleanPreferencesKey(Constants.KEY_TRANSPARENT_TOP_BAR)
     private val transparentInputBarKey =
         booleanPreferencesKey(Constants.KEY_TRANSPARENT_INPUT_BAR)
+    private val backgroundEffectKey = stringPreferencesKey(Constants.KEY_BACKGROUND_EFFECT)
+    private val backgroundBlurKey = floatPreferencesKey(Constants.KEY_BACKGROUND_BLUR)
+    private val avatarBlurKey = floatPreferencesKey(Constants.KEY_AVATAR_BLUR)
+    private val inputBarSeeThroughKey =
+        booleanPreferencesKey(Constants.KEY_INPUT_BAR_SEE_THROUGH)
+    private val inputBarBlurKey = floatPreferencesKey(Constants.KEY_INPUT_BAR_BLUR)
 
     private fun apiKeyKey(p: AiProvider) =
         stringPreferencesKey("${Constants.KEY_PREFIX_API_KEY}_${p.id}")
@@ -254,10 +260,13 @@ class SettingsRepository(
             shufflePrompts = prefs[shufflePromptsKey] ?: true,
             palette = ThemePalette.fromId(prefs[paletteKey]),
             chatAppearance = ChatAppearance(
-                userBubble = BubbleStyle.fromId(prefs[userBubbleKey], BubbleStyle.PLAIN),
+                // 默认值写在这里而非只改 ChatAppearance 的构造默认：
+                // 未设置过该键时用的是这个 fallback，data class 的默认值
+                // 只在别处直接构造 ChatAppearance 时才起作用
+                userBubble = BubbleStyle.fromId(prefs[userBubbleKey], BubbleStyle.BUBBLE),
                 assistantBubble = BubbleStyle.fromId(
                     prefs[assistantBubbleKey],
-                    BubbleStyle.PLAIN
+                    BubbleStyle.BUBBLE
                 ),
                 // 旧版默认值 NONE 会写进 DataStore，仅改默认值对已装设备无效。
                 // 未迁移过的设备把存下的 NONE 视作未设置一次，
@@ -272,6 +281,11 @@ class SettingsRepository(
                 showAssistantAvatar = prefs[showAssistantAvatarKey] ?: true,
                 transparentTopBar = prefs[transparentTopBarKey] ?: true,
                 transparentInputBar = prefs[transparentInputBarKey] ?: false,
+                backgroundEffect = ChatBackgroundEffect.fromId(prefs[backgroundEffectKey]),
+                backgroundBlur = prefs[backgroundBlurKey] ?: 0.4f,
+                avatarBlur = prefs[avatarBlurKey] ?: 0f,
+                inputBarSeeThrough = prefs[inputBarSeeThroughKey] ?: false,
+                inputBarBlur = prefs[inputBarBlurKey] ?: 0.5f,
                 imageVersion = prefs[imageVersionKey] ?: 0L
             )
         )
@@ -342,6 +356,26 @@ class SettingsRepository(
 
     suspend fun setBackgroundDim(value: Float) {
         dataStore.edit { it[backgroundDimKey] = value.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setBackgroundEffect(effect: ChatBackgroundEffect) {
+        dataStore.edit { it[backgroundEffectKey] = effect.id }
+    }
+
+    suspend fun setBackgroundBlur(value: Float) {
+        dataStore.edit { it[backgroundBlurKey] = value.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setAvatarBlur(value: Float) {
+        dataStore.edit { it[avatarBlurKey] = value.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setInputBarSeeThrough(enabled: Boolean) {
+        dataStore.edit { it[inputBarSeeThroughKey] = enabled }
+    }
+
+    suspend fun setInputBarBlur(value: Float) {
+        dataStore.edit { it[inputBarBlurKey] = value.coerceIn(0f, 1f) }
     }
 
     /**

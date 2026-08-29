@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.afyzfur.afyzhub.ui.components.IconColorSwatch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -139,23 +140,11 @@ fun AppearanceSettingsScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle("颜色模式")
-
-                SettingsGroup {
-                    ColorMode.entries.forEach { mode ->
-                        SettingsRadioItem(
-                            title = mode.label,
-                            selected = prefs.colorMode == mode,
-                            onClick = { viewModel.setColorMode(mode) }
-                        )
-                    }
-                }
-
                 SettingsCategoryTitle("配色")
 
                 SettingsGroup {
                     SettingsSwitchItem(
-                        icon = Icons.Default.Favorite,
+                        icon = IconColorSwatch,
                         title = "动态取色",
                         subtitle = if (dynamicColorSupported) {
                             "跟随系统壁纸生成配色"

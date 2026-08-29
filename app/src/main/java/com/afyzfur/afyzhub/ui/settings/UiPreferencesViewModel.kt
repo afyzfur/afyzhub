@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.afyzfur.afyzhub.data.image.ImageStore
 import com.afyzfur.afyzhub.data.settings.AvatarMode
 import com.afyzfur.afyzhub.data.settings.BubbleStyle
+import com.afyzfur.afyzhub.data.settings.ChatBackgroundEffect
 import com.afyzfur.afyzhub.data.settings.ChatBackgroundMode
 import com.afyzfur.afyzhub.data.settings.ColorMode
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
@@ -75,6 +76,26 @@ class UiPreferencesViewModel(
 
     fun setBackgroundMode(mode: ChatBackgroundMode) {
         viewModelScope.launch { repository.setBackgroundMode(mode) }
+    }
+
+    fun setBackgroundEffect(effect: ChatBackgroundEffect) {
+        viewModelScope.launch { repository.setBackgroundEffect(effect) }
+    }
+
+    fun setBackgroundBlur(value: Float) {
+        viewModelScope.launch { repository.setBackgroundBlur(value) }
+    }
+
+    fun setAvatarBlur(value: Float) {
+        viewModelScope.launch { repository.setAvatarBlur(value) }
+    }
+
+    fun setInputBarSeeThrough(enabled: Boolean) {
+        viewModelScope.launch { repository.setInputBarSeeThrough(enabled) }
+    }
+
+    fun setInputBarBlur(value: Float) {
+        viewModelScope.launch { repository.setInputBarBlur(value) }
     }
 
     fun setBackgroundDim(value: Float) {

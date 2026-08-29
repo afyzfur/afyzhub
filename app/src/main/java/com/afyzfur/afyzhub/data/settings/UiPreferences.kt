@@ -46,7 +46,7 @@ enum class AvatarMode(val id: String, val label: String) {
     NONE("none", "不显示"),
 
     /** 内置图标：助手按当前提供商取标识，用户用通用人形图标 */
-    BUILTIN("builtin", "内置图标"),
+    BUILTIN("builtin", "默认"),
 
     /** 用户自选图片，未设置时回落到内置图标 */
     CUSTOM("custom", "自定义图片");
@@ -67,6 +67,47 @@ enum class AvatarMode(val id: String, val label: String) {
 }
 
 /** 聊天背景的显示方式。 */
+/**
+ * 背景图的视觉处理方式。
+ *
+ * 遮罩与模糊解决的是同一个问题——背景图削弱文字对比度——但手段
+ * 不同：遮罩压低整体亮度，保留画面细节；模糊抹掉高频细节，保留
+ * 色调与明暗关系。图片本身花哨时模糊更有效，而想看清画面内容时
+ * 遮罩更合适，所以让用户自己选而不是替他决定。
+ *
+ * 两者可以同时生效（[BOTH]）：深色图配深色文字时，单靠模糊不够，
+ * 还得压暗。
+ */
+enum class ChatBackgroundEffect(val id: String, val label: String) {
+    /** 只压暗 */
+    DIM("dim", "遮罩"),
+
+    /** 只模糊 */
+    BLUR("blur", "模糊"),
+
+    /** 先模糊再压暗 */
+    BOTH("both", "模糊 + 遮罩");
+
+    /** 该效果是否用到遮罩强度 */
+    val usesDim: Boolean get() = this != BLUR
+
+    /** 该效果是否用到模糊强度 */
+    val usesBlur: Boolean get() = this != DIM
+
+    companion object {
+        /**
+         * 默认只用遮罩。
+         *
+         * 与旧版本行为一致：此前只有遮罩这一种处理，升级上来的用户
+         * 不该因为默认值变化而看到背景突然变模糊。
+         */
+        val DEFAULT = DIM
+
+        fun fromId(id: String?): ChatBackgroundEffect =
+            entries.firstOrNull { it.id == id } ?: DEFAULT
+    }
+}
+
 enum class ChatBackgroundMode(val id: String, val label: String) {
     /** 纯色，取主题的 surfaceContainer */
     NONE("none", "跟随主题"),
@@ -92,6 +133,15 @@ enum class ColorMode(val id: String, val label: String) {
         val DEFAULT = SYSTEM
         fun fromId(id: String?): ColorMode =
             entries.firstOrNull { it.id == id } ?: DEFAULT
+
+        /**
+         * 按 跟随系统 → 浅色 → 深色 循环。
+         *
+         * 三个取值点两次就能到任意一个，比进子页面选再退出来更快，
+         * 所以设置首页那一项直接点着切。
+         */
+        fun next(current: ColorMode): ColorMode =
+            entries[(entries.indexOf(current) + 1) % entries.size]
     }
 }
 
@@ -127,14 +177,20 @@ data class MessageDisplayOptions(
  */
 data class ChatAppearance(
     /**
-     * 用户消息默认无气泡，与助手一致。
+     * 用户消息默认有气泡。
      *
-     * 此前默认有气泡（即时通讯的普遍预期），但两侧形态不同看起来割裂。
-     * 想要气泡的用户可以在设置里单独打开。
+     * 曾改为默认无气泡以求两侧形态一致，但那样在有背景图时几乎
+     * 分不出哪句是自己说的——文字直接浮在图上，没有边界。气泡
+     * 提供了这个边界，这比形态统一更要紧。
      */
-    val userBubble: BubbleStyle = BubbleStyle.PLAIN,
-    /** 助手消息默认无气泡，使代码块与表格能用满宽度 */
-    val assistantBubble: BubbleStyle = BubbleStyle.PLAIN,
+    val userBubble: BubbleStyle = BubbleStyle.BUBBLE,
+    /**
+     * 助手消息默认有气泡。
+     *
+     * 代价是代码块与表格用不满整个宽度，但可读性优先——尤其配
+     * 背景图时，无气泡的正文与背景混在一起很难读。
+     */
+    val assistantBubble: BubbleStyle = BubbleStyle.BUBBLE,
     val avatarMode: AvatarMode = AvatarMode.DEFAULT,
     /** 自定义用户头像的本地文件路径，未设置为 null */
     val userAvatarPath: String? = null,
@@ -175,6 +231,39 @@ data class ChatAppearance(
      * 输入内容与占位文字的可读性。想要通透观感的用户可以打开。
      */
     val transparentInputBar: Boolean = false,
+    /**
+     * 背景图的处理方式：遮罩、模糊或两者。
+     */
+    val backgroundEffect: ChatBackgroundEffect = ChatBackgroundEffect.DEFAULT,
+    /**
+     * 背景图模糊半径（0..1，映射到实际 dp）。
+     *
+     * 默认给一个中等值而非 0：用户切到模糊效果时应当立刻看到区别，
+     * 若默认为 0 会以为切换没生效。
+     */
+    val backgroundBlur: Float = 0.4f,
+    /**
+     * 头像模糊半径（0..1）。
+     *
+     * 默认 0 即不模糊。这个选项的用途是让自定义头像不那么抢眼——
+     * 有人想用一张画面复杂的图当头像，又不希望它盖过消息内容。
+     */
+    val avatarBlur: Float = 0f,
+    /**
+     * 输入栏透明时是否让消息透上来。
+     *
+     * 单纯透明只能看到背景图，消息被输入栏遮住的部分仍然看不见。
+     * 打开后输入栏不再遮挡下方消息，代价是文字会叠在消息上，
+     * 需要配合 [inputBarBlur] 才能读清。
+     */
+    val inputBarSeeThrough: Boolean = false,
+    /**
+     * 输入栏的背景模糊半径（0..1）。
+     *
+     * 透明输入栏最大的问题是输入的字与下面的内容糊在一起。模糊
+     * 底下的内容能在保留通透观感的同时把前景文字分离出来。
+     */
+    val inputBarBlur: Float = 0.5f,
     /**
      * 图片内容的版本号，每次保存图片递增。
      *
