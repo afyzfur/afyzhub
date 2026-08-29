@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -28,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
+import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 import com.afyzfur.afyzhub.ui.components.LocalImage
 
 /**
@@ -102,10 +105,16 @@ fun ImageCropDialog(
                     CropOverlay(left, top, right, bottom)
                 }
                 Spacer(Modifier.height(16.dp))
+                // 填充色一律表示"会被裁掉的那一侧"：左/上从左端填起，
+                // 右/下从右端填起
                 EdgeSlider("左边界", left, 0f, right - MIN_SIZE) { left = it }
-                EdgeSlider("右边界", right, left + MIN_SIZE, 1f) { right = it }
+                EdgeSlider(
+                    "右边界", right, left + MIN_SIZE, 1f, fillFromEnd = true
+                ) { right = it }
                 EdgeSlider("上边界", top, 0f, bottom - MIN_SIZE) { top = it }
-                EdgeSlider("下边界", bottom, top + MIN_SIZE, 1f) { bottom = it }
+                EdgeSlider(
+                    "下边界", bottom, top + MIN_SIZE, 1f, fillFromEnd = true
+                ) { bottom = it }
             }
         },
         confirmButton = {
@@ -122,20 +131,30 @@ fun ImageCropDialog(
 /**
  * 单条边界的滑块。
  *
- * 不做水平镜像。右边界与下边界的取值范围上限是 1（不裁剪），
- * 自然映射下滑块正好停在右端，与图片上那条边的位置本就一致；
- * 之前加 scaleX = -1 反而把它们翻到了左端。
+ * 轨道自绘，为的是让填充色表示"会被裁掉的那一侧"。
+ *
+ * Slider 默认的填充恒从轨道左端延伸到 thumb，含义是"从最小值到
+ * 当前值"。这对左边界成立——填充部分正是要裁掉的左侧；但右边界
+ * 的值 1.0 表示不裁，默认填充会铺满整条轨道，看着像"全都要裁掉"，
+ * 与实际相反。[fillFromEnd] 为真时改为从右端填到 thumb。
+ *
+ * 不用 scaleX = -1 整体镜像：那样连 thumb 的拖动方向也一起反了，
+ * 手感与图片上那条边的移动方向不符。
  *
  * valueRange 的下限可能大于上限——比如上下边界已经贴到最小间距时，
  * 再调另一条边算出的范围会反过来。Slider 遇到这种范围会抛异常，
  * 所以这里做一次兜底。
  */
+// track 插槽与 SliderState 目前仍是实验性 API。用它是因为要自绘轨道
+// 才能控制填充方向，而稳定 API 里没有等价能力
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EdgeSlider(
     label: String,
     value: Float,
     min: Float,
     max: Float,
+    fillFromEnd: Boolean = false,
     onChange: (Float) -> Unit
 ) {
     val lo = min.coerceIn(0f, 1f)
@@ -156,8 +175,54 @@ private fun EdgeSlider(
             value = value.coerceIn(lo, hi),
             onValueChange = onChange,
             valueRange = lo..hi,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            track = { state ->
+                CropTrack(
+                    fraction = if (hi > lo) {
+                        ((state.value - lo) / (hi - lo)).coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    },
+                    fillFromEnd = fillFromEnd
+                )
+            }
         )
+    }
+}
+
+/**
+ * 自绘的滑块轨道。
+ *
+ * [fraction] 是 thumb 在轨道上的位置比例，[fillFromEnd] 决定填充色
+ * 从哪一端延伸到 thumb。
+ *
+ * 用两个叠放的圆角条而非 Canvas：轨道就是两个矩形，用布局系统的
+ * 百分比宽度即可，省掉手工算坐标。
+ */
+@Composable
+private fun CropTrack(fraction: Float, fillFromEnd: Boolean) {
+    val f = fraction.coerceIn(0f, 1f)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(TRACK_HEIGHT)
+            .clip(AppShapeTokens.Pill)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+    ) {
+        // 填充段：从某一端延伸到 thumb 的位置。
+        // 右/下边界时 thumb 在 f 处，要裁掉的是它右边那段，
+        // 因此填充宽度为 1 - f 并靠右对齐
+        val fillFraction = if (fillFromEnd) 1f - f else f
+        if (fillFraction > 0f) {
+            Box(
+                modifier = Modifier
+                    .align(if (fillFromEnd) Alignment.CenterEnd else Alignment.CenterStart)
+                    .fillMaxWidth(fillFraction)
+                    .height(TRACK_HEIGHT)
+                    .clip(AppShapeTokens.Pill)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+        }
     }
 }
 
@@ -215,6 +280,9 @@ private fun CropOverlay(left: Float, top: Float, right: Float, bottom: Float) {
  * 定高之后最坏情况也只是宽度变窄。
  */
 private val PREVIEW_HEIGHT = 240.dp
+
+/** 滑块轨道高度 */
+private val TRACK_HEIGHT = 8.dp
 
 /** 裁剪框的最小边长（归一化），防止收成一条线 */
 private const val MIN_SIZE = 0.1f
