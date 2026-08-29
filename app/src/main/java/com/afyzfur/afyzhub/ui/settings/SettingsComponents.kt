@@ -76,13 +76,11 @@ fun SettingsGroup(
         // clickable 拿不到这个形状，涟漪按整行矩形扩散，首尾两项按下
         // 就会在圆角处露出方角。裁剪把涟漪限制在圆角轮廓内。
         //
-        // 竖向内边距挪到裁剪之内：留在外面会让涟漪在上下各差 4dp
-        // 触不到边，看着像没盖满
-        Column(
-            modifier = Modifier
-                .clip(AppShapeTokens.SettingsGroup)
-                .padding(vertical = 4.dp)
-        ) {
+        // 这里不能再加竖向内边距。加了之后首尾两项与圆角之间会隔开
+        // 一段距离，涟漪止步于内边距的直边而非圆角轮廓，看起来仍是
+        // 方的——上一版就是这么写的，所以只改了一半。条目自身已有
+        // 足够的高度与内边距，不需要在组这一层再补
+        Column(modifier = Modifier.clip(AppShapeTokens.SettingsGroup)) {
             content()
         }
     }

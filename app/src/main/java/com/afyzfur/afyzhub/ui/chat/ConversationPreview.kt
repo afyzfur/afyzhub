@@ -2,8 +2,14 @@ package com.afyzfur.afyzhub.ui.chat
 
 import com.afyzfur.afyzhub.domain.model.parseThinking
 
-/** 思考尚未产出回答时的占位文案 */
-const val THINKING_PREVIEW = "正在思考…"
+/**
+ * 尚无可读内容时的占位文案。
+ *
+ * 说"总结"而不是"思考"：这一行的位置本来是给模型生成的会话总结的，
+ * 落到这个占位上意味着总结还没好。回答早已完成、只差总结时说
+ * "正在思考"会让人以为模型还在回答。
+ */
+const val THINKING_PREVIEW = "正在总结…"
 
 /**
  * 由消息正文生成抽屉里的一行预览。
@@ -20,7 +26,8 @@ fun previewOf(raw: String): String {
     val answer = parsed.answer.trim()
     if (answer.isNotEmpty()) return answer.flattenLines()
 
-    // 没有回答：要么在思考中，要么思考完了但回答还没到
+    // 没有回答：可能仍在思考，也可能回答已完成而总结还没生成——
+    // 后者才是这一行最常见的状态
     if (parsed.hasReasoning) return THINKING_PREVIEW
 
     // 既无回答也无思考，说明确实是空内容

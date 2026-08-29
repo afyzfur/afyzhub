@@ -6,6 +6,8 @@ import androidx.compose.foundation.BorderStroke
 import com.afyzfur.afyzhub.ui.components.ThinkingLightbulb
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.components.ModelIcon
@@ -58,6 +60,8 @@ fun ChatInputBar(
     isLoading: Boolean,
     /** 进行中的具体阶段文字。为空时显示提供商名 */
     statusLabel: String = "",
+    /** 点击左下角的模型区域，打开模型切换页 */
+    onPickModel: () -> Unit = {},
     /** 当前模型名，用于显示模型图标 */
     modelName: String = "",
     /** 当前思考程度 */
@@ -120,16 +124,31 @@ fun ChatInputBar(
             // 下层：功能行
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                // 左右都用 20dp 与上方文本对齐。此前右侧是 8dp，
-                // 发送键因此比文本右边缘更靠外，整栏看着没有对齐
+                // 左右边距不相等是刻意的。文本的 20dp 加在 BasicTextField 上，
+                // 那是文字基线的边距；而发送键是 44dp 的圆，圆的视觉边缘比
+                // 它的布局盒边缘更靠内。两侧都给 20dp 时，圆看起来会比文字
+                // 更往里缩。右侧收到 12dp 做光学对齐，让圆的最右点与文字右
+                // 边缘看齐
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
+                    .padding(start = 20.dp, end = 12.dp, bottom = 8.dp)
             ) {
                 // 最左是模型图标，其次思考程度，与 statusLabel 同一行。
                 // 把"以什么模型、想多久"放在离发送键最远的一侧：
                 // 它们是发送前要确认的信息，不该和发送键挤在一起误触
-                ModelIcon(modelName = modelName, size = 18.dp)
+                // 图标合成一个可点区域，直通模型切换页。此前要换模型
+                // 得走设置 → API 配置 → 进某组 → 找到模型区，而换模型是
+                // 聊天时最频繁的操作，值得一个就近入口。
+                // 生成中禁用：这次请求已经带着旧模型发出去了
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(AppShapeTokens.CircleButton)
+                        .clickable(enabled = !isLoading, onClick = onPickModel)
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    ModelIcon(modelName = modelName, size = 18.dp)
+                }
 
                 Spacer(Modifier.width(8.dp))
 
@@ -154,7 +173,13 @@ fun ChatInputBar(
                         MaterialTheme.colorScheme.primary
                     },
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    // 空闲时这里显示配置组名，点它同样进模型页；生成中
+                    // 显示的是阶段文字，点了没有意义所以不可点
+                    modifier = Modifier
+                        .clip(AppShapeTokens.CircleButton)
+                        .clickable(enabled = !isLoading, onClick = onPickModel)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
                 // 单个带 weight 的 Spacer 吃掉剩余宽度。此前这里是
                 // 文字带 weight(1f, fill = false) 再跟一个 Box(weight(1f))，

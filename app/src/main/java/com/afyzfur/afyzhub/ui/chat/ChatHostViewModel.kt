@@ -10,6 +10,7 @@ import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -45,6 +46,23 @@ class ChatHostViewModel(
 
     /** 界面偏好，当前用于首屏提示词与消息元信息显示 */
     val uiPreferences: StateFlow<UiPreferences> = settingsRepository.uiPreferences
+
+    /**
+     * 当前激活配置组的显示名。
+     *
+     * 界面上要显示的是用户给这组起的名字，不是提供商的固定名称。
+     * 建了多组同一提供商时（例如两个不同中转），全都显示「OpenAI」
+     * 就分不出用的是哪一组。
+     *
+     * 组名为空时 displayName 会退回提供商名，所以这里不必再兜底。
+     */
+    val activeProfileName: StateFlow<String> = settingsRepository.apiProfilesFlow
+        .map { it.active?.displayName.orEmpty() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = ""
+        )
 
     /**
      * 循环切换思考程度。

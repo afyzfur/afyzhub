@@ -10,6 +10,7 @@ import com.afyzfur.afyzhub.ui.settings.AppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ChangelogScreen
 import com.afyzfur.afyzhub.ui.settings.ChatAppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
+import com.afyzfur.afyzhub.ui.settings.ModelPickerScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfileEditScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfilesScreen
 import com.afyzfur.afyzhub.ui.settings.QuickPromptsSettingsScreen
@@ -30,6 +31,13 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     /** API 配置组列表。原「提供商」入口现在指向这里 */
     object ApiProfiles : Screen("settings/api_profiles")
+    /**
+     * 纯模型切换页。
+     *
+     * 与 ApiProfiles 分开：那里是配置管理（Key、地址、增删组），
+     * 这里只做"换个模型"这一件事，是日常最频繁的操作
+     */
+    object ModelPicker : Screen("model_picker")
 
     /** 单组配置的编辑页，路径参数为组 id */
     object ApiProfileEdit : Screen("settings/api_profiles/{profileId}") {
@@ -60,6 +68,9 @@ fun NavGraph() {
                 },
                 onNavigateToProvider = {
                     navController.navigate(Screen.ApiProfiles.route)
+                },
+                onNavigateToModelPicker = {
+                    navController.navigate(Screen.ModelPicker.route)
                 }
             )
         }
@@ -91,6 +102,17 @@ fun NavGraph() {
             )
         }
 
+        composable(Screen.ModelPicker.route) {
+            ModelPickerScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfiles = {
+                    navController.navigate(Screen.ApiProfiles.route)
+                },
+                onNavigateToProfileEdit = { id ->
+                    navController.navigate(Screen.ApiProfileEdit.routeFor(id))
+                }
+            )
+        }
         composable(Screen.ApiProfiles.route) {
             ApiProfilesScreen(
                 onNavigateBack = { navController.popBackStack() },

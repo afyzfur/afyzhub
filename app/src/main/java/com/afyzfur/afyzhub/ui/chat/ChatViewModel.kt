@@ -235,6 +235,52 @@ class ChatViewModel(
         viewModelScope.launch { repository.rollbackTo(messageId) }
     }
 
+    /**
+     * 编辑并重发：先删掉原消息及其后续，再以新内容发送。
+     *
+     * 必须串在同一个协程里。此前界面上是先调 rollbackTo（独立协程、
+     * 不等结果）再回填输入框，用户改完立刻点发送时删除可能还没落库，
+     * 发送便在旧消息仍存在的情况下开始；更要紧的是那样两条流程各自
+     * 持有 sendJob 的写入时机，暂停键按下时取消的可能不是正在跑的
+     * 那个协程，表现出来就是点了没反应。
+     */
+    fun editAndResend(
+        messageId: Long,
+        content: String,
+        resolveConversationId: suspend () -> Long
+    ) {
+        val text = content.trim()
+        if (text.isEmpty() || _isLoading.value) return
+        _isLoading.value = true
+        _sendPhase.value = SendPhase.CONNECTING
+        sendJob = viewModelScope.launch {
+            _error.value = null
+            try {
+                // 回滚要在发送之前完成，两者同属一次操作
+                repository.rollbackTo(messageId)
+                val conversationId = resolveConversationId()
+                sendMessageUseCase(conversationId, text) { phase ->
+                    _sendPhase.value = phase
+                }
+                    .onSuccess { reply ->
+                        launchMetadataUpdate(
+                            conversationId = conversationId,
+                            userText = text,
+                            replyContent = reply.content,
+                            // 编辑重发一定不是首条消息，标题已经有了
+                            needTitle = false
+                        )
+                    }
+                    .onFailure { e ->
+                        _error.value = e.message ?: "发送失败"
+                    }
+            } finally {
+                _isLoading.value = false
+                _sendPhase.value = SendPhase.IDLE
+            }
+        }
+    }
+
     /** 重新生成某条助手回复。与发送共用忙碌状态与暂停能力。 */
     fun regenerate(messageId: Long) {
         if (_isLoading.value) return

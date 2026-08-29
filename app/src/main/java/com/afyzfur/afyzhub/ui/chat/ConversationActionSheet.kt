@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -69,9 +70,18 @@ fun ConversationActionSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState()
+        // 跳过半展开档位：默认起始高度只有屏幕一半，六项操作装不下，
+        // 最后的删除会被切掉、必须手动上滑才看得到
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
-        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Column(
+            modifier = Modifier
+                // 内容仍可能超出可用高度（小屏、大字体），留一条滚动通道
+                .verticalScroll(rememberScrollState())
+                // 导航栏区域的额外留白，否则最后一项会贴在手势条上
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
             // 标题行显示会话名，确认操作对象——长按容易按错行
             Text(
                 text = conversation.title,

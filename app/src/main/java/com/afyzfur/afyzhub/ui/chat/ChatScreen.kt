@@ -43,12 +43,17 @@ import org.koin.androidx.compose.koinViewModel
 fun ChatScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToProvider: () -> Unit,
+    /** 打开纯模型切换页 */
+    onNavigateToModelPicker: () -> Unit,
     hostViewModel: ChatHostViewModel = koinViewModel(),
     viewModel: ChatViewModel = koinViewModel()
 ) {
     val conversations by hostViewModel.conversations.collectAsState()
     val currentConversationId by hostViewModel.currentConversationId.collectAsState()
     val groups by hostViewModel.groups.collectAsState()
+    // 显示配置组的自定义名称而非提供商名。多组同一提供商时全都
+    // 写「OpenAI」分不出是哪一组，而组名是用户自己起的
+    val profileName by hostViewModel.activeProfileName.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val sendPhase by viewModel.sendPhase.collectAsState()
@@ -63,6 +68,10 @@ fun ChatScreen(
     val error by viewModel.error.collectAsState()
     val listState = rememberLazyListState()
     var inputText by remember { mutableStateOf("") }
+
+    // 「编辑并重发」记下的消息 id：非空时下一次发送要先删掉它及其后续。
+    // 记在这里而非直接执行删除，是为了让用户改完不发时消息不会丢
+    var editingMessageId by remember { mutableStateOf<Long?>(null) }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -131,8 +140,8 @@ fun ChatScreen(
     ) {
         ChatContent(
             title = currentTitle,
-            modelLabel = "${settings.model} · ${settings.provider.displayName}",
-            providerLabel = settings.provider.displayName,
+            modelLabel = "${settings.model} · $profileName",
+            providerLabel = profileName,
             modelName = settings.model,
             thinkingEffort = settings.thinkingEffort,
             onCycleThinkingEffort = hostViewModel::cycleThinkingEffort,
@@ -152,12 +161,21 @@ fun ChatScreen(
                 val text = inputText
                 if (text.isNotBlank() && !isLoading) {
                     inputText = ""
+                    val editing = editingMessageId
+                    editingMessageId = null
                     // 会话 id 的获取延迟到 ViewModel 的协程内，
                     // 空白新会话在那时才落库
-                    viewModel.sendMessage(text) { hostViewModel.ensureConversation() }
+                    if (editing != null) {
+                        viewModel.editAndResend(editing, text) {
+                            hostViewModel.ensureConversation()
+                        }
+                    } else {
+                        viewModel.sendMessage(text) { hostViewModel.ensureConversation() }
+                    }
                 }
             },
             onStop = { viewModel.stopGenerating() },
+            onPickModel = onNavigateToModelPicker,
             onLongPress = { message -> actionTarget = message },
             onPromptClick = { prompt -> inputText = prompt },
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
@@ -188,9 +206,11 @@ fun ChatScreen(
                 dismiss()
             },
             onEditResend = {
-                // 回填输入框并删掉原消息及其后续，用户改完直接发送
+                // 只回填输入框并记下待替换的消息，删除留到真正发送时
+                // 一起做。此前在这里就先删，用户若改完不发，消息已经
+                // 没了；而且删除与发送是两个独立协程，暂停键会失灵
                 inputText = target.content
-                viewModel.rollbackTo(target.id)
+                editingMessageId = target.id
                 dismiss()
             },
             onRollback = {
@@ -238,6 +258,8 @@ private fun ChatContent(
     onOpenDrawer: () -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
+    /** 点输入栏左下角的模型区域 */
+    onPickModel: () -> Unit,
     onLongPress: (Message) -> Unit,
     onPromptClick: (String) -> Unit,
     onRetry: (Long) -> Unit,
@@ -399,6 +421,7 @@ private fun ChatContent(
                     onValueChange = onInputChange,
                     onSend = onSend,
                     onStop = onStop,
+                    onPickModel = onPickModel,
                     providerLabel = providerLabel,
                     isLoading = isLoading,
                     statusLabel = sendPhase.label,
