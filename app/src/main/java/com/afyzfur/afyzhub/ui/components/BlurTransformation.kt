@@ -36,9 +36,11 @@ class BlurTransformation(private val radius: Float) : Transformation {
         val r = radius.coerceIn(0f, 1f)
         if (r <= 0.01f) return input
 
-        // 下采样倍率：1 倍即原图，越大越模糊。上限 24 是块状感开始
-        // 明显的地方，再高只是变糊而不再变"柔"
-        val factor = 1f + r * 23f
+        // 下采样倍率。用平方曲线而非线性：线性下 20% 就缩到 1/5.6，
+        // 已经糊得看不出画面，滑块后 80% 的行程全是"更糊一点"的无用
+        // 区间。平方后 20% 只缩到约 1/1.3，细节尚存，强度的可用范围
+        // 铺满整条滑块。上限降到 12——原来的 24 只是更糊，不再更"柔"
+        val factor = 1f + r * r * 11f
         val w = (input.width / factor).roundToInt().coerceAtLeast(1)
         val h = (input.height / factor).roundToInt().coerceAtLeast(1)
 

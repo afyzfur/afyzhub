@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub.ui.settings
 
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +23,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -51,6 +54,17 @@ fun ImageCropDialog(
     onConfirm: (left: Float, top: Float, right: Float, bottom: Float) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // 只解图片头部拿宽高，不解像素——成本极低，但让预览框能与
+    // 图片同比例，这是遮罩位置正确的前提。
+    // 读失败时退回 1:1，那时遮罩仍与框对应，只是框不像原图
+    val ratio = remember(path, version) {
+        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, opts)
+        val w = opts.outWidth
+        val h = opts.outHeight
+        if (w > 0 && h > 0) w.toFloat() / h.toFloat() else 1f
+    }
+
     // 初始为整张图，用户从这里往里收
     var left by remember { mutableFloatStateOf(0f) }
     var top by remember { mutableFloatStateOf(0f) }
@@ -62,22 +76,26 @@ fun ImageCropDialog(
         title = { Text("裁剪图片") },
         text = {
             Column {
+                // 预览框必须与图片本身同比例。此前固定 16:9 且用 Fit，
+                // 竖幅图只占中间一条、两侧留白，而遮罩铺满整个框——
+                // 于是"左边界 10%"压暗的是留白区，图片一点没被遮住，
+                // 看起来就是遮罩与实际裁剪范围对不上
+                // 不能同时用 fillMaxWidth 与 heightIn(max)：aspectRatio 满足
+                // 不了"占满宽度"和"限高"两个约束，竖幅图会被压扁，遮罩
+                // 又跟图片对不上。改为固定高度、宽度由比例算出，横向居中
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        // 固定 16:9 而非跟随原图比例：对话框高度需要可预测，
-                        // 否则竖幅长图会把底部按钮挤出屏幕
-                        .aspectRatio(16f / 9f)
+                        .align(Alignment.CenterHorizontally)
+                        .height(PREVIEW_HEIGHT)
+                        .aspectRatio(ratio)
                 ) {
-                    // 必须用 Fit 而非 Crop。Crop 会先裁掉图片一部分来填满
-                    // 这个 16:9 的框，于是预览里看到的不是完整原图；而
-                    // ImageStore.crop 的归一化坐标是相对完整原图算的，
-                    // 两者不一致会导致"拖出来的范围"和"实际裁到的范围"错位
+                    // 框已与图片同比例，Crop 与 Fit 此时等价，
+                    // 用 Crop 可避免浮点误差留下的一两像素白边
                     LocalImage(
                         path = path,
                         version = version,
                         contentDescription = null,
-                        contentScale = ContentScale.Fit,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                     // 压暗将被裁掉的部分：边框只说明"框在哪"，
@@ -86,9 +104,14 @@ fun ImageCropDialog(
                 }
                 Spacer(Modifier.height(16.dp))
                 EdgeSlider("左边界", left, 0f, right - MIN_SIZE) { left = it }
-                EdgeSlider("右边界", right, left + MIN_SIZE, 1f) { right = it }
+                // 右与下镜像：让填色的方向与它们控制的那条边一致
+                EdgeSlider(
+                    "右边界", right, left + MIN_SIZE, 1f, mirrored = true
+                ) { right = it }
                 EdgeSlider("上边界", top, 0f, bottom - MIN_SIZE) { top = it }
-                EdgeSlider("下边界", bottom, top + MIN_SIZE, 1f) { bottom = it }
+                EdgeSlider(
+                    "下边界", bottom, top + MIN_SIZE, 1f, mirrored = true
+                ) { bottom = it }
             }
         },
         confirmButton = {
@@ -105,6 +128,11 @@ fun ImageCropDialog(
 /**
  * 单条边界的滑块。
  *
+ * [mirrored] 用于右边界与下边界：Slider 的已选填色恒从左端起，
+ * 而这两条控制的是右侧与下侧，填色方向与语义相反——滑块看着像
+ * 在"从左往右推"，实际在收右边。整体水平镜像后填色从右端起，
+ * 与图片上那条边的位置一致。
+ *
  * valueRange 的下限可能大于上限——比如上下边界已经贴到最小间距时，
  * 再调另一条边算出的范围会反过来。Slider 遇到这种范围会抛异常，
  * 所以这里做一次兜底。
@@ -115,6 +143,7 @@ private fun EdgeSlider(
     value: Float,
     min: Float,
     max: Float,
+    mirrored: Boolean = false,
     onChange: (Float) -> Unit
 ) {
     val lo = min.coerceIn(0f, 1f)
@@ -135,7 +164,12 @@ private fun EdgeSlider(
             value = value.coerceIn(lo, hi),
             onValueChange = onChange,
             valueRange = lo..hi,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                // scaleX = -1 把整条滑块左右翻转，填色随之从右端起。
+                // 值本身不用换算：翻转只影响绘制与命中区域的映射，
+                // Slider 内部仍按 lo..hi 线性取值
+                .then(if (mirrored) Modifier.scale(scaleX = -1f, scaleY = 1f) else Modifier)
         )
     }
 }
@@ -185,6 +219,15 @@ private fun CropOverlay(left: Float, top: Float, right: Float, bottom: Float) {
         )
     }
 }
+
+/**
+ * 预览区高度。
+ *
+ * 固定高度而非按宽度算：宽度随图片比例变化，横幅图会很矮、竖幅图
+ * 会很高，对话框的整体高度就不可预测，竖幅长图能把按钮挤出屏幕。
+ * 定高之后最坏情况也只是宽度变窄。
+ */
+private val PREVIEW_HEIGHT = 240.dp
 
 /** 裁剪框的最小边长（归一化），防止收成一条线 */
 private const val MIN_SIZE = 0.1f

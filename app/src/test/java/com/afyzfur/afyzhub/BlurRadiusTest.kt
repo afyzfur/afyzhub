@@ -18,7 +18,9 @@ class BlurRadiusTest {
 
     /** 与 BlurTransformation.transform 里的计算相同 */
     private fun downscaled(width: Int, height: Int, radius: Float): Pair<Int, Int> {
-        val factor = 1f + radius.coerceIn(0f, 1f) * 23f
+        // 与实现同为平方曲线：低段平缓，避免 20% 就糊到看不出画面
+        val r = radius.coerceIn(0f, 1f)
+        val factor = 1f + r * r * 11f
         val w = (width / factor).roundToInt().coerceAtLeast(1)
         val h = (height / factor).roundToInt().coerceAtLeast(1)
         return w to h
@@ -62,6 +64,20 @@ class BlurRadiusTest {
         val (w, h) = downscaled(400, 300, 5f)
         assertTrue(w <= 400 && h <= 300)
         assertTrue(w >= 1 && h >= 1)
+    }
+
+    @Test
+    fun `低强度只做轻微柔化`() {
+        // 20% 时若缩得太狠，滑块后段就没有可用区间了。
+        // 这条断言钉住"低段平缓"这个意图，改回线性会让它失败
+        val (w, _) = downscaled(1000, 1000, 0.2f)
+        assertTrue("20% 缩到 $w，过于激进", w > 600)
+    }
+
+    @Test
+    fun `满强度仍有足够的模糊力度`() {
+        val (w, _) = downscaled(1200, 1200, 1f)
+        assertTrue("100% 只缩到 $w，力度不足", w <= 120)
     }
 
     @Test
