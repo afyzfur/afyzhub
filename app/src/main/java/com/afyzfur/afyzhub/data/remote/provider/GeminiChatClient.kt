@@ -25,7 +25,7 @@ class GeminiChatClient(
 ) : ChatClient {
 
     override suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): CompletionResult {
-        val body = json.encodeToString(GenerateRequest.serializer(), buildRequest(turns))
+        val body = json.encodeToString(GenerateRequest.serializer(), buildRequest(turns, settings))
         val text = transport.postForText(
             baseUrl = settings.baseUrl,
             path = "$MODELS_PREFIX/${settings.model}:generateContent",
@@ -34,14 +34,19 @@ class GeminiChatClient(
         )
         val response = json.decodeFromString(GenerateResponse.serializer(), text)
         return CompletionResult(
-            content = response.extractText(),
+            content = response.extractThinking()
+                .takeIf { it.isNotEmpty() }
+                ?.let { "<think>$it</think>" + response.extractText() }
+                ?: response.extractText(),
             usage = response.usageMetadata?.toTokenUsage()
         )
     }
 
     override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> = flow {
-        val body = json.encodeToString(GenerateRequest.serializer(), buildRequest(turns))
+        val body = json.encodeToString(GenerateRequest.serializer(), buildRequest(turns, settings))
         var usage: TokenUsage? = null
+        // Gemini 用 thought 标记区分思考 part，折回内嵌标签
+        val wrapper = ThinkingStreamWrapper()
 
         transport.postForSse(
             baseUrl = settings.baseUrl,
@@ -54,10 +59,16 @@ class GeminiChatClient(
             // Gemini 每个 chunk 都可能带 usageMetadata，且为累计值，
             // 因此直接覆盖，最后一个即为最终结果
             response.usageMetadata?.toTokenUsage()?.let { usage = it }
-            response.extractText()
-                .takeIf { it.isNotEmpty() }
-                ?.let { emit(StreamEvent.TextDelta(it)) }
+            // 同一个 chunk 里思考与正文不会混在一起，按先思考后正文的
+            // 顺序处理即可
+            val reasoning = wrapper.onThinking(response.extractThinking())
+            if (reasoning.isNotEmpty()) emit(StreamEvent.TextDelta(reasoning))
+            val text = wrapper.onText(response.extractText())
+            if (text.isNotEmpty()) emit(StreamEvent.TextDelta(text))
         }
+
+        wrapper.finish().takeIf { it.isNotEmpty() }
+            ?.let { emit(StreamEvent.TextDelta(it)) }
 
         emit(StreamEvent.Finished(usage))
     }
@@ -78,7 +89,7 @@ class GeminiChatClient(
             .sorted()
     }
 
-    private fun buildRequest(turns: List<ChatTurn>): GenerateRequest {
+    private fun buildRequest(turns: List<ChatTurn>, settings: AppSettings): GenerateRequest {
         val systemPrompt = turns
             .filter { it.role == Constants.ROLE_SYSTEM }
             .joinToString("\n") { it.content }
@@ -93,9 +104,23 @@ class GeminiChatClient(
                 )
             }
 
+        // Gemini 用 thinkingBudget 给 token 预算，并需要显式打开
+        // includeThoughts 才会把思考内容返回——只给预算的话模型会思考，
+        // 但过程完全看不到，用户只会觉得变慢了
+        val budget = settings.thinkingEffort.tokenBudget
+        val config = budget?.let {
+            GenerationConfig(
+                thinkingConfig = ThinkingConfig(
+                    thinkingBudget = it,
+                    includeThoughts = true
+                )
+            )
+        }
+
         return GenerateRequest(
             contents = contents,
-            systemInstruction = systemPrompt?.let { Content(role = null, parts = listOf(Part(it))) }
+            systemInstruction = systemPrompt?.let { Content(role = null, parts = listOf(Part(it))) },
+            generationConfig = config
         )
     }
 
@@ -114,26 +139,56 @@ class GeminiChatClient(
     @Serializable
     private data class GenerateRequest(
         val contents: List<Content>,
-        val systemInstruction: Content? = null
+        val systemInstruction: Content? = null,
+        val generationConfig: GenerationConfig? = null
+    )
+
+    @Serializable
+    private data class GenerationConfig(
+        val thinkingConfig: ThinkingConfig? = null
+    )
+
+    /**
+     * Gemini 的思考配置。
+     *
+     * thinkingBudget 为 0 表示关闭，但本应用关闭思考时整个
+     * generationConfig 都不发——部分模型（如 2.5 Pro）不接受
+     * 把预算设成 0，会直接报错。
+     */
+    @Serializable
+    private data class ThinkingConfig(
+        val thinkingBudget: Int,
+        val includeThoughts: Boolean
     )
 
     @Serializable
     private data class Content(val role: String? = null, val parts: List<Part> = emptyList())
 
     @Serializable
-    private data class Part(val text: String = "")
+    private data class Part(
+        val text: String = "",
+        // includeThoughts 打开后思考的 part 会带这个标记，
+        // 不区分就会把推理过程直接混进回答
+        val thought: Boolean = false
+    )
 
     @Serializable
     private data class GenerateResponse(
         val candidates: List<Candidate> = emptyList(),
         val usageMetadata: UsageMetadata? = null
     ) {
-        fun extractText(): String = candidates
-            .firstOrNull()
-            ?.content
-            ?.parts
-            ?.joinToString("") { it.text }
-            .orEmpty()
+        /** 正文部分，不含思考。 */
+        fun extractText(): String = parts()
+            .filter { !it.thought }
+            .joinToString("") { it.text }
+
+        /** 思考部分，由 thought 标记区分。 */
+        fun extractThinking(): String = parts()
+            .filter { it.thought }
+            .joinToString("") { it.text }
+
+        private fun parts(): List<Part> =
+            candidates.firstOrNull()?.content?.parts.orEmpty()
     }
 
     @Serializable

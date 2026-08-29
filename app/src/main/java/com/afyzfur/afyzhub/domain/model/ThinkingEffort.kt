@@ -27,6 +27,20 @@ enum class ThinkingEffort(
     /** 是否需要在请求里带上思考参数 */
     val enabled: Boolean get() = this != OFF
 
+    /**
+     * Anthropic 在开启思考时所需的 max_tokens 下限。
+     *
+     * Claude 要求 `max_tokens` 严格大于 `thinking.budget_tokens`，
+     * 否则直接返回 400。而 budget 是从 max_tokens 里扣的额度，
+     * 不是额外配给——如果只把 max_tokens 抬到刚好超过 budget，
+     * 留给正文的空间就只剩几个 token，回答会被立刻截断。
+     * 因此在预算之外再留出一份正文空间。
+     */
+    fun anthropicMaxTokens(default: Int): Int {
+        val budget = tokenBudget ?: return default
+        return maxOf(default, budget + default)
+    }
+
     companion object {
         /**
          * 默认不开。

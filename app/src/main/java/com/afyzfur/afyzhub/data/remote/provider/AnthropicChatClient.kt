@@ -52,6 +52,9 @@ class AnthropicChatClient(
         var inputTokens: Int? = null
         var outputTokens: Int? = null
 
+        // Claude 把思考和正文推在不同的 delta 类型里，需要折回内嵌标签
+        val wrapper = ThinkingStreamWrapper()
+
         transport.postForSse(
             baseUrl = settings.baseUrl,
             path = MESSAGES_PATH,
@@ -60,12 +63,20 @@ class AnthropicChatClient(
         ).collect { payload ->
             val event = parseEvent(payload) ?: return@collect
             when (event.type) {
-                "content_block_delta" ->
-                    // thinking 模型的 delta 分 thinking_delta 与 text_delta 两种，
-                    // 前者是思考过程不计入正文，取 text 字段即可自然跳过
-                    event.delta?.text
-                        ?.takeIf { it.isNotEmpty() }
-                        ?.let { emit(StreamEvent.TextDelta(it)) }
+                "content_block_delta" -> {
+                    // thinking 模型的 delta 分两种：thinking_delta 把思考放在
+                    // thinking 字段，text_delta 把正文放在 text 字段。此前只取
+                    // text，思考内容被静默丢弃，开了思考也什么都看不到
+                    val delta = event.delta
+                    val piece = when {
+                        !delta?.thinking.isNullOrEmpty() ->
+                            wrapper.onThinking(delta.thinking.orEmpty())
+                        !delta?.text.isNullOrEmpty() ->
+                            wrapper.onText(delta.text.orEmpty())
+                        else -> ""
+                    }
+                    if (piece.isNotEmpty()) emit(StreamEvent.TextDelta(piece))
+                }
 
                 "message_start" ->
                     event.message?.usage?.let { inputTokens = it.input }
@@ -77,9 +88,17 @@ class AnthropicChatClient(
                 // 返回的 SSE 因而是 OpenAI 格式（无 type 字段，正文在
                 // choices[].delta.content）。不兼容会导致整段回复丢失
                 "" -> {
-                    event.choices?.firstOrNull()?.delta?.content
-                        ?.takeIf { it.isNotEmpty() }
-                        ?.let { emit(StreamEvent.TextDelta(it)) }
+                    // 这类中转把思考放在 OpenAI 的 reasoning_content 字段里，
+                    // 同样要折回标签，否则用中转访问 Claude 就看不到思考
+                    val d = event.choices?.firstOrNull()?.delta
+                    val piece = when {
+                        !d?.reasoningContent.isNullOrEmpty() ->
+                            wrapper.onThinking(d.reasoningContent.orEmpty())
+                        !d?.content.isNullOrEmpty() ->
+                            wrapper.onText(d.content.orEmpty())
+                        else -> ""
+                    }
+                    if (piece.isNotEmpty()) emit(StreamEvent.TextDelta(piece))
                     event.usage?.let {
                         inputTokens = it.input
                         outputTokens = it.output
@@ -87,6 +106,11 @@ class AnthropicChatClient(
                 }
             }
         }
+
+        // 补齐未闭合的标签：全程都在思考、正文一个字都没来的
+        // 情况下（被 token 上限截断）会留下半个标签
+        wrapper.finish().takeIf { it.isNotEmpty() }
+            ?.let { emit(StreamEvent.TextDelta(it)) }
 
         val usage = if (inputTokens != null || outputTokens != null) {
             TokenUsage(inputTokens ?: 0, outputTokens ?: 0)
@@ -129,12 +153,21 @@ class AnthropicChatClient(
             .filter { it.role != Constants.ROLE_SYSTEM }
             .map { MessageItem(role = it.role, content = it.content) }
 
+        // Claude 的思考是 thinking 对象而非枚举档位，需把与厂商无关的
+        // 档位翻译成 token 预算。OFF 时整个字段不出现——不支持思考的
+        // 模型收到这个字段会报错
+        val effort = settings.thinkingEffort
+        val thinking = effort.tokenBudget?.let {
+            ThinkingConfig(type = "enabled", budgetTokens = it)
+        }
+
         return MessagesRequest(
             model = settings.model,
             messages = messages,
             system = systemPrompt,
-            maxTokens = Constants.DEFAULT_MAX_TOKENS,
-            stream = stream
+            maxTokens = effort.anthropicMaxTokens(Constants.DEFAULT_MAX_TOKENS),
+            stream = stream,
+            thinking = thinking
         )
     }
 
@@ -162,7 +195,20 @@ class AnthropicChatClient(
         val messages: List<MessageItem>,
         val system: String? = null,
         @SerialName("max_tokens") val maxTokens: Int,
-        val stream: Boolean
+        val stream: Boolean,
+        val thinking: ThinkingConfig? = null
+    )
+
+    /**
+     * Claude 的思考开关。
+     *
+     * type 只有 "enabled" 一种取值；关闭思考的做法是整个字段不出现，
+     * 而不是传 "disabled"。
+     */
+    @Serializable
+    private data class ThinkingConfig(
+        val type: String,
+        @SerialName("budget_tokens") val budgetTokens: Int
     )
 
     @Serializable
@@ -181,11 +227,18 @@ class AnthropicChatClient(
         val choices: List<OpenAiFullChoice>? = null
     ) {
         fun extractText(): String {
-            val anthropic = content
+            // 思考是 type=thinking 的独立块，不能和正文一起拼接，
+            // 否则推理过程会直接混进回答里
+            val reasoning = content
+                .filter { it.type == "thinking" }
+                .joinToString("") { it.thinking.orEmpty() }
+            val body = content
                 .filter { it.type == "text" }
                 .joinToString("") { it.text.orEmpty() }
-            if (anthropic.isNotEmpty()) return anthropic
-            return choices?.firstOrNull()?.message?.content.orEmpty()
+            if (body.isNotEmpty() || reasoning.isNotEmpty()) {
+                return if (reasoning.isNotEmpty()) "<think>$reasoning</think>$body" else body
+            }
+            return choices?.firstOrNull()?.message?.contentWithThinking.orEmpty()
         }
     }
 
@@ -193,10 +246,24 @@ class AnthropicChatClient(
     private data class OpenAiFullChoice(val message: OpenAiMessage? = null)
 
     @Serializable
-    private data class OpenAiMessage(val content: String = "")
+    private data class OpenAiMessage(
+        val content: String = "",
+        @SerialName("reasoning_content") val reasoningContent: String? = null
+    ) {
+        /** 中转把思考单独放在 reasoning_content，折回内嵌标签 */
+        val contentWithThinking: String
+            get() {
+                val r = reasoningContent?.takeIf { it.isNotBlank() } ?: return content
+                return "<think>$r</think>$content"
+            }
+    }
 
     @Serializable
-    private data class ContentBlock(val type: String = "", val text: String? = null)
+    private data class ContentBlock(
+        val type: String = "",
+        val text: String? = null,
+        val thinking: String? = null
+    )
 
     /**
      * 流式事件的统一形状。
@@ -223,7 +290,11 @@ class AnthropicChatClient(
     private data class OpenAiChoice(val delta: OpenAiDelta? = null)
 
     @Serializable
-    private data class OpenAiDelta(val content: String? = null)
+    private data class OpenAiDelta(
+        val content: String? = null,
+        // 转成 OpenAI 协议的中转把思考放在这里
+        @SerialName("reasoning_content") val reasoningContent: String? = null
+    )
 
     @Serializable
     private data class EventMessage(val usage: AnthropicUsage? = null)
@@ -247,8 +318,17 @@ class AnthropicChatClient(
         val output: Int get() = if (outputTokens > 0) outputTokens else completionTokens
     }
 
+    /**
+     * content_block_delta 的增量。
+     *
+     * text_delta 用 text 字段，thinking_delta 用 thinking 字段。
+     * 两者互斥出现，按哪个非空取哪个。
+     */
     @Serializable
-    private data class Delta(val text: String? = null)
+    private data class Delta(
+        val text: String? = null,
+        val thinking: String? = null
+    )
 
     @Serializable
     private data class ModelListResponse(val data: List<ModelEntry> = emptyList())
