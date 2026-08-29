@@ -96,9 +96,6 @@ class SettingsRepository(
     private val backgroundEffectKey = stringPreferencesKey(Constants.KEY_BACKGROUND_EFFECT)
     private val backgroundBlurKey = floatPreferencesKey(Constants.KEY_BACKGROUND_BLUR)
     private val avatarBlurKey = floatPreferencesKey(Constants.KEY_AVATAR_BLUR)
-    private val inputBarSeeThroughKey =
-        booleanPreferencesKey(Constants.KEY_INPUT_BAR_SEE_THROUGH)
-    private val inputBarBlurKey = floatPreferencesKey(Constants.KEY_INPUT_BAR_BLUR)
 
     private fun apiKeyKey(p: AiProvider) =
         stringPreferencesKey("${Constants.KEY_PREFIX_API_KEY}_${p.id}")
@@ -284,8 +281,6 @@ class SettingsRepository(
                 backgroundEffect = ChatBackgroundEffect.fromId(prefs[backgroundEffectKey]),
                 backgroundBlur = prefs[backgroundBlurKey] ?: 0.4f,
                 avatarBlur = prefs[avatarBlurKey] ?: 0f,
-                inputBarSeeThrough = prefs[inputBarSeeThroughKey] ?: false,
-                inputBarBlur = prefs[inputBarBlurKey] ?: 0.5f,
                 imageVersion = prefs[imageVersionKey] ?: 0L
             )
         )
@@ -368,14 +363,6 @@ class SettingsRepository(
 
     suspend fun setAvatarBlur(value: Float) {
         dataStore.edit { it[avatarBlurKey] = value.coerceIn(0f, 1f) }
-    }
-
-    suspend fun setInputBarSeeThrough(enabled: Boolean) {
-        dataStore.edit { it[inputBarSeeThroughKey] = enabled }
-    }
-
-    suspend fun setInputBarBlur(value: Float) {
-        dataStore.edit { it[inputBarBlurKey] = value.coerceIn(0f, 1f) }
     }
 
     /**

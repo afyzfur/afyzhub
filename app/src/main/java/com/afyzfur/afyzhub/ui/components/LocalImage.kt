@@ -27,16 +27,24 @@ fun LocalImage(
     version: Long,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Crop
+    contentScale: ContentScale = ContentScale.Crop,
+    /** 模糊强度 0..1，0 表示不模糊 */
+    blur: Float = 0f
 ) {
     val context = LocalContext.current
+    // 模糊在解码时一次完成并进缓存，比每帧重算便宜得多
+    val blurred = blur > 0.01f
 
     AsyncImage(
         model = ImageRequest.Builder(context)
             .data(File(path))
-            // 路径在换图后不变，用版本号区分缓存条目
-            .memoryCacheKey("$path#$version")
-            .diskCacheKey("$path#$version")
+            // 路径在换图后不变，用版本号区分缓存条目。
+            // 模糊强度也要进 key，否则改滑块会命中旧缓存而看不到变化
+            .memoryCacheKey("$path#$version#$blur")
+            .diskCacheKey("$path#$version#$blur")
+            .apply {
+                if (blurred) transformations(BlurTransformation(blur))
+            }
             .build(),
         contentDescription = contentDescription,
         contentScale = contentScale,

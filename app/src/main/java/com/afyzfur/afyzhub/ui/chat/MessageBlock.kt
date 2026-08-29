@@ -289,6 +289,8 @@ private fun MessageAvatar(
                 path = path!!,
                 version = appearance.imageVersion,
                 contentDescription = null,
+                // 与设置页缩略图用同一个值，两处看到的效果才一致
+                blur = appearance.avatarBlur,
                 modifier = Modifier.size(32.dp)
             )
         } else {

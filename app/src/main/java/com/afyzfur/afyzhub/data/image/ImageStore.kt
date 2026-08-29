@@ -83,6 +83,79 @@ class ImageStore(private val context: Context) {
     }
 
     /**
+     * 按归一化矩形裁剪已保存的图片，结果覆盖原文件。
+     *
+     * 参数用 0..1 的相对坐标而非像素：界面上的裁剪框是按预览尺寸
+     * 拖动的，而预览与实际文件的分辨率不同，传像素需要调用方自己
+     * 换算，换算错了就裁偏。
+     *
+     * 覆盖原文件而非另存：这个应用里每种用途只有一张图（背景、
+     * 用户头像、助手头像各一），保留旧文件除了占空间没有别的作用。
+     * 代价是裁剪不可逆——所以界面上让用户先看到结果再确认。
+     */
+    suspend fun crop(
+        purpose: Purpose,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float
+    ): Result = withContext(Dispatchers.IO) {
+        val file = File(imageDir, purpose.fileName)
+        if (!file.exists()) return@withContext Result.Failure("图片不存在")
+
+        val source = try {
+            BitmapFactory.decodeFile(file.absolutePath)
+        } catch (e: OutOfMemoryError) {
+            return@withContext Result.Failure("图片过大，内存不足")
+        } ?: return@withContext Result.Failure("图片格式无法解析")
+
+        try {
+            // 起点也要留出至少 1 像素的余地。left 传 1.0 时 x 会等于
+            // width，此时无论宽度取多少 createBitmap 都会越界——界面上
+            // 的最小边长约束挡住了这种输入，但数据层不该依赖界面的约束
+            val x = (left.coerceIn(0f, 1f) * source.width).toInt()
+                .coerceIn(0, source.width - 1)
+            val y = (top.coerceIn(0f, 1f) * source.height).toInt()
+                .coerceIn(0, source.height - 1)
+            // 至少留 1 像素：滑到极限时宽或高可能算成 0，
+            // createBitmap 会直接抛异常
+            val w = ((right - left).coerceIn(0f, 1f) * source.width).toInt()
+                .coerceAtLeast(1)
+                .coerceAtMost(source.width - x)
+            val h = ((bottom - top).coerceIn(0f, 1f) * source.height).toInt()
+                .coerceAtLeast(1)
+                .coerceAtMost(source.height - y)
+
+            val cropped = Bitmap.createBitmap(source, x, y, w, h)
+            // 先写临时文件再替换，而不是直接覆盖原文件。
+            // FileOutputStream 一打开就会把原文件清空，若随后压缩失败，
+            // 用户的图片就永久没了——而裁剪本身是不可逆操作，
+            // 至少不该在失败时连原图一起丢掉
+            val temp = File(file.parentFile, "${purpose.fileName}.tmp")
+            FileOutputStream(temp).use { out ->
+                val ok = cropped.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                if (!ok) {
+                    temp.delete()
+                    return@withContext Result.Failure("图片压缩失败")
+                }
+            }
+            if (!temp.renameTo(file)) {
+                temp.delete()
+                return@withContext Result.Failure("无法写入图片文件")
+            }
+            // 用引用比较：createBitmap 在裁剪范围等于整图时会直接返回
+            // 入参，此时 cropped 就是 source，回收它会让 finally 里的
+            // recycle 二次释放
+            if (cropped !== source) cropped.recycle()
+            Result.Success(file.absolutePath)
+        } catch (e: Exception) {
+            Result.Failure("裁剪失败：${e.message ?: e.javaClass.simpleName}")
+        } finally {
+            source.recycle()
+        }
+    }
+
+    /**
      * 按需降采样解码。
      *
      * 先读尺寸信息算出采样率，再按该采样率解码，避免把整张原图

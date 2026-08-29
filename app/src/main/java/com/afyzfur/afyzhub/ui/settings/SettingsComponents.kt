@@ -368,11 +368,18 @@ fun <T> SettingsDropdownItem(
                 onClick = { expanded = true },
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                shape = AppShapeTokens.Pill
+                shape = AppShapeTokens.DropdownButton
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(start = 16.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
+                    // 竖向内边距给到 12dp：按钮更高，24dp 的圆角才有
+                    // 足够的弧度显出来，否则上下会被切平
+                    modifier = Modifier.padding(
+                        start = 18.dp,
+                        end = 12.dp,
+                        top = 12.dp,
+                        bottom = 12.dp
+                    )
                 ) {
                     Text(
                         text = label(selected),

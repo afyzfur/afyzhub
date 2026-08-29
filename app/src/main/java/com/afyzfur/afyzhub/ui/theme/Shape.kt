@@ -70,6 +70,16 @@ object AppShapeTokens {
     /** 设置项分组容器 */
     val SettingsGroup = RoundedCornerShape(20.dp)
 
+    /**
+     * 设置项右侧的下拉按钮。
+     *
+     * 用固定的大圆角而非 Pill 的 percent = 50。两者在按钮较矮时
+     * 效果接近，但 percent 是按短边算的——按钮高 36dp 时半径只有
+     * 18dp，看着是"带弧度的方块"而不是圆滑的胶囊。固定 24dp 配
+     * 更高的按钮，弧度才足够。
+     */
+    val DropdownButton = RoundedCornerShape(24.dp)
+
     /** 抽屉。左侧贴边，右侧收圆角，宽度不占满屏 */
     val Drawer = RoundedCornerShape(
         topStart = 0.dp,

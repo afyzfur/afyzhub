@@ -15,12 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import com.afyzfur.afyzhub.domain.model.SendPhase
-import com.afyzfur.afyzhub.ui.components.LocalImage
+import com.afyzfur.afyzhub.ui.components.ChatBackgroundLayer
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.domain.model.Message
@@ -288,25 +287,13 @@ private fun ChatContent(
     onClearError: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // 背景图铺满整个页面（含系统栏区域），再叠一层可调遮罩。
-        // 遮罩必要性：浅色图配深色文字时对比度不足，无法阅读
-        if (appearance.hasBackgroundImage) {
-            LocalImage(
-                path = appearance.backgroundPath!!,
-                version = appearance.imageVersion,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        MaterialTheme.colorScheme.surface
-                            .copy(alpha = appearance.backgroundDim)
-                    )
-            )
-        }
+        // 背景图铺满整个页面（含系统栏区域）。图片与效果的组合逻辑
+        // 收在 ChatBackgroundLayer 里，设置页的预览用的是同一个组件，
+        // 因此预览所见即此处所得
+        ChatBackgroundLayer(
+            appearance = appearance,
+            modifier = Modifier.fillMaxSize()
+        )
 
         Scaffold(
             // 有背景图时容器透明，让下层的图片透出；

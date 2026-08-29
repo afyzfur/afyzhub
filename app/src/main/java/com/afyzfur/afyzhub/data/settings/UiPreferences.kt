@@ -250,21 +250,6 @@ data class ChatAppearance(
      */
     val avatarBlur: Float = 0f,
     /**
-     * 输入栏透明时是否让消息透上来。
-     *
-     * 单纯透明只能看到背景图，消息被输入栏遮住的部分仍然看不见。
-     * 打开后输入栏不再遮挡下方消息，代价是文字会叠在消息上，
-     * 需要配合 [inputBarBlur] 才能读清。
-     */
-    val inputBarSeeThrough: Boolean = false,
-    /**
-     * 输入栏的背景模糊半径（0..1）。
-     *
-     * 透明输入栏最大的问题是输入的字与下面的内容糊在一起。模糊
-     * 底下的内容能在保留通透观感的同时把前景文字分离出来。
-     */
-    val inputBarBlur: Float = 0.5f,
-    /**
      * 图片内容的版本号，每次保存图片递增。
      *
      * ImageStore 用固定文件名保存，换图后路径不变，渲染层无法从路径

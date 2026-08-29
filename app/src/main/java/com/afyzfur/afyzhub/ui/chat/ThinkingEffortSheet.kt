@@ -8,9 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -23,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
-import com.afyzfur.afyzhub.ui.components.IconThinking
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
 /**
@@ -129,20 +126,11 @@ private fun EffortCard(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp)
+            modifier = Modifier.padding(vertical = 20.dp, horizontal = 8.dp)
         ) {
-            // 用图标数量表示强弱：一个脑是低，三个是高，关闭时给单个
-            // 灰掉的脑。比纯文字更快看出这是一条递增的刻度
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                repeat(effort.iconCount()) {
-                    Icon(
-                        imageVector = IconThinking,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-            Spacer(Modifier.height(8.dp))
+            // 不放图标。用一到三个灯泡表示强弱看着像装饰，而档名
+            // 本身（关闭/低/中/高）已经是有序的，下面那行说明也
+            // 讲清了差别，图标没有补充任何信息
             Text(
                 text = effort.label,
                 style = MaterialTheme.typography.labelLarge,
@@ -157,14 +145,6 @@ private fun EffortCard(
             )
         }
     }
-}
-
-/** 该档位画几个脑图标。关闭也画一个，否则卡片高度不齐。 */
-private fun ThinkingEffort.iconCount(): Int = when (this) {
-    ThinkingEffort.OFF -> 1
-    ThinkingEffort.LOW -> 1
-    ThinkingEffort.MEDIUM -> 2
-    ThinkingEffort.HIGH -> 3
 }
 
 /** 一句话说明这档意味着什么，避免只有"低/中/高"让人猜。 */

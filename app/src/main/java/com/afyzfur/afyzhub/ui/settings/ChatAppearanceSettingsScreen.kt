@@ -30,6 +30,11 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.afyzfur.afyzhub.data.image.ImageStore
+import com.afyzfur.afyzhub.data.settings.ChatAppearance
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,6 +45,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.data.settings.AvatarMode
 import com.afyzfur.afyzhub.data.settings.BubbleStyle
+import com.afyzfur.afyzhub.data.settings.ChatBackgroundEffect
+import com.afyzfur.afyzhub.ui.components.ChatBackgroundLayer
 import com.afyzfur.afyzhub.data.settings.ChatBackgroundMode
 import com.afyzfur.afyzhub.ui.components.LocalImage
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
@@ -74,6 +81,9 @@ fun ChatAppearanceSettingsScreen(
     val backgroundPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri -> uri?.let(viewModel::pickBackground) }
+
+    // 非空时显示裁剪对话框，值表示裁的是哪张图
+    var cropTarget by remember { mutableStateOf<ImageStore.Purpose?>(null) }
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -186,7 +196,9 @@ fun ChatAppearanceSettingsScreen(
                             path = appearance.userAvatarPath,
                             version = appearance.imageVersion,
                             fallbackIcon = Icons.Default.Person,
+                            blur = appearance.avatarBlur,
                             onPick = { userAvatarPicker.launch("image/*") },
+                            onEdit = { cropTarget = ImageStore.Purpose.USER_AVATAR },
                             onClear = viewModel::clearUserAvatar
                         )
                         AvatarPickerRow(
@@ -194,8 +206,19 @@ fun ChatAppearanceSettingsScreen(
                             path = appearance.assistantAvatarPath,
                             version = appearance.imageVersion,
                             fallbackIcon = Icons.Default.Face,
+                            blur = appearance.avatarBlur,
                             onPick = { assistantAvatarPicker.launch("image/*") },
+                            onEdit = { cropTarget = ImageStore.Purpose.ASSISTANT_AVATAR },
                             onClear = viewModel::clearAssistantAvatar
+                        )
+                        // 模糊对两侧头像统一生效：分开设两个值，界面上
+                        // 要多两个滑块，而想让两侧模糊程度不同的需求罕见
+                        SettingsItemDivider()
+                        PercentSlider(
+                            title = "头像模糊",
+                            value = appearance.avatarBlur,
+                            hint = "让画面复杂的头像不那么抢眼，0% 为不处理",
+                            onChange = viewModel::setAvatarBlur
                         )
                     }
                 }
@@ -226,15 +249,41 @@ fun ChatAppearanceSettingsScreen(
                     Spacer(Modifier.height(12.dp))
                     SettingsGroup {
                         BackgroundPreview(
-                            path = appearance.backgroundPath!!,
-                            version = appearance.imageVersion,
+                            appearance = appearance,
                             onReplace = { backgroundPicker.launch("image/*") },
+                            onEdit = { cropTarget = ImageStore.Purpose.CHAT_BACKGROUND },
                             onClear = viewModel::clearBackground
                         )
-                        DimSlider(
-                            value = appearance.backgroundDim,
-                            onChange = viewModel::setBackgroundDim
-                        )
+                        SettingsItemDivider()
+                        // 效果选择放在滑块之前：先决定用哪种处理，
+                        // 再调它的强度，顺序与思考过程一致
+                        ChatBackgroundEffect.entries.forEach { effect ->
+                            SettingsRadioItem(
+                                title = effect.label,
+                                selected = appearance.backgroundEffect == effect,
+                                onClick = { viewModel.setBackgroundEffect(effect) }
+                            )
+                        }
+                        // 只显示当前效果实际用到的滑块。全都显示会让人
+                        // 以为调了有用，而那个值此刻并不参与渲染
+                        if (appearance.backgroundEffect.usesDim) {
+                            SettingsItemDivider()
+                            PercentSlider(
+                                title = "遮罩浓度",
+                                value = appearance.backgroundDim,
+                                hint = "压暗背景，保留画面细节",
+                                onChange = viewModel::setBackgroundDim
+                            )
+                        }
+                        if (appearance.backgroundEffect.usesBlur) {
+                            SettingsItemDivider()
+                            PercentSlider(
+                                title = "模糊强度",
+                                value = appearance.backgroundBlur,
+                                hint = "抹掉画面细节，保留色调与明暗",
+                                onChange = viewModel::setBackgroundBlur
+                            )
+                        }
                     }
                 }
 
@@ -260,6 +309,27 @@ fun ChatAppearanceSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
             }
+        }
+    }
+    // 裁剪对话框。三张图共用一个，用 cropTarget 区分裁的是哪张
+    cropTarget?.let { purpose ->
+        val path = when (purpose) {
+            ImageStore.Purpose.USER_AVATAR -> appearance.userAvatarPath
+            ImageStore.Purpose.ASSISTANT_AVATAR -> appearance.assistantAvatarPath
+            ImageStore.Purpose.CHAT_BACKGROUND -> appearance.backgroundPath
+        }
+        if (path.isNullOrBlank()) {
+            cropTarget = null
+        } else {
+            ImageCropDialog(
+                path = path,
+                version = appearance.imageVersion,
+                onConfirm = { l, t, r, b ->
+                    viewModel.cropImage(purpose, l, t, r, b)
+                    cropTarget = null
+                },
+                onDismiss = { cropTarget = null }
+            )
         }
     }
 }
@@ -324,7 +394,10 @@ private fun AvatarPickerRow(
     path: String?,
     version: Long,
     fallbackIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    /** 头像模糊强度，与聊天里实际显示的一致 */
+    blur: Float,
     onPick: () -> Unit,
+    onEdit: () -> Unit,
     onClear: () -> Unit
 ) {
     Row(
@@ -345,6 +418,8 @@ private fun AvatarPickerRow(
                     path = path,
                     version = version,
                     contentDescription = title,
+                    // 缩略图也上模糊，所见即聊天里的样子
+                    blur = blur,
                     modifier = Modifier.size(40.dp)
                 )
             } else {
@@ -373,6 +448,7 @@ private fun AvatarPickerRow(
         }
 
         if (!path.isNullOrBlank()) {
+            TextButton(onClick = onEdit) { Text("裁剪") }
             IconButton(onClick = onClear) {
                 Icon(
                     imageVector = Icons.Default.Clear,
@@ -387,17 +463,16 @@ private fun AvatarPickerRow(
 /** 背景预览，附更换与移除操作 */
 @Composable
 private fun BackgroundPreview(
-    path: String,
-    version: Long,
+    appearance: ChatAppearance,
     onReplace: () -> Unit,
+    onEdit: () -> Unit,
     onClear: () -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-        LocalImage(
-            path = path,
-            version = version,
-            contentDescription = "当前背景",
-            contentScale = ContentScale.Crop,
+        // 预览直接用聊天页的那个背景层组件，因此遮罩浓度、模糊强度
+        // 的调整在这里立刻可见，且与进入聊天后看到的完全一致
+        ChatBackgroundLayer(
+            appearance = appearance,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(140.dp)
@@ -406,18 +481,29 @@ private fun BackgroundPreview(
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = onReplace) { Text("更换") }
+            TextButton(onClick = onEdit) { Text("裁剪") }
             TextButton(onClick = onClear) { Text("移除") }
         }
     }
 }
 
-/** 背景遮罩浓度调节 */
+/**
+ * 通用的百分比滑块。
+ *
+ * 原先是专用的 DimSlider，加了模糊之后需要第二个同样形态的滑块，
+ * 与其复制一遍不如把标题与说明抽成参数。
+ */
 @Composable
-private fun DimSlider(value: Float, onChange: (Float) -> Unit) {
+private fun PercentSlider(
+    title: String,
+    value: Float,
+    hint: String,
+    onChange: (Float) -> Unit
+) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "遮罩浓度",
+                text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
@@ -430,7 +516,7 @@ private fun DimSlider(value: Float, onChange: (Float) -> Unit) {
         }
         Slider(value = value, onValueChange = onChange)
         Text(
-            text = "背景图会降低文字对比度，提高遮罩浓度可改善可读性。",
+            text = hint,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

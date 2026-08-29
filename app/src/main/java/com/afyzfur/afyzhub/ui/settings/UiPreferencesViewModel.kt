@@ -90,14 +90,6 @@ class UiPreferencesViewModel(
         viewModelScope.launch { repository.setAvatarBlur(value) }
     }
 
-    fun setInputBarSeeThrough(enabled: Boolean) {
-        viewModelScope.launch { repository.setInputBarSeeThrough(enabled) }
-    }
-
-    fun setInputBarBlur(value: Float) {
-        viewModelScope.launch { repository.setInputBarBlur(value) }
-    }
-
     fun setBackgroundDim(value: Float) {
         viewModelScope.launch { repository.setBackgroundDim(value) }
     }
@@ -170,6 +162,35 @@ class UiPreferencesViewModel(
                 is ImageStore.Result.Success -> {
                     repository.setBackgroundPath(result.path)
                     repository.setBackgroundMode(ChatBackgroundMode.IMAGE)
+                }
+                is ImageStore.Result.Failure -> _imageError.value = result.reason
+            }
+        }
+    }
+
+    /**
+     * 裁剪已保存的图片。
+     *
+     * 裁剪后必须重新写一次路径：路径本身没变，但 setXxxPath 会递增
+     * imageVersion，而版本号参与图片缓存的 key。少了这一步，界面上
+     * 显示的还是裁剪前那张——文件已经改了，看起来却像没生效。
+     */
+    fun cropImage(
+        purpose: ImageStore.Purpose,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float
+    ) {
+        viewModelScope.launch {
+            when (val result = imageStore.crop(purpose, left, top, right, bottom)) {
+                is ImageStore.Result.Success -> when (purpose) {
+                    ImageStore.Purpose.USER_AVATAR ->
+                        repository.setUserAvatarPath(result.path)
+                    ImageStore.Purpose.ASSISTANT_AVATAR ->
+                        repository.setAssistantAvatarPath(result.path)
+                    ImageStore.Purpose.CHAT_BACKGROUND ->
+                        repository.setBackgroundPath(result.path)
                 }
                 is ImageStore.Result.Failure -> _imageError.value = result.reason
             }

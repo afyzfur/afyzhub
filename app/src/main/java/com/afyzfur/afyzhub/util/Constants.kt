@@ -51,8 +51,6 @@ object Constants {
     const val KEY_BACKGROUND_EFFECT = "chat_background_effect"
     const val KEY_BACKGROUND_BLUR = "chat_background_blur"
     const val KEY_AVATAR_BLUR = "chat_avatar_blur"
-    const val KEY_INPUT_BAR_SEE_THROUGH = "input_bar_see_through"
-    const val KEY_INPUT_BAR_BLUR = "input_bar_blur"
 
     /**
      * 以下三项按提供商分别存储，键名格式为 `前缀_提供商id`。
