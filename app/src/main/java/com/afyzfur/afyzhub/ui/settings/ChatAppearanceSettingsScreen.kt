@@ -33,6 +33,7 @@ import androidx.compose.material3.TextButton
 import com.afyzfur.afyzhub.data.image.ImageStore
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
 import com.afyzfur.afyzhub.ui.components.IconContrast
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -570,14 +571,24 @@ private fun PercentSlider(
     // thumb 得等写盘完成才跟上，于是不跟手、要划好几次；0% 时更明显，
     // 因为相邻几帧的值相同、DataStore 去重不发新值，thumb 干脆不动。
     var local by remember { mutableFloatStateOf(value) }
-    var dragging by remember { mutableStateOf(false) }
 
-    // 取值规则抽成纯函数，见 SliderValueSource.kt——两个方向都容易
-    // 搞反且表现隐蔽，那里有测试钉住
-    if (shouldAdoptExternal(external = value, local = local, dragging = dragging)) {
+    // pending 表示「本地有改动还没落盘回来」，而非「手指还在滑块上」。
+    // 用后者会让抬手瞬间就把显示权交回外部值，而那时落盘尚未完成，
+    // thumb 会先跳回原位再跳到新位置——就是松手时那下卡顿。
+    // 取值规则见 SliderValueSource.kt，那里有测试钉住
+    val pending = !isSettled(external = value, local = local)
+
+    if (shouldAdoptExternal(external = value, local = local, pending = pending)) {
         local = value
     }
-    val shown = sliderDisplayValue(external = value, local = local, dragging = dragging)
+    val shown = sliderDisplayValue(external = value, local = local, pending = pending)
+
+    // 落盘完成后才撤掉预览覆盖，把渲染交回落盘值。
+    // 放在这里而非 onValueChangeFinished：那一刻落盘还没回来，
+    // 撤掉会让预览先闪回旧值
+    LaunchedEffect(pending) {
+        if (!pending) onPreview(null)
+    }
 
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -598,16 +609,13 @@ private fun PercentSlider(
             onValueChange = {
                 // 拖动期间只更新本地状态并向上报，不写磁盘。
                 // 预览据此实时渲染，落盘留到抬手时做一次
-                dragging = true
                 local = it
                 onPreview(it)
             },
             onValueChangeFinished = {
-                dragging = false
                 onChange(local)
-                // 落盘值即将从 Flow 回来，撤掉临时覆盖，
-                // 之后由落盘值接管渲染
-                onPreview(null)
+                // 不在这里撤覆盖：落盘还没回来。交给上面的
+                // LaunchedEffect 在落盘完成后处理
             }
         )
         Text(

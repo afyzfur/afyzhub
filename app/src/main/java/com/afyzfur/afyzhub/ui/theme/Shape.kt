@@ -13,8 +13,12 @@ import androidx.compose.ui.unit.dp
  * 新界面用大圆角 + tonal 色阶 + 零阴影。
  */
 val AppShapes = Shapes(
-    // 小型元素：标签、徽章
-    extraSmall = RoundedCornerShape(8.dp),
+    // 小型元素与弹层：徽章、下拉菜单。
+    //
+    // 提到 20dp 是为了下拉菜单——它没有 shape 参数，形状只能取自这一档。
+    // Material 默认给 4dp，配上周围 20dp 的设置分组与全圆的下拉按钮，
+    // 那个方角弹层显得格外生硬。项目里没有别处显式引用这一档
+    extraSmall = RoundedCornerShape(20.dp),
     // 输入框内的小控件、下拉项
     small = RoundedCornerShape(12.dp),
     // 通用容器默认档，多数场景走这一档

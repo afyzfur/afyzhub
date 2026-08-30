@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
@@ -87,14 +88,29 @@ fun ChatInputBar(
     val alpha = if (transparent) (1f - seeThrough).coerceIn(0f, 1f) else 1f
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = alpha),
+        // 底色用不透明。整块的透明度交给下面的 graphicsLayer：
+        // 只把底色调透的话，文字与图标仍然完全不透明，透上来的
+        // 就只有空白区域，看不到背后压着的字
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = if (floating) {
             AppShapeTokens.FloatingInputContainer
         } else {
             AppShapeTokens.InputContainer
         },
+        // 两个 elevation 都归零。Material3 的 Surface 默认会按抬升度
+        // 叠一层色调，在半透明底色上那层色调不跟着透，边缘就显出一条
+        // 比里面更实的描边——看着像刻意加的边框，其实是它渲染出来的
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
+            // 整块（含文字与图标）一起半透。graphicsLayer 把子树先画到
+            // 一个离屏层再按 alpha 合成，所以文字也会透——这正是想要的
+            // 效果：能看见背后压着的内容。
+            //
+            // 若改为逐个给文字设颜色 alpha，每处都要改且容易漏，
+            // 而且叠加处的透明度会累积，看起来深浅不一
+            .graphicsLayer { this.alpha = alpha }
             // 悬浮式的外边距加在容器之外，让背景从四周透出来。
             // 导航栏留白也移到这里：通栏式要让容器背景延伸到屏幕底边，
             // 所以留白在容器内部；悬浮式则整块都要抬离底边
