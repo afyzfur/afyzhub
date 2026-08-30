@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -532,14 +531,15 @@ private fun PercentSlider(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Slider(
-            value = shown,
-            onValueChange = {
-                // 拖动期间只更新本地状态：thumb 立刻跟手，不等磁盘
-                dragging = true
-                local = it
-            },
-            onValueChangeFinished = {
+        // 自绘轨道而非用 Slider：Material3 的 Slider 触摸高度固定在
+        // 48dp 且必须先压住 thumb 才能拖，细轨道上很难瞄准。自己接手势
+        // 可以把可点区域放大到整条轨道的高度，并且按下即跳到指点位置——
+        // 后者比加大 thumb 更有效，因为根本不用瞄了。
+        SliderTrack(
+            fraction = shown,
+            onDragStart = { dragging = true },
+            onDrag = { local = it },
+            onDragEnd = {
                 // 抬手才落盘。一次拖动只写一次，而不是上百次
                 dragging = false
                 onChange(local)
