@@ -84,6 +84,8 @@ class RequestLogStoreTest {
         id = id,
         startedAt = id,
         host = "api.example.com",
+        provider = "openai",
+        model = "gpt-4o-mini",
         method = "POST",
         url = "https://api.example.com/v1/chat",
         headers = emptyMap(),

@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub.data.remote.provider
 
+import com.afyzfur.afyzhub.data.log.RequestLogContext
 import com.afyzfur.afyzhub.data.log.RequestLogEntry
 import com.afyzfur.afyzhub.data.log.RequestLogStore
 import com.afyzfur.afyzhub.data.log.redactHeaders
@@ -44,7 +45,8 @@ class HttpTransport(
         baseUrl: String,
         path: String,
         headers: Map<String, String>,
-        query: Map<String, String>
+        query: Map<String, String>,
+        logContext: RequestLogContext
     ): String = withContext(Dispatchers.IO) {
         val url = resolveUrl(baseUrl, path, query)
         val startedAt = System.currentTimeMillis()
@@ -65,7 +67,7 @@ class HttpTransport(
                 } else {
                     describeFailure(response.code, text)
                 }
-                log(startedAt, "GET", url, headers, null, response.code, text, failure)
+                log(startedAt, "GET", url, headers, null, response.code, text, failure, logContext)
                 logged = true
                 if (failure != null) throw IOException(failure)
                 text
@@ -73,7 +75,7 @@ class HttpTransport(
         } catch (e: IOException) {
             // DNS、超时、连接重置等没有状态码可记
             if (!logged) {
-                log(startedAt, "GET", url, headers, null, null, null, e.message ?: "网络错误")
+                log(startedAt, "GET", url, headers, null, null, null, e.message ?: "网络错误", logContext)
             }
             throw e
         }
@@ -84,7 +86,8 @@ class HttpTransport(
         path: String,
         headers: Map<String, String>,
         body: String,
-        query: Map<String, String>
+        query: Map<String, String>,
+        logContext: RequestLogContext
     ): String = withContext(Dispatchers.IO) {
         val url = resolveUrl(baseUrl, path, query)
         val startedAt = System.currentTimeMillis()
@@ -105,7 +108,7 @@ class HttpTransport(
                 } else {
                     describeFailure(response.code, text)
                 }
-                log(startedAt, "POST", url, headers, body, response.code, text, failure)
+                log(startedAt, "POST", url, headers, body, response.code, text, failure, logContext)
                 logged = true
                 if (failure != null) throw IOException(failure)
                 text
@@ -116,7 +119,7 @@ class HttpTransport(
                 throw CancellationException("已暂停")
             }
             if (!logged) {
-                log(startedAt, "POST", url, headers, body, null, null, e.message ?: "网络错误")
+                log(startedAt, "POST", url, headers, body, null, null, e.message ?: "网络错误", logContext)
             }
             throw e
         } finally {
@@ -130,7 +133,8 @@ class HttpTransport(
         path: String,
         headers: Map<String, String>,
         body: String,
-        query: Map<String, String>
+        query: Map<String, String>,
+        logContext: RequestLogContext
     ): Flow<String> = flow {
         val url = resolveUrl(baseUrl, path, query)
         val sseHeaders = headers + mapOf("Accept" to "text/event-stream")
@@ -160,7 +164,7 @@ class HttpTransport(
                 if (!response.isSuccessful) {
                     val detail = response.body?.string().orEmpty()
                     val failure = describeFailure(response.code, detail)
-                    log(startedAt, "POST", url, sseHeaders, body, response.code, detail, failure)
+                    log(startedAt, "POST", url, sseHeaders, body, response.code, detail, failure, logContext)
                     logged = true
                     throw IOException(failure)
                 }
@@ -202,7 +206,7 @@ class HttpTransport(
                     emit(payload)
                 }
             }
-            log(startedAt, "POST", url, sseHeaders, body, statusCode, collected.toString(), null)
+            log(startedAt, "POST", url, sseHeaders, body, statusCode, collected.toString(), null, logContext)
             logged = true
         } catch (e: Exception) {
             // 用户暂停导致的中断不算错误。call.cancel() 会让阻塞的读取抛
@@ -222,7 +226,8 @@ class HttpTransport(
                     body,
                     statusCode,
                     collected.toString().takeIf { it.isNotEmpty() },
-                    e.message ?: "流式中断"
+                    e.message ?: "流式中断",
+                    logContext
                 )
             }
             throw e
@@ -286,13 +291,16 @@ class HttpTransport(
         requestBody: String?,
         statusCode: Int?,
         responseBody: String?,
-        error: String?
+        error: String?,
+        logContext: RequestLogContext
     ) {
         logStore.record(
             RequestLogEntry(
                 id = logStore.newId(),
                 startedAt = startedAt,
                 host = url.host,
+                provider = logContext.provider,
+                model = logContext.model,
                 method = method,
                 url = redactUrl(url.toString()),
                 headers = redactHeaders(headers),

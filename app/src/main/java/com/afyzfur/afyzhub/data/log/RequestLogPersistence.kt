@@ -4,14 +4,18 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * 落盘用的失败记录。
+ * 落盘用的请求记录。
  *
  * 与 [RequestLogEntry] 分开而不是直接序列化后者：落盘只需要排查
  * 所必需的字段，且要控制体积。响应体在这里会被截断，内存中的完整
  * 副本仍保留在 [RequestLogStore] 里供当次会话查看。
  *
- * 只存失败：成功的请求没人回头看，而失败原因常常要隔一阵才想起来查，
- * 那时应用早已重启过。
+ * 0.3.2 起成功记录也落盘。此前只存失败，理由是"成功的没人回头看"，
+ * 但那让"最近这些请求分别用了哪个模型、各花了多久"这类问题在重启后
+ * 无从查证。代价是写入频率从偶尔变成每次请求，因此条数上限要控制住。
+ *
+ * 类名保留 PersistedErrorLog 不改：它出现在落盘 JSON 的类型信息之外，
+ * 改名不影响文件格式，但会牵动若干引用，收益不抵风险。
  */
 @Serializable
 data class PersistedErrorLog(
@@ -23,7 +27,17 @@ data class PersistedErrorLog(
     /** 已截断的响应体 */
     val responseBody: String?,
     val error: String?,
-    val durationMs: Long
+    val durationMs: Long,
+    /**
+     * 提供商与模型。
+     *
+     * 必须带默认值：0.3.2 之前落盘的文件没有这两个字段，缺省值缺失会让
+     * 反序列化抛异常，而 restore() 的兜底是删掉整个文件——那等于升级一次
+     * 就丢掉全部历史记录。ignoreUnknownKeys 只管多出来的字段，管不了
+     * 少掉的。
+     */
+    val provider: String? = null,
+    val model: String? = null
 )
 
 /** 单条响应体的落盘上限。超出部分截断并标注 */
@@ -35,6 +49,8 @@ const val MAX_PERSISTED_ERRORS = 30
 fun RequestLogEntry.toPersisted(): PersistedErrorLog = PersistedErrorLog(
     startedAt = startedAt,
     host = host,
+    provider = provider,
+    model = model,
     method = method,
     url = url,
     statusCode = statusCode,
@@ -62,6 +78,8 @@ fun PersistedErrorLog.toEntry(id: Long): RequestLogEntry = RequestLogEntry(
     id = id,
     startedAt = startedAt,
     host = host,
+    provider = provider,
+    model = model,
     method = method,
     url = url,
     headers = emptyMap(),

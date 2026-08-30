@@ -12,11 +12,9 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * 请求日志的存储。
  *
- * 成功的记录只放内存，进程结束即丢失——它们的用途是"刚才这条为什么慢"，
- * 排查与发生在同一次会话内。
- *
- * 失败的记录额外落盘：报错原因常常要隔一阵才想起来查，那时应用早已
- * 重启过。此前全部只存内存，重进就没了，等于最需要的信息最容易丢。
+ * 成功与失败的记录都落盘，由 [LogRetention] 决定何时清掉。此前成功的
+ * 只放内存、失败的落盘且永不过期——前者让"昨天那次为什么慢"无从查证，
+ * 后者让文件无限增长，两个方向都不理想。
  *
  * 落盘用单独的 JSON 文件而非 DataStore：单条响应体可达数 KB，
  * 混进设置的 preferences 会让每次读设置都带上这些数据。
@@ -53,8 +51,9 @@ class RequestLogStore(
             } else {
                 updated
             }
-            // 失败的额外落盘，成功的不落
-            if (!entry.isSuccess) appendPersisted(entry)
+            // 成功与失败都落盘。此前只落失败，重启后就查不到
+            // "刚才那几条分别用了哪个模型、各花了多久"
+            persistAll()
         }
     }
 
@@ -86,6 +85,39 @@ class RequestLogStore(
         }
     }
 
+    /**
+     * 按保留策略清掉过期记录。
+     *
+     * 在 [restore] 之后调用一次即可，不另设定时器：日志的用途是回头
+     * 排查，过期与否只在打开列表时才有意义，而应用启动必然早于查看。
+     *
+     * 返回删除的条数，便于界面给出反馈。
+     */
+    suspend fun purgeExpired(retention: LogRetention, now: Long = System.currentTimeMillis()): Int {
+        mutex.withLock {
+            val expired = expiredLogs(_entries.value, retention, now)
+            if (expired.isEmpty()) return 0
+            val expiredIds = expired.map { it.id }.toSet()
+            _entries.value = _entries.value.filterNot { it.id in expiredIds }
+            persistAll()
+            return expired.size
+        }
+    }
+
+    /**
+     * 删除指定的若干条记录。
+     *
+     * 用于筛选后的批量删除——把当前筛选结果全部清掉是"只留下我关心的"
+     * 最直接的做法，比逐条删实用。
+     */
+    suspend fun remove(ids: Set<Long>) {
+        if (ids.isEmpty()) return
+        mutex.withLock {
+            _entries.value = _entries.value.filterNot { it.id in ids }
+            persistAll()
+        }
+    }
+
     suspend fun clear() {
         mutex.withLock {
             _entries.value = emptyList()
@@ -95,18 +127,21 @@ class RequestLogStore(
     }
 
     /**
-     * 追加一条失败记录到文件。
+     * 把当前记录整体写入文件。
      *
-     * 每次都整体重写而非追加写：条数上限只有 30，重写的开销可以忽略，
-     * 换来的是不需要处理"文件里已有多少条"和截断时的部分写入。
+     * 整体重写而非追加：条数上限不高，重写的开销可以忽略，换来的是
+     * 不需要处理"文件里已有多少条"和截断时的部分写入。
+     *
+     * 现在每次请求都会走到这里（此前只有失败才写），写入频率明显提高。
+     * 之所以仍可接受：条数上限限制了单次写入的体积，而这个函数在
+     * mutex 内、IO 线程上执行，不会卡住请求本身。
      *
      * 调用方已持有 mutex。
      */
-    private fun appendPersisted(entry: RequestLogEntry) {
+    private fun persistAll() {
         val file = logFile() ?: return
         try {
             val existing = _entries.value
-                .filterNot { it.isSuccess }
                 .take(MAX_PERSISTED_ERRORS)
                 .map { it.toPersisted() }
             file.writeText(

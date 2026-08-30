@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub.data.remote.provider
 
+import com.afyzfur.afyzhub.data.log.RequestLogContext
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.Flow
@@ -30,7 +31,11 @@ class GeminiChatClient(
             baseUrl = settings.baseUrl,
             path = "$MODELS_PREFIX/${settings.model}:generateContent",
             headers = authHeaders(settings),
-            body = body
+            body = body,
+            logContext = RequestLogContext(
+                provider = settings.provider.id,
+                model = settings.model
+            )
         )
         val response = json.decodeFromString(GenerateResponse.serializer(), text)
         return CompletionResult(
@@ -53,7 +58,11 @@ class GeminiChatClient(
             path = "$MODELS_PREFIX/${settings.model}:streamGenerateContent",
             headers = authHeaders(settings),
             body = body,
-            query = mapOf("alt" to "sse")
+            query = mapOf("alt" to "sse"),
+            logContext = RequestLogContext(
+                provider = settings.provider.id,
+                model = settings.model
+            )
         ).collect { payload ->
             val response = parseResponse(payload) ?: return@collect
             // Gemini 每个 chunk 都可能带 usageMetadata，且为累计值，
@@ -77,7 +86,11 @@ class GeminiChatClient(
         val text = transport.getForText(
             baseUrl = settings.baseUrl,
             path = MODELS_PREFIX,
-            headers = authHeaders(settings)
+            headers = authHeaders(settings),
+            logContext = RequestLogContext(
+                provider = settings.provider.id,
+                model = settings.model
+            )
         )
         return json.decodeFromString(ModelListResponse.serializer(), text)
             .models

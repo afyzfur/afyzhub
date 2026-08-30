@@ -5,9 +5,11 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.SvgDecoder
 import com.afyzfur.afyzhub.data.log.RequestLogStore
+import com.afyzfur.afyzhub.data.settings.SettingsRepository
 import com.afyzfur.afyzhub.di.appModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.afyzfur.afyzhub.di.databaseModule
 import com.afyzfur.afyzhub.di.networkModule
@@ -32,11 +34,19 @@ class AfyzHubApplication : Application(), ImageLoaderFactory {
             modules(appModule, databaseModule, networkModule)
         }.koin
 
-        // 载入上次运行留下的失败请求记录。
+        // 载入上次运行留下的请求记录，随后按保留策略清掉过期的。
+        //
         // 放在后台协程里：读文件不该拖慢冷启动，而日志页也不会
-        // 在启动后的头几毫秒内被打开
+        // 在启动后的头几毫秒内被打开。
+        //
+        // 清理只在启动时做一次，不设定时器：日志的用途是回头排查，
+        // 过期与否只在打开列表时才有意义，而启动必然早于查看。
         val logStore = koin.get<RequestLogStore>()
-        CoroutineScope(Dispatchers.IO).launch { logStore.restore() }
+        val settings = koin.get<SettingsRepository>()
+        CoroutineScope(Dispatchers.IO).launch {
+            logStore.restore()
+            logStore.purgeExpired(settings.logRetention.first())
+        }
     }
 
     override fun newImageLoader(): ImageLoader =

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.afyzfur.afyzhub.data.log.LogRetention
 import com.afyzfur.afyzhub.domain.model.AiProvider
 import com.afyzfur.afyzhub.domain.model.ApiProfileStore
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
@@ -96,6 +97,7 @@ class SettingsRepository(
     private val backgroundEffectKey = stringPreferencesKey(Constants.KEY_BACKGROUND_EFFECT)
     private val backgroundBlurKey = floatPreferencesKey(Constants.KEY_BACKGROUND_BLUR)
     private val avatarBlurKey = floatPreferencesKey(Constants.KEY_AVATAR_BLUR)
+    private val logRetentionKey = stringPreferencesKey(Constants.KEY_LOG_RETENTION)
 
     private fun apiKeyKey(p: AiProvider) =
         stringPreferencesKey("${Constants.KEY_PREFIX_API_KEY}_${p.id}")
@@ -284,6 +286,21 @@ class SettingsRepository(
                 imageVersion = prefs[imageVersionKey] ?: 0L
             )
         )
+    }
+
+    /**
+     * 请求日志的保留时长。
+     *
+     * 单独一个流而非塞进 ChatAppearance：后者是聊天外观，与日志无关，
+     * 合并会让读外观时带上无关字段，也让"改这个值会不会影响聊天渲染"
+     * 变成需要求证的问题。
+     */
+    val logRetention: Flow<LogRetention> = dataStore.data.map { prefs ->
+        LogRetention.fromId(prefs[logRetentionKey])
+    }
+
+    suspend fun setLogRetention(retention: LogRetention) {
+        dataStore.edit { it[logRetentionKey] = retention.id }
     }
 
     /**

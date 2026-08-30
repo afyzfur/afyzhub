@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.afyzfur.afyzhub.data.image.ImageStore
@@ -65,7 +66,23 @@ fun ChatAppearanceSettingsScreen(
     viewModel: UiPreferencesViewModel = koinViewModel()
 ) {
     val prefs by viewModel.preferences.collectAsState()
-    val appearance = prefs.chatAppearance
+    val stored = prefs.chatAppearance
+
+    // 拖动中的临时覆盖值。落盘要等抬手（每帧写盘会让滑块跟不上手），
+    // 但预览必须立刻变，所以拖动期间由这三个值接管渲染。
+    // null 表示没在拖，用落盘值。
+    var dimOverride by remember { mutableStateOf<Float?>(null) }
+    var blurOverride by remember { mutableStateOf<Float?>(null) }
+    var avatarBlurOverride by remember { mutableStateOf<Float?>(null) }
+
+    // 传给预览的副本。只替换正在拖的那一项，其余仍取落盘值——
+    // 一次只可能拖一个滑块，但三个覆盖值各自独立更简单，
+    // 不必判断"当前在拖哪个"
+    val appearance = stored.copy(
+        backgroundDim = dimOverride ?: stored.backgroundDim,
+        backgroundBlur = blurOverride ?: stored.backgroundBlur,
+        avatarBlur = avatarBlurOverride ?: stored.avatarBlur
+    )
     val imageError by viewModel.imageError.collectAsState()
 
     // 用 GetContent 而非 OpenDocument：只需一次性读取内容用于复制，
@@ -218,7 +235,8 @@ fun ChatAppearanceSettingsScreen(
                             title = "头像模糊",
                             value = appearance.avatarBlur,
                             hint = "让画面复杂的头像不那么抢眼，0% 为不处理",
-                            onChange = viewModel::setAvatarBlur
+                            onChange = viewModel::setAvatarBlur,
+                            onPreview = { avatarBlurOverride = it }
                         )
                     }
                 }
@@ -272,7 +290,8 @@ fun ChatAppearanceSettingsScreen(
                                 title = "遮罩浓度",
                                 value = appearance.backgroundDim,
                                 hint = "压暗背景，保留画面细节",
-                                onChange = viewModel::setBackgroundDim
+                                onChange = viewModel::setBackgroundDim,
+                                onPreview = { dimOverride = it }
                             )
                         }
                         if (appearance.backgroundEffect.usesBlur) {
@@ -281,7 +300,8 @@ fun ChatAppearanceSettingsScreen(
                                 title = "模糊强度",
                                 value = appearance.backgroundBlur,
                                 hint = "抹掉画面细节，保留色调与明暗",
-                                onChange = viewModel::setBackgroundBlur
+                                onChange = viewModel::setBackgroundBlur,
+                                onPreview = { blurOverride = it }
                             )
                         }
                     }
@@ -498,7 +518,15 @@ private fun PercentSlider(
     title: String,
     value: Float,
     hint: String,
-    onChange: (Float) -> Unit
+    onChange: (Float) -> Unit,
+    /**
+     * 拖动中的实时值，抬手后传 null 表示交回落盘值。
+     *
+     * 与 onChange 分开是因为两者的代价不同：这个每帧都调、只改内存，
+     * onChange 一次拖动只调一次、要写磁盘。之前两者合一，每帧写盘让
+     * 滑块跟不上手；只在抬手时调则预览不实时。
+     */
+    onPreview: (Float?) -> Unit = {}
 ) {
     // 拖动期间 thumb 的位置由本地状态驱动。
     //
@@ -531,18 +559,21 @@ private fun PercentSlider(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        // 自绘轨道而非用 Slider：Material3 的 Slider 触摸高度固定在
-        // 48dp 且必须先压住 thumb 才能拖，细轨道上很难瞄准。自己接手势
-        // 可以把可点区域放大到整条轨道的高度，并且按下即跳到指点位置——
-        // 后者比加大 thumb 更有效，因为根本不用瞄了。
-        SliderTrack(
-            fraction = shown,
-            onDragStart = { dragging = true },
-            onDrag = { local = it },
-            onDragEnd = {
-                // 抬手才落盘。一次拖动只写一次，而不是上百次
+        Slider(
+            value = shown,
+            onValueChange = {
+                // 拖动期间只更新本地状态并向上报，不写磁盘。
+                // 预览据此实时渲染，落盘留到抬手时做一次
+                dragging = true
+                local = it
+                onPreview(it)
+            },
+            onValueChangeFinished = {
                 dragging = false
                 onChange(local)
+                // 落盘值即将从 Flow 回来，撤掉临时覆盖，
+                // 之后由落盘值接管渲染
+                onPreview(null)
             }
         )
         Text(

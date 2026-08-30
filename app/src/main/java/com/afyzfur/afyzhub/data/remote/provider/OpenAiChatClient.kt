@@ -5,6 +5,7 @@ import com.afyzfur.afyzhub.data.remote.dto.ChatResponse
 import com.afyzfur.afyzhub.data.remote.dto.ChatStreamChunk
 import com.afyzfur.afyzhub.data.remote.dto.RequestMessage
 import com.afyzfur.afyzhub.data.remote.dto.StreamOptions
+import com.afyzfur.afyzhub.data.log.RequestLogContext
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -28,7 +29,11 @@ class OpenAiChatClient(
             baseUrl = settings.baseUrl,
             path = CHAT_PATH,
             headers = authHeaders(settings),
-            body = body
+            body = body,
+            logContext = RequestLogContext(
+                provider = settings.provider.id,
+                model = settings.model
+            )
         )
         val response = json.decodeFromString(ChatResponse.serializer(), text)
         return CompletionResult(
@@ -51,7 +56,11 @@ class OpenAiChatClient(
             baseUrl = settings.baseUrl,
             path = CHAT_PATH,
             headers = authHeaders(settings),
-            body = body
+            body = body,
+            logContext = RequestLogContext(
+                provider = settings.provider.id,
+                model = settings.model
+            )
         ).collect { payload ->
             val chunk = parseChunk(payload) ?: return@collect
             // 带 usage 的那个 chunk 通常 choices 为空，两者需分别处理
@@ -91,7 +100,11 @@ class OpenAiChatClient(
         val text = transport.getForText(
             baseUrl = settings.baseUrl,
             path = MODELS_PATH,
-            headers = authHeaders(settings)
+            headers = authHeaders(settings),
+            logContext = RequestLogContext(
+                provider = settings.provider.id,
+                model = settings.model
+            )
         )
         return json.decodeFromString(ModelListResponse.serializer(), text)
             .data

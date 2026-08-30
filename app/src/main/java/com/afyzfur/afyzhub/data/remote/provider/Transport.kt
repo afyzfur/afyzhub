@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub.data.remote.provider
 
+import com.afyzfur.afyzhub.data.log.RequestLogContext
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -15,7 +16,8 @@ interface Transport {
         baseUrl: String,
         path: String,
         headers: Map<String, String>,
-        query: Map<String, String> = emptyMap()
+        query: Map<String, String> = emptyMap(),
+        logContext: RequestLogContext = RequestLogContext.EMPTY
     ): String
 
     /** 发送 POST 并返回完整响应体文本。 */
@@ -24,7 +26,8 @@ interface Transport {
         path: String,
         headers: Map<String, String>,
         body: String,
-        query: Map<String, String> = emptyMap()
+        query: Map<String, String> = emptyMap(),
+        logContext: RequestLogContext = RequestLogContext.EMPTY
     ): String
 
     /**
@@ -37,6 +40,7 @@ interface Transport {
         path: String,
         headers: Map<String, String>,
         body: String,
-        query: Map<String, String> = emptyMap()
+        query: Map<String, String> = emptyMap(),
+        logContext: RequestLogContext = RequestLogContext.EMPTY
     ): Flow<String>
 }

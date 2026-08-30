@@ -16,6 +16,16 @@ data class RequestLogEntry(
      * "请求实际打到了哪里"，中转服务地址写错一眼就能看出。
      */
     val host: String,
+    /**
+     * 提供商标识，未知时为 null。
+     *
+     * 与 host 并存而非取代它：中转服务下 host 相同但提供商可能不同，
+     * 而直连时 host 又比提供商名更能说明"请求打到了哪里"。筛选按
+     * 提供商，定位靠 host。
+     */
+    val provider: String?,
+    /** 模型名，未知时为 null */
+    val model: String?,
     val method: String,
     val url: String,
     /** 已脱敏的请求头 */

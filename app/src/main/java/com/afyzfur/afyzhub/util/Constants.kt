@@ -52,6 +52,9 @@ object Constants {
     const val KEY_BACKGROUND_BLUR = "chat_background_blur"
     const val KEY_AVATAR_BLUR = "chat_avatar_blur"
 
+    /** 请求日志的保留时长，存 LogRetention.id */
+    const val KEY_LOG_RETENTION = "log_retention"
+
     /**
      * 以下三项按提供商分别存储，键名格式为 `前缀_提供商id`。
      * 切换提供商时不会互相覆盖凭证与地址。

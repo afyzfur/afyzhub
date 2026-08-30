@@ -6,6 +6,7 @@ import com.afyzfur.afyzhub.data.remote.provider.GeminiChatClient
 import com.afyzfur.afyzhub.data.remote.provider.HttpTransport
 import com.afyzfur.afyzhub.data.remote.provider.OpenAiChatClient
 import com.afyzfur.afyzhub.data.remote.provider.StreamEvent
+import com.afyzfur.afyzhub.data.log.RequestLogContext
 import com.afyzfur.afyzhub.data.remote.provider.Transport
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.domain.model.AiProvider
@@ -54,16 +55,21 @@ private class FakeTransport(
     var lastQuery: Map<String, String> = emptyMap()
     var lastBaseUrl: String? = null
 
+    /** 日志归属信息。记下来是为了断言 client 真的把它传下去了 */
+    var lastLogContext: RequestLogContext? = null
+
     override suspend fun getForText(
         baseUrl: String,
         path: String,
         headers: Map<String, String>,
-        query: Map<String, String>
+        query: Map<String, String>,
+        logContext: RequestLogContext
     ): String {
         lastBaseUrl = baseUrl
         lastPath = path
         lastHeaders = headers
         lastQuery = query
+        lastLogContext = logContext
         return response
     }
 
@@ -72,13 +78,15 @@ private class FakeTransport(
         path: String,
         headers: Map<String, String>,
         body: String,
-        query: Map<String, String>
+        query: Map<String, String>,
+        logContext: RequestLogContext
     ): String {
         lastBaseUrl = baseUrl
         lastPath = path
         lastHeaders = headers
         lastBody = body
         lastQuery = query
+        lastLogContext = logContext
         return response
     }
 
@@ -87,13 +95,15 @@ private class FakeTransport(
         path: String,
         headers: Map<String, String>,
         body: String,
-        query: Map<String, String>
+        query: Map<String, String>,
+        logContext: RequestLogContext
     ): Flow<String> {
         lastBaseUrl = baseUrl
         lastPath = path
         lastHeaders = headers
         lastBody = body
         lastQuery = query
+        lastLogContext = logContext
         return sseLines.asFlow()
     }
 }

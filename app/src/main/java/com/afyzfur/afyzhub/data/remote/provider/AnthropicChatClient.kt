@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub.data.remote.provider
 
+import com.afyzfur.afyzhub.data.log.RequestLogContext
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.Flow
@@ -30,7 +31,11 @@ class AnthropicChatClient(
             baseUrl = settings.baseUrl,
             path = MESSAGES_PATH,
             headers = authHeaders(settings),
-            body = body
+            body = body,
+            logContext = RequestLogContext(
+                provider = settings.provider.id,
+                model = settings.model
+            )
         )
         val response = json.decodeFromString(MessagesResponse.serializer(), text)
         return CompletionResult(
@@ -59,7 +64,11 @@ class AnthropicChatClient(
             baseUrl = settings.baseUrl,
             path = MESSAGES_PATH,
             headers = authHeaders(settings),
-            body = body
+            body = body,
+            logContext = RequestLogContext(
+                provider = settings.provider.id,
+                model = settings.model
+            )
         ).collect { payload ->
             val event = parseEvent(payload) ?: return@collect
             when (event.type) {
@@ -124,7 +133,11 @@ class AnthropicChatClient(
         val text = transport.getForText(
             baseUrl = settings.baseUrl,
             path = MODELS_PATH,
-            headers = authHeaders(settings)
+            headers = authHeaders(settings),
+            logContext = RequestLogContext(
+                provider = settings.provider.id,
+                model = settings.model
+            )
         )
         return json.decodeFromString(ModelListResponse.serializer(), text)
             .data
