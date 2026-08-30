@@ -19,17 +19,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import com.afyzfur.afyzhub.data.log.LogRetention
+import com.afyzfur.afyzhub.ui.components.IconHistory
+import com.afyzfur.afyzhub.ui.components.IconDocument
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +61,17 @@ fun RequestLogScreen(
     viewModel: RequestLogViewModel = koinViewModel()
 ) {
     val entries by viewModel.entries.collectAsState()
+    val allEntries by viewModel.allEntries.collectAsState()
+    val filter by viewModel.filter.collectAsState()
+    val models by viewModel.availableModels.collectAsState()
+    val providers by viewModel.availableProviders.collectAsState()
+    val logEnabled by viewModel.logEnabled.collectAsState()
+    val retention by viewModel.retention.collectAsState()
+
+    // 删除是不可撤销的，先确认。区分"删筛选结果"与"全部清空"：
+    // 前者在筛选后是主要用法，后者才是真的清干净
+    var confirmClearAll by remember { mutableStateOf(false) }
+    var confirmDeleteFiltered by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -63,6 +80,30 @@ fun RequestLogScreen(
     ) {
         SettingsPageHeader(title = "请求日志", onNavigateBack = onNavigateBack)
 
+        // 开关与保留策略放在这一页：它们只作用于本页的数据，
+        // 放到设置首页要两处来回跳才能理解彼此关系
+        SettingsGroup {
+            SettingsSwitchItem(
+                icon = IconDocument,
+                title = "记录请求日志",
+                subtitle = "关闭后不再记录新的请求，已有记录保留",
+                checked = logEnabled,
+                onCheckedChange = viewModel::setLogEnabled
+            )
+            SettingsItemDivider()
+            SettingsDropdownItem(
+                icon = IconHistory,
+                title = "保留时长",
+                subtitle = "默认一直保留，只在手动删除时清除",
+                options = LogRetention.entries,
+                selected = retention,
+                label = { it.label },
+                onSelect = viewModel::setRetention
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -70,23 +111,30 @@ fun RequestLogScreen(
                 .padding(horizontal = 20.dp)
         ) {
             Text(
-                text = if (entries.isEmpty()) {
-                    "暂无记录"
-                } else {
-                    // 成功与失败的留存规则不同，这里如实说明，
-                    // 否则用户会以为失败记录也会在重启后消失
-                    "共 ${entries.size} 条。失败记录会保留到下次启动，" +
-                        "成功记录仅存于本次运行。全部只在本机"
+                text = when {
+                    allEntries.isEmpty() -> "暂无记录"
+                    // 筛过之后要同时说明筛出多少、总共多少，
+                    // 否则看到条数变少会以为记录丢了
+                    !filter.isEmpty -> "筛出 ${entries.size} 条，共 ${allEntries.size} 条"
+                    else -> "共 ${entries.size} 条。一直保留，只在本机，可手动删除"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            if (entries.isNotEmpty()) {
-                IconButton(onClick = viewModel::clear) {
+            if (allEntries.isNotEmpty()) {
+                IconButton(
+                    onClick = {
+                        // 有筛选时删的是筛选结果，没筛选时删全部。
+                        // 两种情况用同一个按钮但确认文案不同——单独放两个
+                        // 图标按钮，未筛选时其中一个没有意义
+                        if (filter.isEmpty) confirmClearAll = true
+                        else confirmDeleteFiltered = true
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "清空日志",
+                        contentDescription = if (filter.isEmpty) "清空日志" else "删除筛选结果",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -95,19 +143,77 @@ fun RequestLogScreen(
 
         Spacer(Modifier.height(8.dp))
 
+        // 没有记录时不显示筛选栏：无从筛选，只会占地方
+        if (allEntries.isNotEmpty()) {
+            LogFilterBar(
+                filter = filter,
+                models = models,
+                providers = providers,
+                onAgeGroup = viewModel::setAgeGroup,
+                onModel = viewModel::setModel,
+                onProvider = viewModel::setProvider,
+                onFailedOnly = viewModel::setFailedOnly,
+                onReset = viewModel::resetFilter
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+
+        if (entries.isEmpty() && !filter.isEmpty) {
+            Text(
+                text = "没有符合条件的记录",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)
+            )
+        }
+
         LazyColumn(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(entries, key = { it.id }) { entry ->
-                LogCard(entry)
+                LogCard(entry, onDelete = { viewModel.delete(entry.id) })
             }
         }
+    }
+
+    if (confirmClearAll) {
+        AlertDialog(
+            onDismissRequest = { confirmClearAll = false },
+            title = { Text("清空全部日志") },
+            text = { Text("将删除 ${allEntries.size} 条记录，无法恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmClearAll = false
+                    viewModel.clear()
+                }) { Text("清空") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClearAll = false }) { Text("取消") }
+            }
+        )
+    }
+
+    if (confirmDeleteFiltered) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteFiltered = false },
+            title = { Text("删除筛选结果") },
+            text = { Text("将删除当前筛出的 ${entries.size} 条记录，其余保留。无法恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDeleteFiltered = false
+                    viewModel.deleteFiltered()
+                }) { Text("删除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDeleteFiltered = false }) { Text("取消") }
+            }
+        )
     }
 }
 
 @Composable
-private fun LogCard(entry: RequestLogEntry) {
+private fun LogCard(entry: RequestLogEntry, onDelete: () -> Unit) {
     // 每条独立记住展开状态，列表滚动后不丢失
     var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
 
@@ -176,6 +282,14 @@ private fun LogCard(entry: RequestLogEntry) {
 
                 entry.requestBody?.let { DetailSection(label = "请求体", content = it) }
                 entry.responseBody?.let { DetailSection(label = "响应体", content = it) }
+
+                // 删除入口只在展开后出现：折叠那一行已有状态、主机、
+                // 耗时三样，再塞图标会挤掉主机名。展开也意味着用户
+                // 已经看过内容，此时删除的误触风险更低
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onDelete) { Text("删除这条") }
+                }
             } else {
                 Spacer(Modifier.height(4.dp))
                 Text(

@@ -55,6 +55,12 @@ object Constants {
     /** 请求日志的保留时长，存 LogRetention.id */
     const val KEY_LOG_RETENTION = "log_retention"
 
+    /** 输入栏透视强度，0 为不透明 */
+    const val KEY_INPUT_BAR_SEE_THROUGH = "chat_input_bar_see_through"
+
+    /** 输入栏是否毛玻璃 */
+    const val KEY_INPUT_BAR_BLUR = "chat_input_bar_blur"
+
     /** 是否记录请求日志，默认开启 */
     const val KEY_LOG_ENABLED = "log_enabled"
 

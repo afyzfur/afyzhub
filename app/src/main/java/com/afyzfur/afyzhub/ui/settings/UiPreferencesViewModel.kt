@@ -90,6 +90,14 @@ class UiPreferencesViewModel(
         viewModelScope.launch { repository.setAvatarBlur(value) }
     }
 
+    fun setInputBarSeeThrough(value: Float) {
+        viewModelScope.launch { repository.setInputBarSeeThrough(value) }
+    }
+
+    fun setInputBarBlur(enabled: Boolean) {
+        viewModelScope.launch { repository.setInputBarBlur(enabled) }
+    }
+
     fun setBackgroundDim(value: Float) {
         viewModelScope.launch { repository.setBackgroundDim(value) }
     }

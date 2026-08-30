@@ -97,6 +97,9 @@ class SettingsRepository(
     private val backgroundEffectKey = stringPreferencesKey(Constants.KEY_BACKGROUND_EFFECT)
     private val backgroundBlurKey = floatPreferencesKey(Constants.KEY_BACKGROUND_BLUR)
     private val avatarBlurKey = floatPreferencesKey(Constants.KEY_AVATAR_BLUR)
+    private val inputBarSeeThroughKey =
+        floatPreferencesKey(Constants.KEY_INPUT_BAR_SEE_THROUGH)
+    private val inputBarBlurKey = booleanPreferencesKey(Constants.KEY_INPUT_BAR_BLUR)
     private val logRetentionKey = stringPreferencesKey(Constants.KEY_LOG_RETENTION)
     private val logEnabledKey = booleanPreferencesKey(Constants.KEY_LOG_ENABLED)
 
@@ -281,6 +284,8 @@ class SettingsRepository(
                 showAssistantAvatar = prefs[showAssistantAvatarKey] ?: true,
                 transparentTopBar = prefs[transparentTopBarKey] ?: true,
                 transparentInputBar = prefs[transparentInputBarKey] ?: false,
+                inputBarSeeThrough = prefs[inputBarSeeThroughKey] ?: 0.35f,
+                inputBarBlur = prefs[inputBarBlurKey] ?: false,
                 backgroundEffect = ChatBackgroundEffect.fromId(prefs[backgroundEffectKey]),
                 backgroundBlur = prefs[backgroundBlurKey] ?: 0.4f,
                 avatarBlur = prefs[avatarBlurKey] ?: 0f,
@@ -426,6 +431,14 @@ class SettingsRepository(
 
     suspend fun setTransparentInputBar(enabled: Boolean) {
         dataStore.edit { it[transparentInputBarKey] = enabled }
+    }
+
+    suspend fun setInputBarSeeThrough(value: Float) {
+        dataStore.edit { it[inputBarSeeThroughKey] = value.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setInputBarBlur(enabled: Boolean) {
+        dataStore.edit { it[inputBarBlurKey] = enabled }
     }
 
     /**

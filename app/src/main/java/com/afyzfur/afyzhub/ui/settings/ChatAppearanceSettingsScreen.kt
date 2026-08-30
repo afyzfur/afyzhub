@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.afyzfur.afyzhub.data.image.ImageStore
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
+import com.afyzfur.afyzhub.ui.components.IconContrast
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +75,7 @@ fun ChatAppearanceSettingsScreen(
     var dimOverride by remember { mutableStateOf<Float?>(null) }
     var blurOverride by remember { mutableStateOf<Float?>(null) }
     var avatarBlurOverride by remember { mutableStateOf<Float?>(null) }
+    var inputSeeThroughOverride by remember { mutableStateOf<Float?>(null) }
 
     // 传给预览的副本。只替换正在拖的那一项，其余仍取落盘值——
     // 一次只可能拖一个滑块，但三个覆盖值各自独立更简单，
@@ -81,7 +83,8 @@ fun ChatAppearanceSettingsScreen(
     val appearance = stored.copy(
         backgroundDim = dimOverride ?: stored.backgroundDim,
         backgroundBlur = blurOverride ?: stored.backgroundBlur,
-        avatarBlur = avatarBlurOverride ?: stored.avatarBlur
+        avatarBlur = avatarBlurOverride ?: stored.avatarBlur,
+        inputBarSeeThrough = inputSeeThroughOverride ?: stored.inputBarSeeThrough
     )
     val imageError by viewModel.imageError.collectAsState()
 
@@ -321,10 +324,30 @@ fun ChatAppearanceSettingsScreen(
                     SettingsSwitchItem(
                         icon = Icons.Default.KeyboardArrowDown,
                         title = "输入栏透明",
-                        subtitle = "开启后背景图会透上来，可能影响输入文字的可读性",
+                        subtitle = "开启后背景图会透上来",
                         checked = appearance.transparentInputBar,
                         onCheckedChange = viewModel::setTransparentInputBar
                     )
+                    // 强度与毛玻璃只在透明开启时显示：关着的时候调它们
+                    // 看不出任何变化，留在界面上只会让人以为没生效
+                    if (appearance.transparentInputBar) {
+                        SettingsItemDivider()
+                        PercentSlider(
+                            title = "透视强度",
+                            value = appearance.inputBarSeeThrough,
+                            hint = "越高越透，过高会压住输入的文字",
+                            onChange = viewModel::setInputBarSeeThrough,
+                            onPreview = { inputSeeThroughOverride = it }
+                        )
+                        SettingsItemDivider()
+                        SettingsSwitchItem(
+                            icon = IconContrast,
+                            title = "毛玻璃",
+                            subtitle = "把透上来的背景模糊掉，文字更清楚。需要 Android 12 及以上",
+                            checked = appearance.inputBarBlur,
+                            onCheckedChange = viewModel::setInputBarBlur
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(24.dp))

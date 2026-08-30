@@ -232,6 +232,22 @@ data class ChatAppearance(
      */
     val transparentInputBar: Boolean = false,
     /**
+     * 输入栏的透视强度。
+     *
+     * 与 [transparentInputBar] 并存而非取代：那个开关决定"要不要透"，
+     * 这个决定"透多少"。合成一个 0..1 的值看着更简洁，但那样关掉再打开
+     * 就丢了原先调好的强度。
+     */
+    val inputBarSeeThrough: Float = 0.35f,
+    /**
+     * 输入栏是否毛玻璃。
+     *
+     * 单纯降低不透明度会让背景图的细节直接透上来，压住光标和占位文字；
+     * 模糊之后底下只剩色块，文字才看得清。API 31 以下无效，那里降级为
+     * 只降不透明度。
+     */
+    val inputBarBlur: Boolean = false,
+    /**
      * 背景图的处理方式：遮罩、模糊或两者。
      */
     val backgroundEffect: ChatBackgroundEffect = ChatBackgroundEffect.DEFAULT,

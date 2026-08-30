@@ -1,6 +1,7 @@
 package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.layout.Box
+import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.BorderStroke
 import com.afyzfur.afyzhub.ui.components.IconThinking
@@ -33,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
@@ -69,20 +71,29 @@ fun ChatInputBar(
     /** 点击思考程度按钮时的回调 */
     onCycleThinkingEffort: () -> Unit = {},
     transparent: Boolean = false,
+    /** 透视强度，0 为不透明。仅在 [transparent] 为真时生效 */
+    seeThrough: Float = 0.35f,
+    /** 是否毛玻璃。API 31 以下无效，降级为只降不透明度 */
+    blur: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val canSend = value.isNotBlank() && !isLoading
 
+    // 透明时按强度取 alpha，但保底留一点底色：完全透明会让光标与
+    // 占位文字直接压在背景图上，几乎无法辨认边界。
+    // 强度是"透多少"，所以 alpha 取其反
+    val alpha = if (transparent) (1f - seeThrough).coerceIn(0.12f, 1f) else 1f
+    val canGpuBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val blurRadius = if (transparent && blur && canGpuBlur) INPUT_BAR_BLUR_RADIUS else 0.dp
+
     Surface(
-        // 透明时仍留一层极淡的底色而非全透：完全透明会让光标与
-        // 占位文字直接压在背景图上，几乎无法辨认边界
-        color = if (transparent) {
-            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        },
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = alpha),
         shape = AppShapeTokens.InputContainer,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            // 半径恒定套一层而非按条件加减 modifier：链的结构一变就要
+            // 重建绘制节点，切换时会闪一下。半径为 0 时没有视觉效果
+            .blur(blurRadius)
     ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
         // 而内容不被系统手势区域压住
@@ -308,3 +319,11 @@ private fun SendButton(
         }
     }
 }
+
+/**
+ * 输入栏毛玻璃的模糊半径。
+ *
+ * 比背景模糊小得多：输入栏只有几十 dp 高，大半径会把整条糊成一片
+ * 色块，反而看不出"透着背景"。
+ */
+private val INPUT_BAR_BLUR_RADIUS = 12.dp
