@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,6 +29,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.components.LocalImage
 
@@ -38,9 +41,12 @@ import com.afyzfur.afyzhub.ui.components.LocalImage
  * 判定抓哪个部位只在手势按下时做一次，之后整个拖动都作用于同一处；
  * 每帧重新判定会让手指稍微斜一点就跳到另一条边。
  *
- * 裁剪范围用单个 [CropRect] 而非四个独立的浮点状态：一次拖动可能同时
- * 改两条边（拖角）或四条边（平移），分开存就得保证多次写入之间的中间
- * 态也合法，而拖角时"先写完 left 再写 top"的中间态是不合法的。
+ * 手势区比图片本身大一圈（[TOUCH_MARGIN]）。裁剪框贴到图片边缘时，
+ * 把手的一半落在图片之外，只在图片范围内接手势的话那一半点不到，
+ * 边界处就特别难拖。外扩之后边缘与中间一样好抓。
+ *
+ * 整块区域还声明了不参与系统手势：图片左右两侧紧邻屏幕边缘，那里是
+ * 系统返回手势的判定区，第一次滑动会被系统拿走。
  */
 @Composable
 fun ImageCropDialog(
@@ -64,6 +70,8 @@ fun ImageCropDialog(
     // 本次手势抓住的部位。按下时定一次，抬起时清空
     var grabbed by remember { mutableStateOf<Grab?>(null) }
 
+    val marginPx = with(LocalDensity.current) { TOUCH_MARGIN.toPx() }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("裁剪图片") },
@@ -75,20 +83,26 @@ fun ImageCropDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
+                // 外层只负责接手势，比图片大一圈。图片与遮罩在内层，
+                // 尺寸不受影响——把外扩做在内边距上而不是放大图片，
+                // 遮罩的坐标换算才不用跟着变
                 Box(
                     modifier = Modifier
-                        // 固定高度、宽度由比例算出、横向居中。
-                        // 不能同时用 fillMaxWidth 与限高：aspectRatio 满足
-                        // 不了两个约束，竖幅图会被压扁、遮罩跟着错位
                         .align(Alignment.CenterHorizontally)
-                        .height(PREVIEW_HEIGHT)
-                        .aspectRatio(ratio)
+                        .height(PREVIEW_HEIGHT + TOUCH_MARGIN * 2)
+                        .systemGestureExclusion()
                         .pointerInput(Unit) {
                             detectDragGestures(
                                 onDragStart = { pos ->
+                                    // 减去外扩边距换算成图片内的比例。
+                                    // 触点可能落在 0..1 之外，判定函数
+                                    // 允许这种情况
+                                    val iw = size.width - marginPx * 2
+                                    val ih = size.height - marginPx * 2
+                                    if (iw <= 0f || ih <= 0f) return@detectDragGestures
                                     grabbed = grabOf(
-                                        x = pos.x / size.width,
-                                        y = pos.y / size.height,
+                                        x = (pos.x - marginPx) / iw,
+                                        y = (pos.y - marginPx) / ih,
                                         rect = rect
                                     )
                                 },
@@ -96,29 +110,40 @@ fun ImageCropDialog(
                                 onDragCancel = { grabbed = null },
                                 onDrag = { _, drag ->
                                     val g = grabbed ?: return@detectDragGestures
+                                    val iw = size.width - marginPx * 2
+                                    val ih = size.height - marginPx * 2
+                                    if (iw <= 0f || ih <= 0f) return@detectDragGestures
                                     rect = applyDrag(
                                         rect = rect,
                                         grab = g,
-                                        dx = drag.x / size.width,
-                                        dy = drag.y / size.height
+                                        dx = drag.x / iw,
+                                        dy = drag.y / ih
                                     )
                                 }
                             )
                         }
+                        .padding(TOUCH_MARGIN)
                 ) {
-                    // 框已与图片同比例，Crop 与 Fit 此时等价；
-                    // 用 Crop 可避免浮点误差留下的一两像素白边
-                    LocalImage(
-                        path = path,
-                        version = version,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    // 遮罩、框线、三分线、把手都在一次 Canvas 里画完，
-                    // 只走绘制阶段。嵌套布局加 weight 的话每帧都要重跑
-                    // 整棵子树的测量，那是之前卡顿的主因
-                    CropOverlay(rect)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .height(PREVIEW_HEIGHT)
+                            .aspectRatio(ratio)
+                    ) {
+                        // 框已与图片同比例，Crop 与 Fit 此时等价；
+                        // 用 Crop 可避免浮点误差留下的一两像素白边
+                        LocalImage(
+                            path = path,
+                            version = version,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // 遮罩、框线、三分线、把手都在一次 Canvas 里
+                        // 画完，只走绘制阶段。嵌套布局加 weight 的话每帧
+                        // 都要重跑整棵子树的测量，那是之前卡顿的主因
+                        CropOverlay(rect)
+                    }
                 }
             }
         },
@@ -251,7 +276,15 @@ private fun CropOverlay(rect: CropRect) {
  * 固定高度而非按宽度算：宽度随图片比例变化，横幅图会很矮、竖幅图
  * 会很高，对话框的整体高度就不可预测，竖幅长图能把按钮挤出屏幕。
  */
-private val PREVIEW_HEIGHT = 260.dp
+private val PREVIEW_HEIGHT = 240.dp
+
+/**
+ * 手势区在图片四周的外扩量。
+ *
+ * 取值参照手指触点的实际大小：把手贴在图片边缘时，一半的触摸区在
+ * 图片之外，24dp 足够把那一半接回来。
+ */
+private val TOUCH_MARGIN = 24.dp
 
 /** 框线宽度（像素） */
 private const val BORDER_WIDTH = 3f

@@ -61,6 +61,21 @@ class CropGrabTest {
         assertEquals(Grab.INSIDE, grabOf(0.4f, 0.5f, full))
     }
 
+    @Test
+    fun `触点落在图片之外仍能抓到贴边的把手`() {
+        // 手势区比图片大一圈，贴边的把手有一半在图片外面，换算出的
+        // 归一化坐标会是负数或大于 1。这些点必须照样判成对应的边，
+        // 否则边界处依然难拖
+        val edge = CropRect(0f, 0f, 1f, 1f)
+        assertEquals(Grab.LEFT, grabOf(-0.04f, 0.5f, edge))
+        assertEquals(Grab.RIGHT, grabOf(1.04f, 0.5f, edge))
+        assertEquals(Grab.TOP, grabOf(0.5f, -0.04f, edge))
+        assertEquals(Grab.BOTTOM, grabOf(0.5f, 1.04f, edge))
+        // 图片外的角同样要能抓
+        assertEquals(Grab.TOP_LEFT, grabOf(-0.03f, -0.03f, edge))
+        assertEquals(Grab.BOTTOM_RIGHT, grabOf(1.03f, 1.03f, edge))
+    }
+
     // ---- 初始范围 ----
 
     @Test

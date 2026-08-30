@@ -34,6 +34,10 @@ internal data class CropRect(
  *
  * 先判角再判边：角落同时靠近两条边，若先判边就永远抓不到角。
  * 都不靠近则视作整体平移。
+ *
+ * 触点允许落在 0..1 之外。裁剪框贴到图片边缘时，把手的一半在图片
+ * 外面，若只在图片范围内接手势，那一半就点不到——边界处最难拖正是
+ * 这个原因。调用方把手势区扩到图片之外，这里据此判定。
  */
 internal fun grabOf(x: Float, y: Float, rect: CropRect): Grab {
     val nearLeft = abs(x - rect.left) < TOUCH_SLOP

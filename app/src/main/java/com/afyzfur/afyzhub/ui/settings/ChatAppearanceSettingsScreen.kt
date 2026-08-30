@@ -5,6 +5,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -514,7 +515,14 @@ private fun PercentSlider(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Slider(value = value, onValueChange = onChange)
+        // 声明这条滑轨不参与系统手势：滑块在 0% 时 thumb 贴着屏幕左缘，
+        // 那里是系统返回手势的判定区，第一次滑动会被系统拿去做返回，
+        // 用起来就是"0% 特别难拖、要划好几次"
+        Slider(
+            value = value,
+            onValueChange = onChange,
+            modifier = Modifier.systemGestureExclusion()
+        )
         Text(
             text = hint,
             style = MaterialTheme.typography.bodySmall,
