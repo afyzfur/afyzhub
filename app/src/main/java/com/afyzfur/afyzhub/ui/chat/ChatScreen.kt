@@ -11,6 +11,12 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -351,17 +357,30 @@ private fun ChatContent(
                 )
             }
         ) { paddingValues ->
-            Column(
+            // 输入栏叠在列表之上而非与它并列。并列时列表止步于输入栏
+            // 上边缘，输入栏底下只有背景图，透明也透不出聊天内容。
+            //
+            // 输入栏的高度随内容变化（多行输入、状态行），所以量出来
+            // 再折算成列表的底部留白，而不是写死一个值
+            var inputBarHeight by remember { mutableStateOf(0.dp) }
+            val density = LocalDensity.current
+
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
+                Column(modifier = Modifier.fillMaxSize()) {
                 if (messages.isEmpty() && !isLoading) {
                     EmptyChatContent(
                         prompts = quickPrompts,
                         shufflePrompts = shufflePrompts,
                         onPromptClick = onPromptClick,
-                        modifier = Modifier.weight(1f)
+                        // 同样要避开叠在上面的输入栏，否则最下面那条
+                        // 快捷提示会被压住
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(bottom = inputBarHeight)
                     )
                 } else {
                     LazyColumn(
@@ -369,7 +388,14 @@ private fun ChatContent(
                             .weight(1f)
                             .fillMaxWidth(),
                         state = listState,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        // 底部留出输入栏的高度：列表能滚到输入栏后面
+                        // 透出内容，同时最后一条消息仍可完整滚到可见处
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 12.dp,
+                            bottom = 12.dp + inputBarHeight
+                        ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
@@ -399,54 +425,70 @@ private fun ChatContent(
                     }
                 }
 
-                error?.let { errorMessage ->
-                    Surface(
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        shape = AppShapeTokens.SettingsGroup,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(start = 16.dp, end = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                }
+
+                // 输入栏与撤回条一起叠在列表底部。
+                //
+                // 撤回条跟着输入栏走而非留在 Column 里：它的位置语义是
+                // 「紧贴输入栏上方」，输入栏浮起来之后它也得跟上
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .onSizeChanged { size ->
+                            // 量出实际高度折算成列表底部留白。输入栏高度
+                            // 随内容变化（多行输入、状态行），写死会在
+                            // 多行时挡住最后一条消息
+                            inputBarHeight = with(density) { size.height.toDp() }
+                        }
+                ) {
+                    // 错误提示也移到这一层。它原本在列表所在的 Column 末尾，
+                    // 而输入栏现在叠在上面，留在原处会被压住
+                    error?.let { errorMessage ->
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = AppShapeTokens.SettingsGroup,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp)
                         ) {
-                            Text(
-                                text = errorMessage,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.weight(1f)
-                            )
-                            TextButton(onClick = onClearError) {
-                                Text("关闭")
+                            Row(
+                                modifier = Modifier.padding(start = 16.dp, end = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = errorMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                TextButton(onClick = onClearError) {
+                                    Text("关闭")
+                                }
                             }
                         }
                     }
+                    UndoBar(
+                        removal = undoable,
+                        onUndo = onUndoRemoval,
+                        onDismiss = onDismissUndo
+                    )
+                    ChatInputBar(
+                        transparent = appearance.transparentInputBar,
+                        seeThrough = appearance.inputBarSeeThrough,
+                        floating = appearance.inputBarFloating,
+                        value = inputText,
+                        onValueChange = onInputChange,
+                        onSend = onSend,
+                        onStop = onStop,
+                        onPickModel = onPickModel,
+                        providerLabel = providerLabel,
+                        isLoading = isLoading,
+                        statusLabel = sendPhase.label,
+                        modelName = modelName,
+                        thinkingEffort = thinkingEffort,
+                        onCycleThinkingEffort = onCycleThinkingEffort
+                    )
                 }
-
-                // 撤回提示紧贴输入栏上方：删除操作与撤回入口在
-                // 同一处视线内，且不遮挡刚被删掉那段内容的位置
-                UndoBar(
-                    removal = undoable,
-                    onUndo = onUndoRemoval,
-                    onDismiss = onDismissUndo
-                )
-                ChatInputBar(
-                    transparent = appearance.transparentInputBar,
-                    seeThrough = appearance.inputBarSeeThrough,
-                    floating = appearance.inputBarFloating,
-                    value = inputText,
-                    onValueChange = onInputChange,
-                    onSend = onSend,
-                    onStop = onStop,
-                    onPickModel = onPickModel,
-                    providerLabel = providerLabel,
-                    isLoading = isLoading,
-                    statusLabel = sendPhase.label,
-                    modelName = modelName,
-                    thinkingEffort = thinkingEffort,
-                    onCycleThinkingEffort = onCycleThinkingEffort
-                )
             }
         }
     }
