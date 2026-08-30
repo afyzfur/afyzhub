@@ -18,6 +18,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Checkbox
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.Delete
 import com.afyzfur.afyzhub.data.log.LogRetention
 import com.afyzfur.afyzhub.ui.components.IconHistory
@@ -70,16 +76,37 @@ fun RequestLogScreen(
 
     // 删除是不可撤销的，先确认。区分"删筛选结果"与"全部清空"：
     // 前者在筛选后是主要用法，后者才是真的清干净
+    val selected by viewModel.selected.collectAsState()
+    val inSelection = selected.isNotEmpty()
+
     var confirmClearAll by remember { mutableStateOf(false) }
     var confirmDeleteFiltered by remember { mutableStateOf(false) }
+    var confirmDeleteSelected by remember { mutableStateOf(false) }
+
+    // 多选态下拦截返回：先退出多选而不是直接离开页面。
+    // 否则辛苦选了十几条，误触返回就全没了
+    BackHandler(enabled = inSelection, onBack = viewModel::clearSelection)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        SettingsPageHeader(title = "请求日志", onNavigateBack = onNavigateBack)
+        if (inSelection) {
+            // 多选态下顶栏整体换掉，而不是在原有基础上加按钮：
+            // 此时"返回上一页"和"筛选"都不该是主要动作
+            SelectionHeader(
+                count = selected.size,
+                onExit = viewModel::clearSelection,
+                onSelectAll = viewModel::selectAllVisible,
+                onDelete = { confirmDeleteSelected = true }
+            )
+        } else {
+            SettingsPageHeader(title = "请求日志", onNavigateBack = onNavigateBack)
+        }
 
+        // 多选时收起设置与筛选：此刻的任务是挑记录，别的都是干扰
+        if (!inSelection) {
         // 开关与保留策略放在这一页：它们只作用于本页的数据，
         // 放到设置首页要两处来回跳才能理解彼此关系
         SettingsGroup {
@@ -103,6 +130,7 @@ fun RequestLogScreen(
         }
 
         Spacer(Modifier.height(12.dp))
+        }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -172,7 +200,14 @@ fun RequestLogScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(entries, key = { it.id }) { entry ->
-                LogCard(entry, onDelete = { viewModel.delete(entry.id) })
+                LogCard(
+                    entry = entry,
+                    onDelete = { viewModel.delete(entry.id) },
+                    selected = entry.id in selected,
+                    inSelection = inSelection,
+                    onLongPress = { viewModel.startSelection(entry.id) },
+                    onToggleSelect = { viewModel.toggleSelection(entry.id) }
+                )
             }
         }
     }
@@ -190,6 +225,23 @@ fun RequestLogScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmClearAll = false }) { Text("取消") }
+            }
+        )
+    }
+
+    if (confirmDeleteSelected) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteSelected = false },
+            title = { Text("删除所选记录") },
+            text = { Text("将删除选中的 ${selected.size} 条记录，无法恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDeleteSelected = false
+                    viewModel.deleteSelected()
+                }) { Text("删除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDeleteSelected = false }) { Text("取消") }
             }
         )
     }
@@ -212,20 +264,56 @@ fun RequestLogScreen(
     }
 }
 
+// combinedClickable 仍标记为实验性，但它是 Compose 里做长按的标准做法，
+// 且 API 形状多年未变。替代方案是自己用 pointerInput 判定长按时长，
+// 那等于重实现一遍且更容易出错
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LogCard(entry: RequestLogEntry, onDelete: () -> Unit) {
+private fun LogCard(
+    entry: RequestLogEntry,
+    onDelete: () -> Unit,
+    selected: Boolean,
+    inSelection: Boolean,
+    onLongPress: () -> Unit,
+    onToggleSelect: () -> Unit
+) {
     // 每条独立记住展开状态，列表滚动后不丢失
     var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        // 选中的卡片换底色而非只加个勾：一眼能看出选了哪几条，
+        // 不必逐行找勾选框
+        color = if (selected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
         shape = AppShapeTokens.SettingsGroup,
-        // 涟漪要跟随卡片圆角，走 Surface 的 onClick
-        onClick = { expanded = !expanded },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            // 用 combinedClickable 而非 Surface 的 onClick：需要长按。
+            // 涟漪跟随圆角靠外层的 clip
+            .clip(AppShapeTokens.SettingsGroup)
+            .combinedClickable(
+                onClick = {
+                    // 多选态下点击是改选择，不是展开——展开需要看详情，
+                    // 而此刻用户在挑要删的条目
+                    if (inSelection) onToggleSelect() else expanded = !expanded
+                },
+                onLongClick = onLongPress
+            )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (inSelection) {
+                    Checkbox(
+                        checked = selected,
+                        // 勾选框本身不接手势：整张卡片都可点，
+                        // 单独给它加回调会让点框和点卡片行为不一致
+                        onCheckedChange = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
                 StatusBadge(entry)
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -286,9 +374,11 @@ private fun LogCard(entry: RequestLogEntry, onDelete: () -> Unit) {
                 // 删除入口只在展开后出现：折叠那一行已有状态、主机、
                 // 耗时三样，再塞图标会挤掉主机名。展开也意味着用户
                 // 已经看过内容，此时删除的误触风险更低
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onDelete) { Text("删除这条") }
+                if (!inSelection) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = onDelete) { Text("删除这条") }
+                    }
                 }
             } else {
                 Spacer(Modifier.height(4.dp))
@@ -360,4 +450,48 @@ private fun formatTime(millis: Long): String =
 private fun formatDuration(millis: Long): String = when {
     millis < 1000 -> "${millis}ms"
     else -> "${"%.1f".format(millis / 1000.0)}s"
+}
+
+/**
+ * 多选态下的顶栏。
+ *
+ * 替换掉原本的页头而非叠加按钮：多选时"返回上一页"和"筛选"都不是
+ * 主要动作，把它们留在原位反而容易误触。左侧的关闭对应"退出多选"，
+ * 与系统返回键的行为一致。
+ */
+@Composable
+private fun SelectionHeader(
+    count: Int,
+    onExit: () -> Unit,
+    onSelectAll: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp)
+    ) {
+        IconButton(onClick = onExit) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "退出多选"
+            )
+        }
+        Text(
+            text = "已选 $count 项",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp)
+        )
+        TextButton(onClick = onSelectAll) { Text("全选") }
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "删除所选",
+                tint = MaterialTheme.colorScheme.error
+            )
+        }
+    }
 }

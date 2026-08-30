@@ -342,8 +342,8 @@ fun ChatAppearanceSettingsScreen(
                         SettingsItemDivider()
                         SettingsSwitchItem(
                             icon = IconContrast,
-                            title = "毛玻璃",
-                            subtitle = "把透上来的背景模糊掉，文字更清楚。需要 Android 12 及以上",
+                            title = "文字衬底",
+                            subtitle = "在输入区后面垫一层底色，透视强度高时文字仍清楚",
                             checked = appearance.inputBarBlur,
                             onCheckedChange = viewModel::setInputBarBlur
                         )

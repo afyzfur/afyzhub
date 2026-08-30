@@ -1,7 +1,6 @@
 package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.layout.Box
-import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.BorderStroke
 import com.afyzfur.afyzhub.ui.components.IconThinking
@@ -34,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
@@ -73,27 +71,36 @@ fun ChatInputBar(
     transparent: Boolean = false,
     /** 透视强度，0 为不透明。仅在 [transparent] 为真时生效 */
     seeThrough: Float = 0.35f,
-    /** 是否毛玻璃。API 31 以下无效，降级为只降不透明度 */
+    /**
+     * 是否加深文字衬底。
+     *
+     * 原先叫「毛玻璃」，但 Modifier.blur 模糊的是它所应用的组件本身，
+     * 不是背后的内容——加在输入栏上会把输入的文字连图标一起糊掉，
+     * 而真正的毛玻璃需要采样背后已绘制的画面，Compose 标准库没有提供。
+     * 改为在文字区域后面垫一层更实的底色，达到同样的目的：让透上来的
+     * 背景不影响文字辨认。
+     */
     blur: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val canSend = value.isNotBlank() && !isLoading
 
-    // 透明时按强度取 alpha，但保底留一点底色：完全透明会让光标与
-    // 占位文字直接压在背景图上，几乎无法辨认边界。
-    // 强度是"透多少"，所以 alpha 取其反
-    val alpha = if (transparent) (1f - seeThrough).coerceIn(0.12f, 1f) else 1f
-    val canGpuBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val blurRadius = if (transparent && blur && canGpuBlur) INPUT_BAR_BLUR_RADIUS else 0.dp
+    // 强度是"透多少"，alpha 取其反。不设下界：用户把强度拉满时
+    // 就该是全透，此前保底 0.12 让最透的一档看着仍有底色
+    val alpha = if (transparent) (1f - seeThrough).coerceIn(0f, 1f) else 1f
+
+    // 文字衬底。只在透明且开启时给，否则整条本身就是实色，
+    // 再垫一层会显出一个色块边框
+    val textBacking = if (transparent && blur) {
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = TEXT_BACKING_ALPHA)
+    } else {
+        null
+    }
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = alpha),
         shape = AppShapeTokens.InputContainer,
-        modifier = modifier
-            .fillMaxWidth()
-            // 半径恒定套一层而非按条件加减 modifier：链的结构一变就要
-            // 重建绘制节点，切换时会闪一下。半径为 0 时没有视觉效果
-            .blur(blurRadius)
+        modifier = modifier.fillMaxWidth()
     ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
         // 而内容不被系统手势区域压住
@@ -119,6 +126,19 @@ fun ChatInputBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 44.dp)
+                    // 衬底只垫在文字这一块，不铺满整条：功能行的图标
+                    // 本身有形状、辨认不难，而输入区是唯一需要看清
+                    // 笔画和光标位置的地方。内边距加在衬底之内，
+                    // 否则色块会紧贴文字边缘
+                    .then(
+                        if (textBacking != null) {
+                            Modifier
+                                .padding(horizontal = 12.dp)
+                                .background(textBacking, AppShapeTokens.InputContainer)
+                        } else {
+                            Modifier
+                        }
+                    )
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 decorationBox = { innerTextField ->
                     if (value.isEmpty()) {
@@ -321,9 +341,9 @@ private fun SendButton(
 }
 
 /**
- * 输入栏毛玻璃的模糊半径。
+ * 文字衬底的不透明度。
  *
- * 比背景模糊小得多：输入栏只有几十 dp 高，大半径会把整条糊成一片
- * 色块，反而看不出"透着背景"。
+ * 取值要够高才能压住背景图的细节，但不能到不透明——那样就等于没开
+ * 透明，输入区会变成一块实心色块浮在背景上。
  */
-private val INPUT_BAR_BLUR_RADIUS = 12.dp
+private const val TEXT_BACKING_ALPHA = 0.72f

@@ -97,24 +97,77 @@ class RequestLogViewModel(
             list.mapNotNull { it.provider }.distinct().sorted()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /**
+     * 多选中的记录 id。
+     *
+     * 空集合表示不在多选模式。用"集合是否为空"而非另设一个布尔标记：
+     * 两个状态各存一份就得保证它们始终一致，而"选了东西却不在多选态"
+     * 或反过来都是不合法的中间态。
+     */
+    private val _selected = MutableStateFlow<Set<Long>>(emptySet())
+    val selected: StateFlow<Set<Long>> = _selected.asStateFlow()
+
+    /** 长按进入多选并选中第一条 */
+    fun startSelection(id: Long) {
+        _selected.value = setOf(id)
+    }
+
+    fun toggleSelection(id: Long) {
+        val current = _selected.value
+        _selected.value = if (id in current) current - id else current + id
+    }
+
+    /**
+     * 退出多选。
+     *
+     * 改筛选条件时也会调用：否则 selected 里会残留当前筛选看不到的 id，
+     * 点删除就把屏幕外的记录也删了，用户不知道自己删掉了什么。相比在
+     * 删除时再过滤一遍，直接清空更实在——选择的语义本来就是"我在这批里
+     * 挑了这几条"，换了一批就不该沿用。
+     */
+    fun clearSelection() {
+        _selected.value = emptySet()
+    }
+
+    /** 全选当前筛选出的记录，而非全部——多选是在筛选结果之上操作的 */
+    fun selectAllVisible() {
+        _selected.value = entries.value.map { it.id }.toSet()
+    }
+
+    fun deleteSelected() {
+        val ids = _selected.value
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            store.remove(ids)
+            // 删完退出多选：留在多选态里而选中项已不存在，
+            // 顶栏会显示"已选 0 项"
+            _selected.value = emptySet()
+        }
+    }
+
     fun setAgeGroup(group: LogAgeGroup?) {
         _filter.value = _filter.value.copy(ageGroup = group)
+        clearSelection()
     }
 
     fun setModel(model: String?) {
         _filter.value = _filter.value.copy(model = model)
+        clearSelection()
     }
 
     fun setProvider(provider: String?) {
         _filter.value = _filter.value.copy(provider = provider)
+        clearSelection()
     }
 
     fun setFailedOnly(enabled: Boolean) {
         _filter.value = _filter.value.copy(failedOnly = enabled)
+        clearSelection()
     }
 
     fun resetFilter() {
         _filter.value = LogFilter()
+        clearSelection()
     }
 
     /**
