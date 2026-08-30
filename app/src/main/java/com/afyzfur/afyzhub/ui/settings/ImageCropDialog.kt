@@ -141,9 +141,12 @@ fun ImageCropDialog(
  * 不用 scaleX = -1 整体镜像：那样连 thumb 的拖动方向也一起反了，
  * 手感与图片上那条边的移动方向不符。
  *
- * valueRange 的下限可能大于上限——比如上下边界已经贴到最小间距时，
- * 再调另一条边算出的范围会反过来。Slider 遇到这种范围会抛异常，
- * 所以这里做一次兜底。
+ * valueRange 固定为 0..1，取值约束放在 onChange 里做。
+ *
+ * 这一点很关键。此前 range 传的是随另一条边算出的动态区间
+ * （如 0f..(right - MIN_SIZE)），而 Slider 内部状态与 range 绑定：
+ * range 一变就重建状态、丢掉正在进行的手势——表现就是要划好几次
+ * 才有反应。range 固定后手势全程连续，越界由 onChange 夹住。
  */
 // track 插槽与 SliderState 目前仍是实验性 API。用它是因为要自绘轨道
 // 才能控制填充方向，而稳定 API 里没有等价能力
@@ -152,16 +155,13 @@ fun ImageCropDialog(
 private fun EdgeSlider(
     label: String,
     value: Float,
+    /** 允许的下界，拖到更小时夹住 */
     min: Float,
+    /** 允许的上界，拖到更大时夹住 */
     max: Float,
     fillFromEnd: Boolean = false,
     onChange: (Float) -> Unit
 ) {
-    val lo = min.coerceIn(0f, 1f)
-    val hi = max.coerceIn(0f, 1f)
-    // 范围退化时不给滑块，避免 Slider 因 start > end 崩溃
-    if (hi <= lo) return
-
     Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Text(
             text = label,
@@ -172,17 +172,14 @@ private fun EdgeSlider(
         // 滑块吃掉标签之外的剩余宽度。此前用 fillMaxWidth(0.85f)，
         // 那是"占父级宽度的 85%"，与前面标签的宽度叠加后会溢出
         Slider(
-            value = value.coerceIn(lo, hi),
-            onValueChange = onChange,
-            valueRange = lo..hi,
+            value = value,
+            // 夹在这里而非靠 range 限制：range 变动会打断手势
+            onValueChange = { onChange(it.coerceIn(min.coerceAtMost(max), max)) },
+            valueRange = 0f..1f,
             modifier = Modifier.weight(1f),
             track = { state ->
                 CropTrack(
-                    fraction = if (hi > lo) {
-                        ((state.value - lo) / (hi - lo)).coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    },
+                    fraction = state.value.coerceIn(0f, 1f),
                     fillFromEnd = fillFromEnd
                 )
             }
