@@ -324,28 +324,39 @@ fun ChatAppearanceSettingsScreen(
                     SettingsSwitchItem(
                         icon = Icons.Default.KeyboardArrowDown,
                         title = "输入栏透明",
-                        subtitle = "开启后背景图会透上来",
+                        subtitle = if (appearance.transparentInputBar) {
+                            "背景会透上来，可用下面的强度调节"
+                        } else {
+                            "开启后背景图会透上来"
+                        },
                         checked = appearance.transparentInputBar,
                         onCheckedChange = viewModel::setTransparentInputBar
                     )
-                    // 强度与毛玻璃只在透明开启时显示：关着的时候调它们
-                    // 看不出任何变化，留在界面上只会让人以为没生效
+                    // 样式与透明无关，始终可选：悬浮式在不透明时也
+                    // 是一种不同的观感
+                    SettingsItemDivider()
+                    SettingsSwitchItem(
+                        icon = IconContrast,
+                        title = "输入栏悬浮",
+                        subtitle = if (appearance.inputBarFloating) {
+                            "四周留出间距，四角全圆，与页面分离"
+                        } else {
+                            "当前铺满底部，开启后四周留出间距"
+                        },
+                        checked = appearance.inputBarFloating,
+                        onCheckedChange = viewModel::setInputBarFloating
+                    )
+                    // 强度只在透明开启时显示：关着的时候调它看不出
+                    // 任何变化，留在界面上只会让人以为没生效
                     if (appearance.transparentInputBar) {
                         SettingsItemDivider()
                         PercentSlider(
                             title = "透视强度",
                             value = appearance.inputBarSeeThrough,
-                            hint = "越高越透，过高会压住输入的文字",
+                            hint = "越高越透。悬浮样式下露出的背景更多，" +
+                                "调低一些就够",
                             onChange = viewModel::setInputBarSeeThrough,
                             onPreview = { inputSeeThroughOverride = it }
-                        )
-                        SettingsItemDivider()
-                        SettingsSwitchItem(
-                            icon = IconContrast,
-                            title = "文字衬底",
-                            subtitle = "在输入区后面垫一层底色，透视强度高时文字仍清楚",
-                            checked = appearance.inputBarBlur,
-                            onCheckedChange = viewModel::setInputBarBlur
                         )
                     }
                 }

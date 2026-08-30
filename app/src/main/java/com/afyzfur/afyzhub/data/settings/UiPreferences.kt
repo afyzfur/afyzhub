@@ -240,13 +240,13 @@ data class ChatAppearance(
      */
     val inputBarSeeThrough: Float = 0.35f,
     /**
-     * 输入栏是否毛玻璃。
+     * 输入栏是否悬浮样式。
      *
-     * 单纯降低不透明度会让背景图的细节直接透上来，压住光标和占位文字；
-     * 模糊之后底下只剩色块，文字才看得清。API 31 以下无效，那里降级为
-     * 只降不透明度。
+     * 悬浮式四周留边、四角全圆、不贴屏幕底边，通栏式铺满宽度只圆上方
+     * 两角。两者对透视的观感差别很大：悬浮式露出的背景更多，透视强度
+     * 低一点就够；通栏式则要调高才看得出。
      */
-    val inputBarBlur: Boolean = false,
+    val inputBarFloating: Boolean = false,
     /**
      * 背景图的处理方式：遮罩、模糊或两者。
      */

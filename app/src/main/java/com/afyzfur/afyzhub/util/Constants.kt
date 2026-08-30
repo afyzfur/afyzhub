@@ -58,8 +58,8 @@ object Constants {
     /** 输入栏透视强度，0 为不透明 */
     const val KEY_INPUT_BAR_SEE_THROUGH = "chat_input_bar_see_through"
 
-    /** 输入栏是否毛玻璃 */
-    const val KEY_INPUT_BAR_BLUR = "chat_input_bar_blur"
+    /** 输入栏是否悬浮样式（四周留边、四角全圆） */
+    const val KEY_INPUT_BAR_FLOATING = "chat_input_bar_floating"
 
     /** 是否记录请求日志，默认开启 */
     const val KEY_LOG_ENABLED = "log_enabled"

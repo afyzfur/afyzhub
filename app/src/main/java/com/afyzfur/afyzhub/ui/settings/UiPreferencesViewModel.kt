@@ -94,8 +94,8 @@ class UiPreferencesViewModel(
         viewModelScope.launch { repository.setInputBarSeeThrough(value) }
     }
 
-    fun setInputBarBlur(enabled: Boolean) {
-        viewModelScope.launch { repository.setInputBarBlur(enabled) }
+    fun setInputBarFloating(enabled: Boolean) {
+        viewModelScope.launch { repository.setInputBarFloating(enabled) }
     }
 
     fun setBackgroundDim(value: Float) {

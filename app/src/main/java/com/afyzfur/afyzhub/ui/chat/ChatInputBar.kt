@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub.ui.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.BorderStroke
@@ -22,7 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -72,42 +72,49 @@ fun ChatInputBar(
     /** 透视强度，0 为不透明。仅在 [transparent] 为真时生效 */
     seeThrough: Float = 0.35f,
     /**
-     * 是否加深文字衬底。
+     * 是否悬浮样式。
      *
-     * 原先叫「毛玻璃」，但 Modifier.blur 模糊的是它所应用的组件本身，
-     * 不是背后的内容——加在输入栏上会把输入的文字连图标一起糊掉，
-     * 而真正的毛玻璃需要采样背后已绘制的画面，Compose 标准库没有提供。
-     * 改为在文字区域后面垫一层更实的底色，达到同样的目的：让透上来的
-     * 背景不影响文字辨认。
+     * 悬浮式四周留边、四角全圆、不贴屏幕底边；通栏式铺满宽度、只圆
+     * 上方两角。悬浮式露出的背景更多，透视的效果也更明显。
      */
-    blur: Boolean = false,
+    floating: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val canSend = value.isNotBlank() && !isLoading
 
     // 强度是"透多少"，alpha 取其反。不设下界：用户把强度拉满时
-    // 就该是全透，此前保底 0.12 让最透的一档看着仍有底色
+    // 就该是全透
     val alpha = if (transparent) (1f - seeThrough).coerceIn(0f, 1f) else 1f
-
-    // 文字衬底。只在透明且开启时给，否则整条本身就是实色，
-    // 再垫一层会显出一个色块边框
-    val textBacking = if (transparent && blur) {
-        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = TEXT_BACKING_ALPHA)
-    } else {
-        null
-    }
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = alpha),
-        shape = AppShapeTokens.InputContainer,
-        modifier = modifier.fillMaxWidth()
+        shape = if (floating) {
+            AppShapeTokens.FloatingInputContainer
+        } else {
+            AppShapeTokens.InputContainer
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            // 悬浮式的外边距加在容器之外，让背景从四周透出来。
+            // 导航栏留白也移到这里：通栏式要让容器背景延伸到屏幕底边，
+            // 所以留白在容器内部；悬浮式则整块都要抬离底边
+            .then(
+                if (floating) {
+                    Modifier
+                        .navigationBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                } else {
+                    Modifier
+                }
+            )
     ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
         // 而内容不被系统手势区域压住
         Column(
             modifier = Modifier
                 .padding(top = 4.dp)
-                .navigationBarsPadding()
+                // 悬浮式的留白已加在容器外层，这里再加一次会多出一段空白
+                .then(if (floating) Modifier else Modifier.navigationBarsPadding())
         ) {
 
             // 上层：文本输入。用 BasicTextField 而非 TextField，
@@ -126,19 +133,6 @@ fun ChatInputBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 44.dp)
-                    // 衬底只垫在文字这一块，不铺满整条：功能行的图标
-                    // 本身有形状、辨认不难，而输入区是唯一需要看清
-                    // 笔画和光标位置的地方。内边距加在衬底之内，
-                    // 否则色块会紧贴文字边缘
-                    .then(
-                        if (textBacking != null) {
-                            Modifier
-                                .padding(horizontal = 12.dp)
-                                .background(textBacking, AppShapeTokens.InputContainer)
-                        } else {
-                            Modifier
-                        }
-                    )
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 decorationBox = { innerTextField ->
                     if (value.isEmpty()) {
@@ -339,11 +333,3 @@ private fun SendButton(
         }
     }
 }
-
-/**
- * 文字衬底的不透明度。
- *
- * 取值要够高才能压住背景图的细节，但不能到不透明——那样就等于没开
- * 透明，输入区会变成一块实心色块浮在背景上。
- */
-private const val TEXT_BACKING_ALPHA = 0.72f

@@ -113,7 +113,11 @@ fun RequestLogScreen(
             SettingsSwitchItem(
                 icon = IconDocument,
                 title = "记录请求日志",
-                subtitle = "关闭后不再记录新的请求，已有记录保留",
+                subtitle = if (logEnabled) {
+                    "每次请求都会留下一条，仅存在本机"
+                } else {
+                    "已关闭，不再记录新的请求。已有记录仍保留"
+                },
                 checked = logEnabled,
                 onCheckedChange = viewModel::setLogEnabled
             )
@@ -121,7 +125,15 @@ fun RequestLogScreen(
             SettingsDropdownItem(
                 icon = IconHistory,
                 title = "保留时长",
-                subtitle = "默认一直保留，只在手动删除时清除",
+                // 说明随当前选项变化：固定写"默认一直保留"在用户已经
+                // 选了 7 天时是错的，而这一项的关键差别正是"会不会
+                // 自动消失"
+                subtitle = when (retention) {
+                    LogRetention.FOREVER -> "记录不会自动消失，只在手动删除时清除"
+                    LogRetention.DAY -> "超过 1 天的记录会在下次启动时清掉"
+                    LogRetention.WEEK -> "超过 7 天的记录会在下次启动时清掉"
+                    LogRetention.MONTH -> "超过 30 天的记录会在下次启动时清掉"
+                },
                 options = LogRetention.entries,
                 selected = retention,
                 label = { it.label },

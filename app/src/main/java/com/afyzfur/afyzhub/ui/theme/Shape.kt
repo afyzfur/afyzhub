@@ -41,6 +41,15 @@ object AppShapeTokens {
      */
     val InputContainer = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
+    /**
+     * 悬浮式输入区外层容器。
+     *
+     * 四角全圆：这个样式四周都留边、不贴屏幕底边，下方圆角露出的是
+     * 刻意留出的间隙而非缺口。半径比通栏样式略小——悬浮的块本身更窄，
+     * 28dp 在窄块上会显得过分圆。
+     */
+    val FloatingInputContainer = RoundedCornerShape(24.dp)
+
     /** 助手消息块。全宽，四角统一 */
     val AssistantMessage = RoundedCornerShape(20.dp)
 
@@ -73,12 +82,12 @@ object AppShapeTokens {
     /**
      * 设置项右侧的下拉按钮。
      *
-     * 用固定的大圆角而非 Pill 的 percent = 50。两者在按钮较矮时
-     * 效果接近，但 percent 是按短边算的——按钮高 36dp 时半径只有
-     * 18dp，看着是"带弧度的方块"而不是圆滑的胶囊。固定 24dp 配
-     * 更高的按钮，弧度才足够。
+     * 用 Pill 的 percent = 50 而非固定半径。此前担心 percent 按短边算
+     * 会让矮按钮半径不足，于是固定 24dp——但固定值在按钮实际高度超过
+     * 48dp 时反而不够圆，两端仍是直边。percent = 50 保证两端始终是
+     * 完整的半圆，无论按钮多高。
      */
-    val DropdownButton = RoundedCornerShape(24.dp)
+    val DropdownButton = RoundedCornerShape(percent = 50)
 
     /** 抽屉。左侧贴边，右侧收圆角，宽度不占满屏 */
     val Drawer = RoundedCornerShape(

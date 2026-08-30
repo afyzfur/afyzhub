@@ -434,7 +434,7 @@ private fun ChatContent(
                 ChatInputBar(
                     transparent = appearance.transparentInputBar,
                     seeThrough = appearance.inputBarSeeThrough,
-                    blur = appearance.inputBarBlur,
+                    floating = appearance.inputBarFloating,
                     value = inputText,
                     onValueChange = onInputChange,
                     onSend = onSend,
