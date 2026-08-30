@@ -1,6 +1,10 @@
 package com.afyzfur.afyzhub.ui.settings
 
 import android.graphics.BitmapFactory
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -199,25 +203,29 @@ private fun EdgeSlider(
 @Composable
 private fun CropTrack(fraction: Float, fillFromEnd: Boolean) {
     val f = fraction.coerceIn(0f, 1f)
-    Box(
+    val base = MaterialTheme.colorScheme.surfaceContainerHighest
+    val fill = MaterialTheme.colorScheme.primary
+    // 同样用 Canvas 而非 fillMaxWidth(fraction)：后者是布局参数，
+    // 拖动时每帧都要重新测量这一层
+    Canvas(
         modifier = Modifier
             .fillMaxWidth()
             .height(TRACK_HEIGHT)
-            .clip(AppShapeTokens.Pill)
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
     ) {
-        // 填充段：从某一端延伸到 thumb 的位置。
+        val radius = size.height / 2f
+        val corner = CornerRadius(radius, radius)
+        drawRoundRect(color = base, cornerRadius = corner)
+
         // 右/下边界时 thumb 在 f 处，要裁掉的是它右边那段，
-        // 因此填充宽度为 1 - f 并靠右对齐
-        val fillFraction = if (fillFromEnd) 1f - f else f
-        if (fillFraction > 0f) {
-            Box(
-                modifier = Modifier
-                    .align(if (fillFromEnd) Alignment.CenterEnd else Alignment.CenterStart)
-                    .fillMaxWidth(fillFraction)
-                    .height(TRACK_HEIGHT)
-                    .clip(AppShapeTokens.Pill)
-                    .background(MaterialTheme.colorScheme.primary)
+        // 因此填充从 f 延伸到右端
+        val fillWidth = if (fillFromEnd) size.width * (1f - f) else size.width * f
+        if (fillWidth > 0f) {
+            val startX = if (fillFromEnd) size.width - fillWidth else 0f
+            drawRoundRect(
+                color = fill,
+                topLeft = Offset(startX, 0f),
+                size = Size(fillWidth, size.height),
+                cornerRadius = corner
             )
         }
     }
@@ -226,46 +234,32 @@ private fun CropTrack(fraction: Float, fillFromEnd: Boolean) {
 /**
  * 裁剪范围之外的遮罩。
  *
- * 用嵌套的 Column/Row 加权重拼出"中间挖空"。权重不能为 0——
- * 边界贴到极限时差值会是 0，Compose 的 weight 要求正数，
- * 因此统一夹到一个极小值。
+ * 用 Canvas 一次画四个矩形，而不是嵌套 Column/Row 加 weight。
+ *
+ * weight 是布局参数：拖动滑块时每一帧都要重跑整棵子树的测量与布局，
+ * 而嵌套两层各三个子项意味着每帧多轮测量——这是拖动不跟手的主因，
+ * 之前几次都在调 Slider 的参数，方向错了。
+ *
+ * 改用 Canvas 后只走绘制阶段，测量与布局完全跳过；矩形坐标由比例
+ * 直接算出，也不再需要 weight 不能为 0 的那些兜底。
  */
 @Composable
 private fun CropOverlay(left: Float, top: Float, right: Float, bottom: Float) {
     val shade = Color.Black.copy(alpha = 0.55f)
-    val eps = 0.0001f
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        val l = (left.coerceIn(0f, 1f) * w)
+        val r = (right.coerceIn(0f, 1f) * w)
+        val t = (top.coerceIn(0f, 1f) * h)
+        val b = (bottom.coerceIn(0f, 1f) * h)
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(top.coerceAtLeast(eps))
-                .background(shade)
-        )
-        Row(modifier = Modifier.weight((bottom - top).coerceAtLeast(eps))) {
-            // 这一层只按 weight 分配宽度，高度取满。用 fillMaxSize 会
-            // 同时要求占满父级宽度，与 weight 的按比例分宽相冲突
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .weight(left.coerceAtLeast(eps))
-                    .background(shade)
-            )
-            // 保留区：不铺遮罩，让图片原样透出
-            Spacer(modifier = Modifier.weight((right - left).coerceAtLeast(eps)))
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .weight((1f - right).coerceAtLeast(eps))
-                    .background(shade)
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight((1f - bottom).coerceAtLeast(eps))
-                .background(shade)
-        )
+        // 上下两条通宽，左右两条只占保留区的高度——这样四块拼起来
+        // 正好是"中间挖空"，且不会在角上重叠出更深的颜色
+        drawRect(color = shade, topLeft = Offset(0f, 0f), size = Size(w, t))
+        drawRect(color = shade, topLeft = Offset(0f, b), size = Size(w, h - b))
+        drawRect(color = shade, topLeft = Offset(0f, t), size = Size(l, b - t))
+        drawRect(color = shade, topLeft = Offset(r, t), size = Size(w - r, b - t))
     }
 }
 
