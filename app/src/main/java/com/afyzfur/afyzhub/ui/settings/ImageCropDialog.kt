@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,9 +43,6 @@ import com.afyzfur.afyzhub.ui.components.LocalImage
  * 手势区比图片本身大一圈（[TOUCH_MARGIN]）。裁剪框贴到图片边缘时，
  * 把手的一半落在图片之外，只在图片范围内接手势的话那一半点不到，
  * 边界处就特别难拖。外扩之后边缘与中间一样好抓。
- *
- * 整块区域还声明了不参与系统手势：图片左右两侧紧邻屏幕边缘，那里是
- * 系统返回手势的判定区，第一次滑动会被系统拿走。
  */
 @Composable
 fun ImageCropDialog(
@@ -90,7 +86,6 @@ fun ImageCropDialog(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .height(PREVIEW_HEIGHT + TOUCH_MARGIN * 2)
-                        .systemGestureExclusion()
                         .pointerInput(Unit) {
                             detectDragGestures(
                                 onDragStart = { pos ->

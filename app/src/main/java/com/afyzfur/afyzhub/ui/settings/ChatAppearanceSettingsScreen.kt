@@ -5,7 +5,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.afyzfur.afyzhub.data.image.ImageStore
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -501,6 +501,23 @@ private fun PercentSlider(
     hint: String,
     onChange: (Float) -> Unit
 ) {
+    // 拖动期间 thumb 的位置由本地状态驱动。
+    //
+    // 此前 onValueChange 直接连到 ViewModel 的 setter，而那条链是
+    // 协程 -> dataStore.edit 写磁盘 -> Flow 发新值 -> 整页重组，滑块的
+    // value 又取自这个回来的值。一次拖动上百帧就是上百次磁盘写入，
+    // thumb 得等写盘完成才跟上，于是不跟手、要划好几次；0% 时更明显，
+    // 因为相邻几帧的值相同、DataStore 去重不发新值，thumb 干脆不动。
+    var local by remember { mutableFloatStateOf(value) }
+    var dragging by remember { mutableStateOf(false) }
+
+    // 取值规则抽成纯函数，见 SliderValueSource.kt——两个方向都容易
+    // 搞反且表现隐蔽，那里有测试钉住
+    if (shouldAdoptExternal(external = value, local = local, dragging = dragging)) {
+        local = value
+    }
+    val shown = sliderDisplayValue(external = value, local = local, dragging = dragging)
+
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -510,18 +527,23 @@ private fun PercentSlider(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "${(value * 100).roundToInt()}%",
+                text = "${(shown * 100).roundToInt()}%",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        // 声明这条滑轨不参与系统手势：滑块在 0% 时 thumb 贴着屏幕左缘，
-        // 那里是系统返回手势的判定区，第一次滑动会被系统拿去做返回，
-        // 用起来就是"0% 特别难拖、要划好几次"
         Slider(
-            value = value,
-            onValueChange = onChange,
-            modifier = Modifier.systemGestureExclusion()
+            value = shown,
+            onValueChange = {
+                // 拖动期间只更新本地状态：thumb 立刻跟手，不等磁盘
+                dragging = true
+                local = it
+            },
+            onValueChangeFinished = {
+                // 抬手才落盘。一次拖动只写一次，而不是上百次
+                dragging = false
+                onChange(local)
+            }
         )
         Text(
             text = hint,
