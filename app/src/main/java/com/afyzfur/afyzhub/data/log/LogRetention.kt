@@ -5,12 +5,12 @@ import java.util.concurrent.TimeUnit
 /**
  * 请求日志的保留时长。
  *
- * 此前的行为是成功记录只进内存、失败记录落盘且不过期。前者让"刚才
- * 那条为什么慢"在重启后无从查证，后者让文件无限增长——两个方向都
- * 不理想。现在统一落盘，由这个策略决定何时清掉。
+ * 默认永久保留，只在用户手动删除时才清掉。自动过期的问题是它会在
+ * 用户不知情时移除记录——而日志的用途恰恰是"隔了一阵回头查"，等到
+ * 想查时发现被清了，这个功能就等于没有。存储增长由条数上限兜住，
+ * 不需要再用时间兜一层。
  *
- * [FOREVER] 放在最后：它是唯一会让存储无限增长的选项，不该是默认，
- * 但确实有人想留着全部记录。
+ * 按时长过期仍作为可选项保留：确实有人不想让日志一直堆着。
  */
 enum class LogRetention(
     val id: String,
@@ -18,19 +18,20 @@ enum class LogRetention(
     /** 保留的毫秒数，null 表示永久 */
     val durationMs: Long?
 ) {
-    DAY("1d", "1 天", TimeUnit.DAYS.toMillis(1)),
-    WEEK("7d", "7 天", TimeUnit.DAYS.toMillis(7)),
-    MONTH("30d", "30 天", TimeUnit.DAYS.toMillis(30)),
-    FOREVER("forever", "永久保留", null);
+    FOREVER("forever", "一直保留", null),
+    DAY("1d", "保留 1 天", TimeUnit.DAYS.toMillis(1)),
+    WEEK("7d", "保留 7 天", TimeUnit.DAYS.toMillis(7)),
+    MONTH("30d", "保留 30 天", TimeUnit.DAYS.toMillis(30));
 
     companion object {
         /**
-         * 默认 7 天。
+         * 默认一直保留。
          *
-         * 1 天太短——隔一晚再想查昨天那次失败就没了；30 天则让文件
-         * 长到几 MB。一周覆盖了"这两天出的问题"这个最常见的场景。
+         * 排在第一位而非最后：它是默认项，也是多数情况下想要的行为。
+         * 自动过期会在用户不知情时删掉记录，而日志的价值就在于事后
+         * 还能查到。
          */
-        val DEFAULT = WEEK
+        val DEFAULT = FOREVER
 
         fun fromId(id: String?): LogRetention =
             entries.firstOrNull { it.id == id } ?: DEFAULT

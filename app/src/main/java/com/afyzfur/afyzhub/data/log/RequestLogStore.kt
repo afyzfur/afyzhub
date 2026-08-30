@@ -27,6 +27,18 @@ class RequestLogStore(
     private val persistDir: File? = null
 ) {
 
+    /**
+     * 是否记录。关闭时 [record] 直接返回，连内存也不写。
+     *
+     * 由外部在设置变化时推入，而不是让 store 自己读设置：store 在
+     * 数据层、不该依赖设置仓库，否则两者互相引用。
+     *
+     * 用 @Volatile 而非放进 mutex：record 的第一件事就是读它，
+     * 为一个布尔值去抢锁不值得，而读到稍旧的值最多多记一条。
+     */
+    @Volatile
+    var enabled: Boolean = true
+
     private val _entries = MutableStateFlow<List<RequestLogEntry>>(emptyList())
 
     /** 最新的在前，便于界面直接展示。 */
@@ -41,6 +53,9 @@ class RequestLogStore(
     fun newId(): Long = nextId.getAndIncrement()
 
     suspend fun record(entry: RequestLogEntry) {
+        // 关闭时彻底不记：只是不落盘的话，"已关闭"却还能在列表里看到
+        // 本次运行的记录，与开关的字面意思不符
+        if (!enabled) return
         mutex.withLock {
             val updated = ArrayList<RequestLogEntry>(_entries.value.size + 1)
             updated.add(entry)

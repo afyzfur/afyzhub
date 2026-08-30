@@ -43,9 +43,15 @@ class AfyzHubApplication : Application(), ImageLoaderFactory {
         // 过期与否只在打开列表时才有意义，而启动必然早于查看。
         val logStore = koin.get<RequestLogStore>()
         val settings = koin.get<SettingsRepository>()
-        CoroutineScope(Dispatchers.IO).launch {
+        val scope = CoroutineScope(Dispatchers.IO)
+        scope.launch {
             logStore.restore()
             logStore.purgeExpired(settings.logRetention.first())
+        }
+        // 记录开关持续跟随设置。用 collect 而非启动时读一次：
+        // 用户在设置页关掉后应当立刻停止记录，不必重启应用
+        scope.launch {
+            settings.logEnabled.collect { logStore.enabled = it }
         }
     }
 

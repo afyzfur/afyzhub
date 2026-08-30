@@ -98,6 +98,7 @@ class SettingsRepository(
     private val backgroundBlurKey = floatPreferencesKey(Constants.KEY_BACKGROUND_BLUR)
     private val avatarBlurKey = floatPreferencesKey(Constants.KEY_AVATAR_BLUR)
     private val logRetentionKey = stringPreferencesKey(Constants.KEY_LOG_RETENTION)
+    private val logEnabledKey = booleanPreferencesKey(Constants.KEY_LOG_ENABLED)
 
     private fun apiKeyKey(p: AiProvider) =
         stringPreferencesKey("${Constants.KEY_PREFIX_API_KEY}_${p.id}")
@@ -301,6 +302,20 @@ class SettingsRepository(
 
     suspend fun setLogRetention(retention: LogRetention) {
         dataStore.edit { it[logRetentionKey] = retention.id }
+    }
+
+    /**
+     * 是否记录请求日志，默认开启。
+     *
+     * 关闭后连内存也不记，而不只是不落盘：否则"已关闭"却还能在列表里
+     * 看到本次运行的记录，与开关的字面意思不符。
+     */
+    val logEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[logEnabledKey] ?: true
+    }
+
+    suspend fun setLogEnabled(enabled: Boolean) {
+        dataStore.edit { it[logEnabledKey] = enabled }
     }
 
     /**

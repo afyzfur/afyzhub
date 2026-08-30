@@ -53,8 +53,19 @@ class LogRetentionTest {
     // ---- 保留策略 ----
 
     @Test
-    fun `默认保留七天`() {
-        assertEquals(LogRetention.WEEK, LogRetention.DEFAULT)
+    fun `默认一直保留`() {
+        // 自动过期会在用户不知情时删掉记录，而日志的价值就在于事后
+        // 还能查到。清理改为只由手动删除触发
+        assertEquals(LogRetention.FOREVER, LogRetention.DEFAULT)
+        assertEquals(null, LogRetention.DEFAULT.durationMs)
+    }
+
+    @Test
+    fun `默认策略下任何记录都不过期`() {
+        // 与「默认一直保留」配套：光是默认值对了不够，还要确认它
+        // 真的不会清掉任何东西
+        val entries = listOf(entry(1, ageDays = 0), entry(2, ageDays = 9999))
+        assertTrue(expiredLogs(entries, LogRetention.DEFAULT, now).isEmpty())
     }
 
     @Test

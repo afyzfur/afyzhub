@@ -169,6 +169,46 @@ class RequestLogPersistenceTest {
     }
 
     @Test
+    fun `关闭记录后连内存也不记`() = runTest {
+        // 只是不落盘的话，"已关闭"却还能在列表里看到本次运行的记录，
+        // 与开关的字面意思不符
+        val dir = tempFolder.newFolder()
+        val store = RequestLogStore(persistDir = dir)
+        store.enabled = false
+        store.record(entry(1, error = "boom", statusCode = 500))
+
+        assertTrue("关闭后内存里不该有记录", store.entries.value.isEmpty())
+
+        val second = RequestLogStore(persistDir = dir)
+        second.restore()
+        assertTrue("关闭后也不该落盘", second.entries.value.isEmpty())
+    }
+
+    @Test
+    fun `重新开启后恢复记录`() = runTest {
+        // 开关要能来回切，而不是关一次就永久失效
+        val store = RequestLogStore(persistDir = tempFolder.newFolder())
+        store.enabled = false
+        store.record(entry(1, error = "dropped", statusCode = 500))
+        store.enabled = true
+        store.record(entry(2, error = "kept", statusCode = 500))
+
+        assertEquals(1, store.entries.value.size)
+        assertEquals("kept", store.entries.value.first().error)
+    }
+
+    @Test
+    fun `关闭不影响已有记录`() = runTest {
+        // 关闭的语义是"不再记新的"，而非"清掉旧的"——后者应当只由
+        // 手动删除触发
+        val store = RequestLogStore(persistDir = tempFolder.newFolder())
+        store.record(entry(1, error = "existing", statusCode = 500))
+        store.enabled = false
+
+        assertEquals(1, store.entries.value.size)
+    }
+
+    @Test
     fun `未配置目录时退化为纯内存`() = runTest {
         val store = RequestLogStore(persistDir = null)
         store.record(entry(1, error = "boom", statusCode = 500))

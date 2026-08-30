@@ -55,6 +55,9 @@ object Constants {
     /** 请求日志的保留时长，存 LogRetention.id */
     const val KEY_LOG_RETENTION = "log_retention"
 
+    /** 是否记录请求日志，默认开启 */
+    const val KEY_LOG_ENABLED = "log_enabled"
+
     /**
      * 以下三项按提供商分别存储，键名格式为 `前缀_提供商id`。
      * 切换提供商时不会互相覆盖凭证与地址。
