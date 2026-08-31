@@ -372,6 +372,8 @@ private fun ChatContent(
             // 输入栏的高度随内容变化（多行输入、状态行），所以量出来
             // 再折算成列表的底部留白，而不是写死一个值
             var inputBarHeight by remember { mutableStateOf(0.dp) }
+            // 输入栏本体的高度，由 ChatInputBar 自己报上来
+            var inputBarBodyHeight by remember { mutableStateOf(0.dp) }
             val density = LocalDensity.current
 
             // 增强透视决定列表是否钻到输入栏后面。
@@ -380,7 +382,11 @@ private fun ChatContent(
             // 透出背景图与压着的消息。所以关闭时让列表止于输入栏上沿，
             // 后面只剩背景图可透
             val deep = appearance.inputBarDeepSeeThrough
-            val listBottomInset = if (deep) inputBarHeight else 0.dp
+
+            // 让位只按输入栏本体算，悬浮式的外留白与导航栏内边距都不算：
+            // 列表铺到它们后面，消息才能从底部那条缝透出来。渐隐也随之
+            // 落在本体上沿，而不是留白上沿（此前渐隐偏上就是多算了这段）
+            val listBottomInset = if (deep) inputBarHeight else inputBarBodyHeight
 
             Box(
                 modifier = Modifier
@@ -390,9 +396,9 @@ private fun ChatContent(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        // 非增强档给底部留出输入栏的高度，列表的可视区
-                        // 就停在输入栏上沿，不会钻到后面
-                        .padding(bottom = if (deep) 0.dp else inputBarHeight)
+                        // 非增强档只让出输入栏本体的高度。悬浮式的外留白
+                        // 不让，列表铺到它后面，底部那条缝就能透出消息
+                        .padding(bottom = if (deep) 0.dp else inputBarBodyHeight)
                 ) {
                 if (messages.isEmpty() && !isLoading) {
                     EmptyChatContent(
@@ -526,6 +532,7 @@ private fun ChatContent(
                         seeThrough = appearance.inputBarSeeThrough,
                         floating = appearance.inputBarFloating,
                         deepSeeThrough = appearance.inputBarDeepSeeThrough,
+                        onBodyHeightChange = { inputBarBodyHeight = it },
                         value = inputText,
                         onValueChange = onInputChange,
                         onSend = onSend,

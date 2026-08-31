@@ -35,6 +35,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
@@ -87,8 +90,17 @@ fun ChatInputBar(
      * 开启时整层一起半透，能看见背后压着的消息。
      */
     deepSeeThrough: Boolean = false,
+    /**
+     * 报告输入栏本体的高度（不含悬浮式的外留白）。
+     *
+     * 由本组件报告而非在调用侧反推：调用侧只能量到"错误条 + 撤回条 +
+     * 输入栏"的总高，而且悬浮式的外留白与导航栏内边距都混在里面，
+     * 减不干净。列表要让位的恰恰只有本体这一段
+     */
+    onBodyHeightChange: (Dp) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
     val canSend = value.isNotBlank() && !isLoading
 
     // 强度是"透多少"，alpha 取其反。不设下界：用户把强度拉满时
@@ -149,6 +161,11 @@ fun ChatInputBar(
             //  - 在 graphicsLayer 之内：底色要跟着整层一起半透，否则增强档
             //    下只有文字在透、底色仍是实的
             .background(surfaceColor, containerShape)
+            // 量在 background 这一层：链上排在 padding 之后，
+            // 量到的就是刨去外留白的本体尺寸
+            .onSizeChanged { size ->
+                onBodyHeightChange(with(density) { size.height.toDp() })
+            }
     ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
         // 而内容不被系统手势区域压住
