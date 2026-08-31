@@ -369,22 +369,36 @@ private fun ChatContent(
             var inputBarHeight by remember { mutableStateOf(0.dp) }
             val density = LocalDensity.current
 
+            // 增强透视决定列表是否钻到输入栏后面。
+            //
+            // 只调 alpha 分不出两档：列表一旦铺满，半透的底色必然同时
+            // 透出背景图与压着的消息。所以关闭时让列表止于输入栏上沿，
+            // 后面只剩背景图可透
+            val deep = appearance.inputBarDeepSeeThrough
+            val listBottomInset = if (deep) inputBarHeight else 0.dp
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // 非增强档给底部留出输入栏的高度，列表的可视区
+                        // 就停在输入栏上沿，不会钻到后面
+                        .padding(bottom = if (deep) 0.dp else inputBarHeight)
+                ) {
                 if (messages.isEmpty() && !isLoading) {
                     EmptyChatContent(
                         prompts = quickPrompts,
                         shufflePrompts = shufflePrompts,
                         onPromptClick = onPromptClick,
-                        // 同样要避开叠在上面的输入栏，否则最下面那条
-                        // 快捷提示会被压住
+                        // 同上：非增强档由外层 Column 让位，这里只需
+                        // 处理增强档
                         modifier = Modifier
                             .weight(1f)
-                            .padding(bottom = inputBarHeight)
+                            .padding(bottom = listBottomInset)
                     )
                 } else {
                     LazyColumn(
@@ -398,7 +412,9 @@ private fun ChatContent(
                             start = 16.dp,
                             end = 16.dp,
                             top = 12.dp,
-                            bottom = 12.dp + inputBarHeight
+                            // 只在增强档补留白。非增强档时外层 Column 已经
+                            // 让出了输入栏的位置，这里再加会多出一段空白
+                            bottom = 12.dp + listBottomInset
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)
