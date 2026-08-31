@@ -19,6 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -428,17 +430,35 @@ private fun ChatContent(
                             }
                             .drawWithContent {
                                 drawContent()
-                                drawRect(
-                                    brush = Brush.verticalGradient(
-                                        // 只在最下面这一小段渐隐，再长会让
-                                        // 正常阅读的内容也发虚
-                                        0f to Color.Black,
-                                        1f to Color.Transparent,
-                                        startY = size.height - LIST_FADE_PX,
-                                        endY = size.height
-                                    ),
-                                    blendMode = BlendMode.DstIn
-                                )
+
+                                // 渐隐的下边界取"输入栏本体上沿"。增强档下
+                                // 列表铺满到屏幕底，size.height 比本体上沿低
+                                // 一整个输入栏，直接用它会把渐隐藏到输入栏
+                                // 后面去
+                                val fadeBottom = size.height -
+                                    if (deep) inputBarBodyHeight.toPx() else 0f
+                                val fadeTop = (fadeBottom - LIST_FADE_PX)
+                                    .coerceAtLeast(0f)
+
+                                if (fadeBottom > fadeTop) {
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            // 只柔化这一小段，再长会让正常
+                                            // 阅读的内容也发虚
+                                            0f to Color.Black,
+                                            1f to Color.Transparent,
+                                            startY = fadeTop,
+                                            endY = fadeBottom
+                                        ),
+                                        // 必须限定范围。不带 topLeft/size 时
+                                        // drawRect 铺满画布，渐变区以下取端点色
+                                        // Transparent，会把输入栏后面透出的
+                                        // 消息整段擦掉
+                                        topLeft = Offset(0f, fadeTop),
+                                        size = Size(size.width, fadeBottom - fadeTop),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
                             },
                         state = listState,
                         // 底部留出输入栏的高度：列表能滚到输入栏后面
