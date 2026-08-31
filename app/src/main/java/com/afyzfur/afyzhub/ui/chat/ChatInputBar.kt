@@ -103,18 +103,22 @@ fun ChatInputBar(
     }
     val layerAlpha = if (deepSeeThrough) alpha else 1f
 
-    Surface(
-        color = surfaceColor,
-        shape = if (floating) {
-            AppShapeTokens.FloatingInputContainer
-        } else {
-            AppShapeTokens.InputContainer
-        },
-        // 两个 elevation 都归零。Material3 的 Surface 默认会按抬升度
-        // 叠一层色调，在半透明底色上那层色调不跟着透，边缘就显出一条
-        // 比里面更实的描边——看着像刻意加的边框，其实是它渲染出来的
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
+    val containerShape = if (floating) {
+        AppShapeTokens.FloatingInputContainer
+    } else {
+        AppShapeTokens.InputContainer
+    }
+
+    // 不用 Surface，改为 Box + background。
+    //
+    // 上一版把 tonalElevation 与 shadowElevation 都归零了，那圈线仍在，
+    // 说明它不是抬升色调那一层。Surface 除色调外还管 contentColor、
+    // 点击拦截、边界裁剪，具体哪一步在边缘多画了一层我看不到。
+    //
+    // 而输入栏用不上 Surface 的任何附加行为——它只需要一块带圆角的
+    // 底色。background(color, shape) 就是单纯填一次色，绘制里没有
+    // 任何自动叠加的层，也就没有可能出现描边。
+    Box(
         modifier = modifier
             .fillMaxWidth()
             // 增强档下整块（含文字与图标）一起半透。graphicsLayer 把子树
@@ -127,7 +131,7 @@ fun ChatInputBar(
             // 而且叠加处的透明度会累积，看起来深浅不一
             .graphicsLayer { this.alpha = layerAlpha }
             // 悬浮式的外边距加在容器之外，让背景从四周透出来。
-            // 导航栏留白也移到这里：通栏式要让容器背景延伸到屏幕底边，
+            // 导航栏留白也在这里：通栏式要让容器背景延伸到屏幕底边，
             // 所以留白在容器内部；悬浮式则整块都要抬离底边
             .then(
                 if (floating) {
@@ -138,6 +142,13 @@ fun ChatInputBar(
                     Modifier
                 }
             )
+            // 底色排在 padding 之后、graphicsLayer 之内，两个位置都有讲究：
+            //  - 在 padding 之后：modifier 链从外往内套，排在 padding 前面
+            //    会把外边距一起填上色，悬浮式那 12dp 留白就没了。原来用
+            //    Surface 时不受影响，因为它在内部画底色、不看链的位置
+            //  - 在 graphicsLayer 之内：底色要跟着整层一起半透，否则增强档
+            //    下只有文字在透、底色仍是实的
+            .background(surfaceColor, containerShape)
     ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
         // 而内容不被系统手势区域压住
