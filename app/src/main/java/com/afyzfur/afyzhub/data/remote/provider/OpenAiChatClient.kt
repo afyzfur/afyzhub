@@ -31,7 +31,7 @@ class OpenAiChatClient(
             headers = authHeaders(settings),
             body = body,
             logContext = RequestLogContext(
-                provider = settings.provider.id,
+                provider = settings.profileLabel,
                 model = settings.model
             )
         )
@@ -58,7 +58,7 @@ class OpenAiChatClient(
             headers = authHeaders(settings),
             body = body,
             logContext = RequestLogContext(
-                provider = settings.provider.id,
+                provider = settings.profileLabel,
                 model = settings.model
             )
         ).collect { payload ->
@@ -102,7 +102,7 @@ class OpenAiChatClient(
             path = MODELS_PATH,
             headers = authHeaders(settings),
             logContext = RequestLogContext(
-                provider = settings.provider.id,
+                provider = settings.profileLabel,
                 model = settings.model
             )
         )

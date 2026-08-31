@@ -33,7 +33,7 @@ class GeminiChatClient(
             headers = authHeaders(settings),
             body = body,
             logContext = RequestLogContext(
-                provider = settings.provider.id,
+                provider = settings.profileLabel,
                 model = settings.model
             )
         )
@@ -60,7 +60,7 @@ class GeminiChatClient(
             body = body,
             query = mapOf("alt" to "sse"),
             logContext = RequestLogContext(
-                provider = settings.provider.id,
+                provider = settings.profileLabel,
                 model = settings.model
             )
         ).collect { payload ->
@@ -88,7 +88,7 @@ class GeminiChatClient(
             path = MODELS_PREFIX,
             headers = authHeaders(settings),
             logContext = RequestLogContext(
-                provider = settings.provider.id,
+                provider = settings.profileLabel,
                 model = settings.model
             )
         )

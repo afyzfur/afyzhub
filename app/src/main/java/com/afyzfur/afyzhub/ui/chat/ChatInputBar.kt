@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
@@ -79,6 +80,13 @@ fun ChatInputBar(
      * 上方两角。悬浮式露出的背景更多，透视的效果也更明显。
      */
     floating: Boolean = false,
+    /**
+     * 是否增强透视。
+     *
+     * 关闭时只让底色半透，文字与图标保持不透明，透上来的是背景图；
+     * 开启时整层一起半透，能看见背后压着的消息。
+     */
+    deepSeeThrough: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val canSend = value.isNotBlank() && !isLoading
@@ -87,11 +95,16 @@ fun ChatInputBar(
     // 就该是全透
     val alpha = if (transparent) (1f - seeThrough).coerceIn(0f, 1f) else 1f
 
+    // 两档透视作用在不同层次上：
+    //  - 普通档把 alpha 给底色，文字与图标不受影响，始终清晰
+    //  - 增强档把 alpha 给整层，文字随之半透，背后的消息才看得见
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.let {
+        if (deepSeeThrough) it else it.copy(alpha = alpha)
+    }
+    val layerAlpha = if (deepSeeThrough) alpha else 1f
+
     Surface(
-        // 底色用不透明。整块的透明度交给下面的 graphicsLayer：
-        // 只把底色调透的话，文字与图标仍然完全不透明，透上来的
-        // 就只有空白区域，看不到背后压着的字
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = surfaceColor,
         shape = if (floating) {
             AppShapeTokens.FloatingInputContainer
         } else {
@@ -104,13 +117,15 @@ fun ChatInputBar(
         shadowElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
-            // 整块（含文字与图标）一起半透。graphicsLayer 把子树先画到
-            // 一个离屏层再按 alpha 合成，所以文字也会透——这正是想要的
-            // 效果：能看见背后压着的内容。
+            // 增强档下整块（含文字与图标）一起半透。graphicsLayer 把子树
+            // 先画到一个离屏层再按 alpha 合成，所以文字也会透。
+            //
+            // 恒定套一层而非按开关加减 modifier：链的结构一变就要重建
+            // 绘制节点，切换时会闪。alpha 为 1 时没有视觉效果。
             //
             // 若改为逐个给文字设颜色 alpha，每处都要改且容易漏，
             // 而且叠加处的透明度会累积，看起来深浅不一
-            .graphicsLayer { this.alpha = alpha }
+            .graphicsLayer { this.alpha = layerAlpha }
             // 悬浮式的外边距加在容器之外，让背景从四周透出来。
             // 导航栏留白也移到这里：通栏式要让容器背景延伸到屏幕底边，
             // 所以留白在容器内部；悬浮式则整块都要抬离底边
@@ -250,14 +265,34 @@ private fun ThinkingEffortButton(
     onClick: () -> Unit
 ) {
     val active = effort.enabled
+
+    // 底色随档位加深，而不是"开就一个色"。三档用同一颜色时，看一眼
+    // 只知道开着、不知道开到哪一档，得点开面板才能确认。
+    //
+    // 用 secondaryContainer 与 secondary 之间的插值而非三个写死的颜色：
+    // 主题配色可切换（六套色板加动态取色），写死的值在别的色板下会
+    // 与整体脱节
+    val depth = when (effort) {
+        ThinkingEffort.LOW -> 0f
+        ThinkingEffort.MEDIUM -> 0.4f
+        ThinkingEffort.HIGH -> 0.75f
+        else -> 0f
+    }
+    val activeColor = lerp(
+        MaterialTheme.colorScheme.secondaryContainer,
+        MaterialTheme.colorScheme.secondary,
+        depth
+    )
+    val activeContentColor = lerp(
+        MaterialTheme.colorScheme.onSecondaryContainer,
+        MaterialTheme.colorScheme.onSecondary,
+        depth
+    )
+
     Surface(
-        color = if (active) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            Color.Transparent
-        },
+        color = if (active) activeColor else Color.Transparent,
         contentColor = if (active) {
-            MaterialTheme.colorScheme.onSecondaryContainer
+            activeContentColor
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },

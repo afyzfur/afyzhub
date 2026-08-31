@@ -248,6 +248,17 @@ data class ChatAppearance(
      */
     val inputBarFloating: Boolean = false,
     /**
+     * 是否增强透视。
+     *
+     * 关闭时只有底色半透，输入的文字与图标保持不透明——透上来的是背景图，
+     * 文字始终清晰。开启时整块（含文字）一起半透，能看见背后压着的消息，
+     * 代价是输入的内容也变淡。
+     *
+     * 分成两档而非只给一个强度：两者的取舍点不同，前者要的是"背景好看
+     * 且不影响打字"，后者要的是"界面通透"，用同一个滑块表达不了。
+     */
+    val inputBarDeepSeeThrough: Boolean = false,
+    /**
      * 背景图的处理方式：遮罩、模糊或两者。
      */
     val backgroundEffect: ChatBackgroundEffect = ChatBackgroundEffect.DEFAULT,

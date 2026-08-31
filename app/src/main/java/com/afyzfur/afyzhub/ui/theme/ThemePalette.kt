@@ -26,7 +26,7 @@ enum class ThemePalette(
     /** 该配色在设置页的代表色，用于色块预览 */
     val swatch: Color
 ) {
-    ORANGE("orange", "品牌橙", 0f, Color(0xFFFCA43C)),
+    ORANGE("orange", "暖橙", 0f, Color(0xFFFCA43C)),
     BLUE("blue", "静蓝", 185f, Color(0xFF3C9CFC)),
     GREEN("green", "松绿", 105f, Color(0xFF4CAF50)),
     PURPLE("purple", "藤紫", 240f, Color(0xFF9C7CF4)),
@@ -42,7 +42,14 @@ enum class ThemePalette(
     open fun dark(): ColorScheme = DarkColors.shiftHue(hueShift)
 
     companion object {
-        val DEFAULT = ORANGE
+        /**
+         * 默认石墨。
+         *
+         * 橙色作为品牌色出现在图标上就够了，铺满整个界面则过于抢眼——
+         * 聊天内容本身才是要看的东西。石墨去饱和后不与任何内容争夺注意力，
+         * 想要彩色的仍可自行切换。
+         */
+        val DEFAULT = GRAPHITE
 
         fun fromId(id: String?): ThemePalette =
             entries.firstOrNull { it.id == id } ?: DEFAULT

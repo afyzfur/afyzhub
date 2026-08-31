@@ -2,6 +2,7 @@ package com.afyzfur.afyzhub.ui.settings
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -111,44 +112,51 @@ private fun <T> DropdownFilterChip(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    FilterChip(
-        selected = selected,
-        onClick = { expanded = true },
-        label = {
-            Text(
-                text = label,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    )
-
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-        // 不裁剪到屏幕边缘之外，长模型名的菜单才不会被切掉
-        properties = PopupProperties(focusable = true)
-    ) {
-        DropdownMenuItem(
-            text = { Text("全部") },
-            onClick = {
-                expanded = false
-                onSelect(null)
+    // chip 与菜单必须包在同一个 Box 里。
+    //
+    // 此前两者是筛选栏那个 Row 的兄弟节点，而 DropdownMenu 的定位锚点是
+    // 它在父布局中的位置——于是无论点哪个 chip，菜单都从 Row 的最左侧
+    // 弹出。包一层 Box 后锚点变成这个 chip 自己
+    Box {
+        FilterChip(
+            selected = selected,
+            onClick = { expanded = true },
+            label = {
+                Text(
+                    text = label,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         )
-        options.forEach { (value, text) ->
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            // 不裁剪到屏幕边缘之外，长模型名的菜单才不会被切掉
+            properties = PopupProperties(focusable = true)
+        ) {
             DropdownMenuItem(
-                text = {
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
+                text = { Text("全部") },
                 onClick = {
                     expanded = false
-                    onSelect(value)
+                    onSelect(null)
                 }
             )
+            options.forEach { (value, text) ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelect(value)
+                    }
+                )
+            }
         }
     }
 }

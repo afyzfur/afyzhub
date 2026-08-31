@@ -173,7 +173,7 @@ fun AppearanceSettingsScreen(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = if (paletteEnabled) {
-                        "配色由品牌橙色板旋转色相派生，各套的明暗层次一致。"
+                        "各套配色由同一色板旋转色相派生，明暗层次一致。"
                     } else {
                         "动态取色已开启，配色来自系统壁纸。关闭后可选择预设配色。"
                     },

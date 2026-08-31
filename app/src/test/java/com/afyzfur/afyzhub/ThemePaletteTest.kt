@@ -126,6 +126,8 @@ class ThemePaletteTest {
         }
         // 未知 id 回落默认值而非抛异常，避免旧配置导致崩溃
         assertEquals(ThemePalette.DEFAULT, ThemePalette.fromId("nonexistent"))
+        // 默认是石墨而非橙：橙色作为品牌色留在图标上，铺满界面过于抢眼
+        assertEquals(ThemePalette.GRAPHITE, ThemePalette.DEFAULT)
         assertEquals(ThemePalette.DEFAULT, ThemePalette.fromId(null))
     }
 }

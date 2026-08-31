@@ -354,10 +354,25 @@ fun ChatAppearanceSettingsScreen(
                         PercentSlider(
                             title = "透视强度",
                             value = appearance.inputBarSeeThrough,
-                            hint = "越高越透。悬浮样式下露出的背景更多，" +
-                                "调低一些就够",
+                            hint = if (appearance.inputBarDeepSeeThrough) {
+                                "越高越透。增强透视下输入的文字也会跟着变淡"
+                            } else {
+                                "越高越透。悬浮样式下露出的背景更多，调低一些就够"
+                            },
                             onChange = viewModel::setInputBarSeeThrough,
                             onPreview = { inputSeeThroughOverride = it }
+                        )
+                        SettingsItemDivider()
+                        SettingsSwitchItem(
+                            icon = IconContrast,
+                            title = "增强透视",
+                            subtitle = if (appearance.inputBarDeepSeeThrough) {
+                                "连文字一起透，能看见输入栏后面的消息"
+                            } else {
+                                "当前只透出背景，开启后可看见后面的消息"
+                            },
+                            checked = appearance.inputBarDeepSeeThrough,
+                            onCheckedChange = viewModel::setInputBarDeepSeeThrough
                         )
                     }
                 }

@@ -25,6 +25,16 @@ import kotlinx.coroutines.flow.stateIn
 /** 当前生效的设置。 */
 data class AppSettings(
     val provider: AiProvider = AiProvider.DEFAULT,
+    /**
+     * 生效配置组的显示名。
+     *
+     * 与 [provider] 并存：前者决定用哪套协议，这个只用于展示。日志里
+     * 记的是它而非提供商名——同一个提供商下可以有多组配置（不同中转、
+     * 不同密钥），只显示 "OpenAI" 区分不出是哪一组。
+     *
+     * 没有配置组时回退到提供商名。
+     */
+    val profileLabel: String = AiProvider.DEFAULT.displayName,
     val apiKey: String = "",
     val model: String = AiProvider.DEFAULT.fallbackModel,
     val baseUrl: String = AiProvider.DEFAULT.defaultBaseUrl,
@@ -101,6 +111,8 @@ class SettingsRepository(
         floatPreferencesKey(Constants.KEY_INPUT_BAR_SEE_THROUGH)
     private val inputBarFloatingKey =
         booleanPreferencesKey(Constants.KEY_INPUT_BAR_FLOATING)
+    private val inputBarDeepSeeThroughKey =
+        booleanPreferencesKey(Constants.KEY_INPUT_BAR_DEEP_SEE_THROUGH)
     private val logRetentionKey = stringPreferencesKey(Constants.KEY_LOG_RETENTION)
     private val logEnabledKey = booleanPreferencesKey(Constants.KEY_LOG_ENABLED)
 
@@ -218,6 +230,7 @@ class SettingsRepository(
         if (active != null) {
             AppSettings(
                 provider = active.provider,
+                profileLabel = active.displayName,
                 apiKey = active.apiKey,
                 model = active.effectiveModel,
                 baseUrl = normalizeBaseUrl(active.effectiveBaseUrl, active.provider),
@@ -228,6 +241,8 @@ class SettingsRepository(
             val provider = AiProvider.fromId(prefs[providerKey])
             AppSettings(
                 provider = provider,
+                // 迁移前没有配置组，只能用提供商名
+                profileLabel = provider.displayName,
                 apiKey = readApiKey(prefs, provider),
                 model = readModel(prefs, provider),
                 baseUrl = readBaseUrl(prefs, provider),
@@ -287,6 +302,7 @@ class SettingsRepository(
                 transparentInputBar = prefs[transparentInputBarKey] ?: false,
                 inputBarSeeThrough = prefs[inputBarSeeThroughKey] ?: 0.35f,
                 inputBarFloating = prefs[inputBarFloatingKey] ?: false,
+                inputBarDeepSeeThrough = prefs[inputBarDeepSeeThroughKey] ?: false,
                 backgroundEffect = ChatBackgroundEffect.fromId(prefs[backgroundEffectKey]),
                 backgroundBlur = prefs[backgroundBlurKey] ?: 0.4f,
                 avatarBlur = prefs[avatarBlurKey] ?: 0f,
@@ -440,6 +456,10 @@ class SettingsRepository(
 
     suspend fun setInputBarFloating(enabled: Boolean) {
         dataStore.edit { it[inputBarFloatingKey] = enabled }
+    }
+
+    suspend fun setInputBarDeepSeeThrough(enabled: Boolean) {
+        dataStore.edit { it[inputBarDeepSeeThroughKey] = enabled }
     }
 
     /**

@@ -112,7 +112,11 @@ fun ChatScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerShape = AppShapeTokens.Drawer
+                drawerShape = AppShapeTokens.Drawer,
+                // 按屏宽取比例而非用 Material 默认的固定 360dp：后者在
+                // 窄屏上几乎铺满，看不见背后的聊天页，也就失去了"临时
+                // 拉出一层"的意味。留出的那一截同时是关闭抽屉的点击区
+                modifier = Modifier.fillMaxWidth(DRAWER_WIDTH_FRACTION)
             ) {
                 ConversationDrawer(
                     existingGroups = groups,
@@ -476,6 +480,7 @@ private fun ChatContent(
                         transparent = appearance.transparentInputBar,
                         seeThrough = appearance.inputBarSeeThrough,
                         floating = appearance.inputBarFloating,
+                        deepSeeThrough = appearance.inputBarDeepSeeThrough,
                         value = inputText,
                         onValueChange = onInputChange,
                         onSend = onSend,
@@ -493,3 +498,11 @@ private fun ChatContent(
         }
     }
 }
+
+/**
+ * 抽屉占屏幕宽度的比例。
+ *
+ * 0.82 留出约五分之一：足够看清背后是聊天页、也够点，同时抽屉本身
+ * 仍有足够宽度容纳会话标题不至于频繁折行。
+ */
+private const val DRAWER_WIDTH_FRACTION = 0.82f
