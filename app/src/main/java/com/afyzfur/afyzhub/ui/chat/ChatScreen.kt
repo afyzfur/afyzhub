@@ -18,6 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -404,7 +409,31 @@ private fun ChatContent(
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            // 底部渐隐。列表在可视区下边缘会把内容硬切断，
+                            // 紧贴输入栏时那道齐整的切口读起来就是一条边框
+                            // （被切的是文字笔画，所以它还跟着圆角轮廓走）。
+                            //
+                            // 渐隐让切口处淡出到透明而不是齐平截断。
+                            // graphicsLayer 的 compositingStrategy 必须设为
+                            // Offscreen，否则 DstIn 混合无处可作用
+                            .graphicsLayer {
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        // 只在最下面这一小段渐隐，再长会让
+                                        // 正常阅读的内容也发虚
+                                        0f to Color.Black,
+                                        1f to Color.Transparent,
+                                        startY = size.height - LIST_FADE_PX,
+                                        endY = size.height
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
+                            },
                         state = listState,
                         // 底部留出输入栏的高度：列表能滚到输入栏后面
                         // 透出内容，同时最后一条消息仍可完整滚到可见处
@@ -522,3 +551,11 @@ private fun ChatContent(
  * 仍有足够宽度容纳会话标题不至于频繁折行。
  */
 private const val DRAWER_WIDTH_FRACTION = 0.82f
+
+/**
+ * 列表底部渐隐的高度（像素）。
+ *
+ * 40px 在 480dpi 上约合 13dp，正好覆盖一行文字的高度：被切断的那行
+ * 完整淡出，上一行不受影响。改大会让正常阅读的末尾几行发虚。
+ */
+private const val LIST_FADE_PX = 40f
