@@ -431,12 +431,13 @@ private fun ChatContent(
                             .drawWithContent {
                                 drawContent()
 
-                                // 渐隐的下边界取"输入栏本体上沿"。增强档下
-                                // 列表铺满到屏幕底，size.height 比本体上沿低
-                                // 一整个输入栏，直接用它会把渐隐藏到输入栏
-                                // 后面去
+                                // 渐隐要画在"列表内容实际止步的位置"：
+                                //  - 增强档：列表 contentPadding 用整块高度（含留白），
+                                //    内容止步于整块上沿，渐隐也该画在那里
+                                //  - 非增强档：外层 Column 已让位，列表自己的
+                                //    size.height 就是实际止步位置
                                 val fadeBottom = size.height -
-                                    if (deep) inputBarBodyHeight.toPx() else 0f
+                                    if (deep) inputBarHeight.toPx() else 0f
                                 val fadeTop = (fadeBottom - LIST_FADE_PX)
                                     .coerceAtLeast(0f)
 
@@ -547,7 +548,32 @@ private fun ChatContent(
                         onUndo = onUndoRemoval,
                         onDismiss = onDismissUndo
                     )
+                    // 在输入栏后面垫底色。悬浮式下只画本体部分，下方留白不画，
+                    // 让背景/消息从那条缝透出来；通栏式下画整块到屏幕底
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(
+                                if (appearance.inputBarFloating) {
+                                    inputBarBodyHeight
+                                } else {
+                                    inputBarHeight
+                                }
+                            )
+                            // 用 surfaceContainerHigh 而非 surface：输入栏是叠在列表之上的
+                            // 浮层，需要更高的色阶来拉开层次
+                            .background(
+                                MaterialTheme.colorScheme.surfaceContainerHigh,
+                                if (appearance.inputBarFloating) {
+                                    AppShapeTokens.FloatingInputContainer
+                                } else {
+                                    AppShapeTokens.InputContainer
+                                }
+                            )
+                    )
+
                     ChatInputBar(
+                        
                         transparent = appearance.transparentInputBar,
                         seeThrough = appearance.inputBarSeeThrough,
                         floating = appearance.inputBarFloating,

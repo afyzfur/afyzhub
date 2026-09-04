@@ -154,13 +154,11 @@ fun ChatInputBar(
                     Modifier
                 }
             )
-            // 底色排在 padding 之后、graphicsLayer 之内，两个位置都有讲究：
-            //  - 在 padding 之后：modifier 链从外往内套，排在 padding 前面
-            //    会把外边距一起填上色，悬浮式那 12dp 留白就没了。原来用
-            //    Surface 时不受影响，因为它在内部画底色、不看链的位置
-            //  - 在 graphicsLayer 之内：底色要跟着整层一起半透，否则增强档
-            //    下只有文字在透、底色仍是实的
-            .background(surfaceColor, containerShape)
+            // 底色已改由外层统一提供（ChatScreen 里那个 Spacer），这里不再画。
+            // 
+            // 之前底色加在这里，悬浮式下排在 padding 之后、不含外留白——本身对，
+            // 但做不到"本体有底色、留白透消息"，因为 graphicsLayer 的 alpha
+            // 作用于整块，要么都透要么都不透
             // 量在 background 这一层：链上排在 padding 之后，
             // 量到的就是刨去外留白的本体尺寸
             .onSizeChanged { size ->
