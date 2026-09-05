@@ -154,11 +154,10 @@ fun ChatInputBar(
                     Modifier
                 }
             )
-            // 底色已改由外层统一提供（ChatScreen 里那个 Spacer），这里不再画。
-            // 
-            // 之前底色加在这里，悬浮式下排在 padding 之后、不含外留白——本身对，
-            // 但做不到"本体有底色、留白透消息"，因为 graphicsLayer 的 alpha
-            // 作用于整块，要么都透要么都不透
+            // 底色排在 padding 之后：悬浮式下不含外留白，留白区能透消息。
+            // 非增强档时这层底色是不透明的，叠在 Spacer 之上把底色"加厚"；
+            // 增强档时这层随 graphicsLayer 一起半透，Spacer 的半透底色透出来
+            .background(surfaceColor, containerShape)
             // 量在 background 这一层：链上排在 padding 之后，
             // 量到的就是刨去外留白的本体尺寸
             .onSizeChanged { size ->

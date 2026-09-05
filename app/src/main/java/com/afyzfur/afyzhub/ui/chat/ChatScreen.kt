@@ -549,7 +549,9 @@ private fun ChatContent(
                         onDismiss = onDismissUndo
                     )
                     // 在输入栏后面垫底色。悬浮式下只画本体部分，下方留白不画，
-                    // 让背景/消息从那条缝透出来；通栏式下画整块到屏幕底
+                    // 让背景/消息从那条缝透出来；通栏式下画整块到屏幕底。
+                    //
+                    // 增强档时底色也要透，否则看不见背后消息
                     Spacer(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -560,10 +562,10 @@ private fun ChatContent(
                                     inputBarHeight
                                 }
                             )
-                            // 用 surfaceContainerHigh 而非 surface：输入栏是叠在列表之上的
-                            // 浮层，需要更高的色阶来拉开层次
                             .background(
-                                MaterialTheme.colorScheme.surfaceContainerHigh,
+                                MaterialTheme.colorScheme.surfaceContainerHigh.let {
+                                    if (deep) it.copy(alpha = 0.72f) else it
+                                },
                                 if (appearance.inputBarFloating) {
                                     AppShapeTokens.FloatingInputContainer
                                 } else {
