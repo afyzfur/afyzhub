@@ -381,16 +381,8 @@ private fun ChatContent(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        // 非增强档只让出输入栏本体的高度。悬浮式的外留白
-                        // 不让，列表铺到它后面，底部那条缝就能透出消息
                         .padding(
-                            bottom = if (deep) {
-                                // 增强档：列表铺到输入栏后面
-                                if (floating) inputBarHeight else inputBarHeight
-                            } else {
-                                // 非增强档：列表止于输入栏上沿
-                                inputBarHeight
-                            }
+                            bottom = if (deep) 0.dp else inputBarHeight
                         )
                 ) {
                 if (messages.isEmpty() && !isLoading) {
@@ -410,7 +402,7 @@ private fun ChatContent(
                             start = 16.dp,
                             end = 16.dp,
                             top = 12.dp,
-                            bottom = 12.dp
+                            bottom = if (deep) 12.dp + inputBarHeight else 12.dp
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)
