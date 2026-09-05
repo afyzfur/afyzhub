@@ -363,7 +363,8 @@ private fun ChatContent(
         ) { paddingValues ->
             var inputBarHeight by remember { mutableStateOf(0.dp) }
             val density = LocalDensity.current
-            // 当前版本固定使用非增强透视布局：列表止于输入栏上沿。
+            // 增强透视时列表延伸到输入栏后面；关闭时由外层让位。
+            val deep = appearance.inputBarDeepSeeThrough
 
             Box(
                 modifier = Modifier
@@ -374,7 +375,7 @@ private fun ChatContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
-                            bottom = inputBarHeight
+                            bottom = if (deep) 0.dp else inputBarHeight
                         )
                 ) {
                 if (messages.isEmpty() && !isLoading) {
@@ -394,7 +395,7 @@ private fun ChatContent(
                             start = 16.dp,
                             end = 16.dp,
                             top = 12.dp,
-                            bottom = 12.dp
+                            bottom = if (deep) 12.dp + inputBarHeight else 12.dp
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)
