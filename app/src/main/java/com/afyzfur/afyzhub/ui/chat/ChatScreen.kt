@@ -385,10 +385,12 @@ private fun ChatContent(
             // 后面只剩背景图可透
             val deep = appearance.inputBarDeepSeeThrough
 
-            // 让位只按输入栏本体算，悬浮式的外留白与导航栏内边距都不算：
-            // 列表铺到它们后面，消息才能从底部那条缝透出来。渐隐也随之
-            // 落在本体上沿，而不是留白上沿（此前渐隐偏上就是多算了这段）
-            val listBottomInset = if (deep) inputBarHeight else inputBarBodyHeight
+            // 非增强档按输入栏布局的整块高度让位（含导航栏内边距与悬浮
+            // 外留白）。此前按"本体"让位，但本体上沿比布局上沿低一段，
+            // 列表底边落进输入栏后面，那段重叠的消息隔着半透底色显出来，
+            // 看着就是"关了增强还能看到字"。列表止于布局上沿，后面只剩
+            // 背景图可透，两档才分得开
+            val listBottomInset = inputBarHeight
 
             Box(
                 modifier = Modifier
@@ -431,9 +433,9 @@ private fun ChatContent(
                             .drawWithContent {
                                 drawContent()
 
-                                // 渐隐要画在"列表内容实际止步的位置"：
-                                //  - 增强档：列表 contentPadding 用整块高度（含留白），
-                                //    内容止步于整块上沿，渐隐也该画在那里
+                                // 渐隐画在"列表内容实际止步的位置"：
+                                //  - 增强档：列表铺满、contentPadding 用整块高度，
+                                //    内容止步于输入栏布局上沿，渐隐画在那里
                                 //  - 非增强档：外层 Column 已让位，列表自己的
                                 //    size.height 就是实际止步位置
                                 val fadeBottom = size.height -
@@ -548,32 +550,6 @@ private fun ChatContent(
                         onUndo = onUndoRemoval,
                         onDismiss = onDismissUndo
                     )
-                    // 在输入栏后面垫底色。悬浮式下只画本体部分，下方留白不画，
-                    // 让背景/消息从那条缝透出来；通栏式下画整块到屏幕底。
-                    //
-                    // 增强档时底色也要透，否则看不见背后消息
-                    Spacer(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(
-                                if (appearance.inputBarFloating) {
-                                    inputBarBodyHeight
-                                } else {
-                                    inputBarHeight
-                                }
-                            )
-                            .background(
-                                MaterialTheme.colorScheme.surfaceContainerHigh.let {
-                                    if (deep) it.copy(alpha = 0.72f) else it
-                                },
-                                if (appearance.inputBarFloating) {
-                                    AppShapeTokens.FloatingInputContainer
-                                } else {
-                                    AppShapeTokens.InputContainer
-                                }
-                            )
-                    )
-
                     ChatInputBar(
                         
                         transparent = appearance.transparentInputBar,
