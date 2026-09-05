@@ -18,13 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -370,8 +363,7 @@ private fun ChatContent(
         ) { paddingValues ->
             var inputBarHeight by remember { mutableStateOf(0.dp) }
             val density = LocalDensity.current
-            val deep = appearance.inputBarDeepSeeThrough
-            val floating = appearance.inputBarFloating
+            // 当前版本固定使用非增强透视布局：列表止于输入栏上沿。
 
             Box(
                 modifier = Modifier
@@ -382,7 +374,7 @@ private fun ChatContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
-                            bottom = if (deep) 0.dp else inputBarHeight
+                            bottom = inputBarHeight
                         )
                 ) {
                 if (messages.isEmpty() && !isLoading) {
@@ -402,7 +394,7 @@ private fun ChatContent(
                             start = 16.dp,
                             end = 16.dp,
                             top = 12.dp,
-                            bottom = if (deep) 12.dp + inputBarHeight else 12.dp
+                            bottom = 12.dp
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -513,11 +505,3 @@ private fun ChatContent(
  * 仍有足够宽度容纳会话标题不至于频繁折行。
  */
 private const val DRAWER_WIDTH_FRACTION = 0.82f
-
-/**
- * 列表底部渐隐的高度（像素）。
- *
- * 40px 在 480dpi 上约合 13dp，正好覆盖一行文字的高度：被切断的那行
- * 完整淡出，上一行不受影响。改大会让正常阅读的末尾几行发虚。
- */
-private const val LIST_FADE_PX = 40f
