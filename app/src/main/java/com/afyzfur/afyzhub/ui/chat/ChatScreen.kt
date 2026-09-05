@@ -481,9 +481,28 @@ private fun ChatContent(
                         onUndo = onUndoRemoval,
                         onDismiss = onDismissUndo
                     )
-                    ChatInputBar(
-                        
-                        transparent = appearance.transparentInputBar,
+                    // 输入栏和底色层叠在一起
+                    Box {
+                        // 底色层：悬浮式只画本体高度，通栏式画整块
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (floating) inputBarBodyHeight else inputBarHeight)
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceContainerHigh.let {
+                                        if (deep) it.copy(alpha = 0.72f) else it
+                                    },
+                                    if (floating) {
+                                        AppShapeTokens.FloatingInputContainer
+                                    } else {
+                                        AppShapeTokens.InputContainer
+                                    }
+                                )
+                        )
+                        ChatInputBar(
+                            
+                            transparent = appearance.transparentInputBar,
                         seeThrough = appearance.inputBarSeeThrough,
                         floating = appearance.inputBarFloating,
                         deepSeeThrough = appearance.inputBarDeepSeeThrough,
@@ -499,7 +518,8 @@ private fun ChatContent(
                         modelName = modelName,
                         thinkingEffort = thinkingEffort,
                         onCycleThinkingEffort = onCycleThinkingEffort
-                    )
+                        )
+                    }
                 }
             }
         }
