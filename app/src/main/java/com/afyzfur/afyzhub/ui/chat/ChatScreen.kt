@@ -3,6 +3,7 @@ package com.afyzfur.afyzhub.ui.chat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -18,16 +19,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -385,20 +379,13 @@ private fun ChatContent(
             // 后面只剩背景图可透
             val deep = appearance.inputBarDeepSeeThrough
 
-            // 渐隐基准：增强档用整块（列表铺满、内容止于整块上沿），
-            // 非增强档用 0（外层 Column 已让位，列表 size.height 就是止步位置）
-            val listBottomInset = if (deep) inputBarHeight else 0.dp
-
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        // 非增强档让出整块输入栏的高度，列表止于输入栏布局上沿
-                        .padding(bottom = if (deep) 0.dp else inputBarHeight)
+                    modifier = Modifier.fillMaxSize()
                 ) {
                 if (messages.isEmpty() && !isLoading) {
                     EmptyChatContent(
@@ -409,56 +396,13 @@ private fun ChatContent(
                         // 处理增强档
                         modifier = Modifier
                             .weight(1f)
-                            .padding(bottom = listBottomInset)
+                            .padding(bottom = inputBarHeight)
                     )
                 } else {
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxWidth()
-                            // 底部渐隐。列表在可视区下边缘会把内容硬切断，
-                            // 紧贴输入栏时那道齐整的切口读起来就是一条边框
-                            // （被切的是文字笔画，所以它还跟着圆角轮廓走）。
-                            //
-                            // 渐隐让切口处淡出到透明而不是齐平截断。
-                            // graphicsLayer 的 compositingStrategy 必须设为
-                            // Offscreen，否则 DstIn 混合无处可作用
-                            .graphicsLayer {
-                                compositingStrategy = CompositingStrategy.Offscreen
-                            }
-                            .drawWithContent {
-                                drawContent()
-
-                                // 渐隐要画在"列表内容实际止步的位置"：
-                                //  - 增强档：列表 contentPadding 用整块高度（含留白），
-                                //    内容止步于整块上沿，渐隐也该画在那里
-                                //  - 非增强档：外层 Column 已让位，列表自己的
-                                //    size.height 就是实际止步位置
-                                val fadeBottom = size.height -
-                                    if (deep) inputBarHeight.toPx() else 0f
-                                val fadeTop = (fadeBottom - LIST_FADE_PX)
-                                    .coerceAtLeast(0f)
-
-                                if (fadeBottom > fadeTop) {
-                                    drawRect(
-                                        brush = Brush.verticalGradient(
-                                            // 只柔化这一小段，再长会让正常
-                                            // 阅读的内容也发虚
-                                            0f to Color.Black,
-                                            1f to Color.Transparent,
-                                            startY = fadeTop,
-                                            endY = fadeBottom
-                                        ),
-                                        // 必须限定范围。不带 topLeft/size 时
-                                        // drawRect 铺满画布，渐变区以下取端点色
-                                        // Transparent，会把输入栏后面透出的
-                                        // 消息整段擦掉
-                                        topLeft = Offset(0f, fadeTop),
-                                        size = Size(size.width, fadeBottom - fadeTop),
-                                        blendMode = BlendMode.DstIn
-                                    )
-                                }
-                            },
+                            .fillMaxWidth(),
                         state = listState,
                         // 底部留出输入栏的高度：列表能滚到输入栏后面
                         // 透出内容，同时最后一条消息仍可完整滚到可见处
@@ -468,7 +412,7 @@ private fun ChatContent(
                             top = 12.dp,
                             // 只在增强档补留白。非增强档时外层 Column 已经
                             // 让出了输入栏的位置，这里再加会多出一段空白
-                            bottom = 12.dp + listBottomInset
+                            bottom = 12.dp + inputBarHeight
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -585,4 +529,3 @@ private const val DRAWER_WIDTH_FRACTION = 0.82f
  * 40px 在 480dpi 上约合 13dp，正好覆盖一行文字的高度：被切断的那行
  * 完整淡出，上一行不受影响。改大会让正常阅读的末尾几行发虚。
  */
-private const val LIST_FADE_PX = 40f
