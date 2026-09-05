@@ -369,6 +369,7 @@ private fun ChatContent(
             }
         ) { paddingValues ->
             var inputBarHeight by remember { mutableStateOf(0.dp) }
+            var inputBarBodyHeight by remember { mutableStateOf(0.dp) }
             val density = LocalDensity.current
             val deep = appearance.inputBarDeepSeeThrough
             val floating = appearance.inputBarFloating
@@ -382,7 +383,7 @@ private fun ChatContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
-                            bottom = if (deep) 0.dp else inputBarHeight
+                            bottom = if (deep) 0.dp else inputBarBodyHeight
                         )
                 ) {
                 if (messages.isEmpty() && !isLoading) {
