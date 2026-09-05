@@ -153,10 +153,7 @@ fun ChatInputBar(
                     Modifier
                 }
             )
-            // 底色排在 padding 之后：悬浮式下不含外留白，留白区能透消息。
-            // 非增强档时这层底色是不透明的，叠在 Spacer 之上把底色"加厚"；
-            // 增强档时这层随 graphicsLayer 一起半透，Spacer 的半透底色透出来
-            .background(surfaceColor, containerShape)
+            // 底色改由 ChatScreen 的外层提供，这里只保留 clip 确保内容不溢出
             .clip(containerShape)
     ) {
         Column(
