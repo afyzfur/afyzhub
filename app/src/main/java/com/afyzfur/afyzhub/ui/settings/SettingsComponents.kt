@@ -295,17 +295,23 @@ fun SettingsSwitchItem(
     title: String,
     subtitle: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true
 ) {
     SettingsRowBase(
         icon = icon,
         title = title,
         subtitle = subtitle,
-        modifier = Modifier.clickable { onCheckedChange(!checked) }
+        modifier = if (enabled) {
+            Modifier.clickable { onCheckedChange(!checked) }
+        } else {
+            Modifier
+        }
     ) {
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            enabled = enabled
         )
     }
 }

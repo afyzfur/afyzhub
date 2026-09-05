@@ -339,13 +339,16 @@ fun ChatAppearanceSettingsScreen(
                     SettingsSwitchItem(
                         icon = IconContrast,
                         title = "输入栏悬浮",
-                        subtitle = if (appearance.inputBarFloating) {
+                        subtitle = if (!appearance.inputBarDeepSeeThrough) {
+                            "非增强透视的悬浮模式暂不支持，请先开启增强透视"
+                        } else if (appearance.inputBarFloating) {
                             "四周留出间距，四角全圆，与页面分离"
                         } else {
                             "当前铺满底部，开启后四周留出间距"
                         },
                         checked = appearance.inputBarFloating,
-                        onCheckedChange = viewModel::setInputBarFloating
+                        onCheckedChange = viewModel::setInputBarFloating,
+                        enabled = appearance.inputBarDeepSeeThrough
                     )
                     // 强度只在透明开启时显示：关着的时候调它看不出
                     // 任何变化，留在界面上只会让人以为没生效
