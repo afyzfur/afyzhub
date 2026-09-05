@@ -136,15 +136,7 @@ fun ChatInputBar(
             .onSizeChanged { size ->
                 onBodyHeightChange(with(density) { size.height.toDp() })
             }
-            // 增强档下整块（含文字与图标）一起半透。graphicsLayer 把子树
-            // 先画到一个离屏层再按 alpha 合成，所以文字也会透。
-            //
-            // 恒定套一层而非按开关加减 modifier：链的结构一变就要重建
-            // 绘制节点，切换时会闪。alpha 为 1 时没有视觉效果。
-            //
-            // 若改为逐个给文字设颜色 alpha，每处都要改且容易漏，
-            // 而且叠加处的透明度会累积，看起来深浅不一
-            .graphicsLayer { this.alpha = layerAlpha }
+            // 透明度由 ChatScreen 的底色层统一控制，这里不再单独处理
             .navigationBarsPadding()
             .then(
                 if (floating) {
