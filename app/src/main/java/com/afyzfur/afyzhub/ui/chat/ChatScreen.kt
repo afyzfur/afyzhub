@@ -487,7 +487,7 @@ private fun ChatContent(
                         seeThrough = appearance.inputBarSeeThrough,
                         floating = appearance.inputBarFloating,
                         deepSeeThrough = appearance.inputBarDeepSeeThrough,
-                        
+                        onBodyHeightChange = { inputBarBodyHeight = it },
                         value = inputText,
                         onValueChange = onInputChange,
                         onSend = onSend,
