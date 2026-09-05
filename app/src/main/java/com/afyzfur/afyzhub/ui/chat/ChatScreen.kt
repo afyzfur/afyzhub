@@ -385,12 +385,8 @@ private fun ChatContent(
             // 后面只剩背景图可透
             val deep = appearance.inputBarDeepSeeThrough
 
-            // 非增强档按输入栏布局的整块高度让位（含导航栏内边距与悬浮
-            // 外留白）。此前按"本体"让位，但本体上沿比布局上沿低一段，
-            // 列表底边落进输入栏后面，那段重叠的消息隔着半透底色显出来，
-            // 看着就是"关了增强还能看到字"。列表止于布局上沿，后面只剩
-            // 背景图可透，两档才分得开
-            val listBottomInset = inputBarHeight
+            // 增强档列表铺满、透消息；非增强档让位、后面只剩背景图可透
+            val listBottomInset = if (deep) 0.dp else inputBarHeight
 
             Box(
                 modifier = Modifier
@@ -433,13 +429,10 @@ private fun ChatContent(
                             .drawWithContent {
                                 drawContent()
 
-                                // 渐隐画在"列表内容实际止步的位置"：
-                                //  - 增强档：列表铺满、contentPadding 用整块高度，
-                                //    内容止步于输入栏布局上沿，渐隐画在那里
-                                //  - 非增强档：外层 Column 已让位，列表自己的
-                                //    size.height 就是实际止步位置
-                                val fadeBottom = size.height -
-                                    if (deep) inputBarHeight.toPx() else 0f
+                                // contentPadding 已按 deep 处理了让位，
+                                // 列表内容实际止步于 size.height - padding，
+                                // 渐隐直接用 size.height 即可
+                                val fadeBottom = size.height
                                 val fadeTop = (fadeBottom - LIST_FADE_PX)
                                     .coerceAtLeast(0f)
 
