@@ -111,9 +111,9 @@ fun ChatInputBar(
     //  - 普通档把 alpha 给底色，文字与图标不受影响，始终清晰
     //  - 增强档把 alpha 给整层，文字随之半透，背后的消息才看得见
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.let {
-        if (deepSeeThrough) it else it.copy(alpha = alpha)
+        if (deepSeeThrough) it.copy(alpha = 0.72f) else it.copy(alpha = alpha)
     }
-    val layerAlpha = if (deepSeeThrough) alpha else 1f
+    val layerAlpha = if (deepSeeThrough) 0.72f else 1f
 
     val containerShape = if (floating) {
         AppShapeTokens.FloatingInputContainer
@@ -133,23 +133,44 @@ fun ChatInputBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .onSizeChanged { size ->
-                onBodyHeightChange(with(density) { size.height.toDp() })
-            }
-            // 透明度由 ChatScreen 的底色层统一控制，这里不再单独处理
-            .navigationBarsPadding()
+            // 增强档下整块（含文字与图标）一起半透。graphicsLayer 把子树
+            // 先画到一个离屏层再按 alpha 合成，所以文字也会透。
+            //
+            // 恒定套一层而非按开关加减 modifier：链的结构一变就要重建
+            // 绘制节点，切换时会闪。alpha 为 1 时没有视觉效果。
+            //
+            // 若改为逐个给文字设颜色 alpha，每处都要改且容易漏，
+            // 而且叠加处的透明度会累积，看起来深浅不一
+            .graphicsLayer { this.alpha = layerAlpha }
+            // 悬浮式的外边距加在容器之外，让背景从四周透出来。
+            // 导航栏留白也在这里：通栏式要让容器背景延伸到屏幕底边，
+            // 所以留白在容器内部；悬浮式则整块都要抬离底边
             .then(
                 if (floating) {
-                    Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    Modifier
+                        .navigationBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 } else {
                     Modifier
                 }
             )
-            // 底色改由 ChatScreen 的外层提供，这里只保留 clip 确保内容不溢出
-            .clip(containerShape)
+            // 底色排在 padding 之后：悬浮式下不含外留白，留白区能透消息。
+            // 非增强档时这层底色是不透明的，叠在 Spacer 之上把底色"加厚"；
+            // 增强档时这层随 graphicsLayer 一起半透，Spacer 的半透底色透出来
+            .background(surfaceColor, containerShape)
+            // 量在 background 这一层：链上排在 padding 之后，
+            // 量到的就是刨去外留白的本体尺寸
+            .onSizeChanged { size ->
+                onBodyHeightChange(with(density) { size.height.toDp() })
+            }
     ) {
+        // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
+        // 而内容不被系统手势区域压住
         Column(
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier
+                .padding(top = 4.dp)
+                // 悬浮式的留白已加在容器外层，这里再加一次会多出一段空白
+                .then(if (floating) Modifier else Modifier.navigationBarsPadding())
         ) {
 
             // 上层：文本输入。用 BasicTextField 而非 TextField，
