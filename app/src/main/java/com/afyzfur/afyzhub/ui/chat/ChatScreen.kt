@@ -385,7 +385,11 @@ private fun ChatContent(
                     .padding(paddingValues)
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            bottom = if (deep) 0.dp else inputBarBodyHeight
+                        )
                 ) {
                 if (messages.isEmpty() && !isLoading) {
                     EmptyChatContent(
@@ -394,9 +398,7 @@ private fun ChatContent(
                         onPromptClick = onPromptClick,
                         // 同上：非增强档由外层 Column 让位，这里只需
                         // 处理增强档
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(bottom = inputBarHeight)
+                        modifier = Modifier.weight(1f)
                     )
                 } else {
                     LazyColumn(
@@ -410,9 +412,9 @@ private fun ChatContent(
                             start = 16.dp,
                             end = 16.dp,
                             top = 12.dp,
-                            // 只在增强档补留白。非增强档时外层 Column 已经
-                            // 让出了输入栏的位置，这里再加会多出一段空白
-                            bottom = 12.dp + inputBarHeight
+                            // 增强档让内容滚到输入栏后面；非增强档由外层
+                            // Column 让出输入栏本体高度，这里不再重复让位
+                            bottom = if (deep) 12.dp + inputBarHeight else 12.dp
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)
