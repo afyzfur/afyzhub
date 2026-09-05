@@ -3,7 +3,6 @@ package com.afyzfur.afyzhub.ui.chat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -19,9 +18,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -362,22 +368,10 @@ private fun ChatContent(
                 )
             }
         ) { paddingValues ->
-            // 输入栏叠在列表之上而非与它并列。并列时列表止步于输入栏
-            // 上边缘，输入栏底下只有背景图，透明也透不出聊天内容。
-            //
-            // 输入栏的高度随内容变化（多行输入、状态行），所以量出来
-            // 再折算成列表的底部留白，而不是写死一个值
             var inputBarHeight by remember { mutableStateOf(0.dp) }
-            // 输入栏本体的高度，由 ChatInputBar 自己报上来
-            var inputBarBodyHeight by remember { mutableStateOf(0.dp) }
             val density = LocalDensity.current
-
-            // 增强透视决定列表是否钻到输入栏后面。
-            //
-            // 只调 alpha 分不出两档：列表一旦铺满，半透的底色必然同时
-            // 透出背景图与压着的消息。所以关闭时让列表止于输入栏上沿，
-            // 后面只剩背景图可透
             val deep = appearance.inputBarDeepSeeThrough
+            val floating = appearance.inputBarFloating
 
             Box(
                 modifier = Modifier
@@ -388,7 +382,7 @@ private fun ChatContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
-                            bottom = if (deep) 0.dp else inputBarBodyHeight
+                            bottom = if (deep) 0.dp else inputBarHeight
                         )
                 ) {
                 if (messages.isEmpty() && !isLoading) {
@@ -396,8 +390,6 @@ private fun ChatContent(
                         prompts = quickPrompts,
                         shufflePrompts = shufflePrompts,
                         onPromptClick = onPromptClick,
-                        // 同上：非增强档由外层 Column 让位，这里只需
-                        // 处理增强档
                         modifier = Modifier.weight(1f)
                     )
                 } else {
@@ -406,14 +398,10 @@ private fun ChatContent(
                             .weight(1f)
                             .fillMaxWidth(),
                         state = listState,
-                        // 底部留出输入栏的高度：列表能滚到输入栏后面
-                        // 透出内容，同时最后一条消息仍可完整滚到可见处
                         contentPadding = PaddingValues(
                             start = 16.dp,
                             end = 16.dp,
                             top = 12.dp,
-                            // 增强档让内容滚到输入栏后面；非增强档由外层
-                            // Column 让出输入栏本体高度，这里不再重复让位
                             bottom = if (deep) 12.dp + inputBarHeight else 12.dp
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
@@ -498,7 +486,8 @@ private fun ChatContent(
                         seeThrough = appearance.inputBarSeeThrough,
                         floating = appearance.inputBarFloating,
                         deepSeeThrough = appearance.inputBarDeepSeeThrough,
-                        onBodyHeightChange = { inputBarBodyHeight = it },
+                        onBodyHeightChange = { inputBarHeight = it },
+                        
                         value = inputText,
                         onValueChange = onInputChange,
                         onSend = onSend,
@@ -531,3 +520,4 @@ private const val DRAWER_WIDTH_FRACTION = 0.82f
  * 40px 在 480dpi 上约合 13dp，正好覆盖一行文字的高度：被切断的那行
  * 完整淡出，上一行不受影响。改大会让正常阅读的末尾几行发虚。
  */
+private const val LIST_FADE_PX = 40f
