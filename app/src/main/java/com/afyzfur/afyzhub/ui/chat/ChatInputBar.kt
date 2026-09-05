@@ -157,6 +157,7 @@ fun ChatInputBar(
             // 非增强档时这层底色是不透明的，叠在 Spacer 之上把底色"加厚"；
             // 增强档时这层随 graphicsLayer 一起半透，Spacer 的半透底色透出来
             .background(surfaceColor, containerShape)
+            .clip(containerShape)
     ) {
         Column(
             modifier = Modifier.padding(top = 4.dp)
