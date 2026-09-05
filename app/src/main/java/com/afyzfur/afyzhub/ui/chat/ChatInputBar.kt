@@ -111,9 +111,9 @@ fun ChatInputBar(
     //  - 普通档把 alpha 给底色，文字与图标不受影响，始终清晰
     //  - 增强档把 alpha 给整层，文字随之半透，背后的消息才看得见
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.let {
-        if (deepSeeThrough) it.copy(alpha = 0.72f) else it.copy(alpha = alpha)
+        if (deepSeeThrough) it else it.copy(alpha = alpha)
     }
-    val layerAlpha = if (deepSeeThrough) 0.72f else 1f
+    val layerAlpha = if (deepSeeThrough) alpha else 1f
 
     val containerShape = if (floating) {
         AppShapeTokens.FloatingInputContainer
@@ -158,18 +158,16 @@ fun ChatInputBar(
             // 非增强档时这层底色是不透明的，叠在 Spacer 之上把底色"加厚"；
             // 增强档时这层随 graphicsLayer 一起半透，Spacer 的半透底色透出来
             .background(surfaceColor, containerShape)
-            // 量在 background 这一层：链上排在 padding 之后，
-            // 量到的就是刨去外留白的本体尺寸
-            .onSizeChanged { size ->
-                onBodyHeightChange(with(density) { size.height.toDp() })
-            }
     ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
         // 而内容不被系统手势区域压住
         Column(
             modifier = Modifier
                 .padding(top = 4.dp)
-                // 悬浮式的留白已加在容器外层，这里再加一次会多出一段空白
+                // 只测量输入栏本体，不把悬浮式外部留白计入列表让位。
+                .onSizeChanged { size ->
+                    onBodyHeightChange(with(density) { size.height.toDp() })
+                }
                 .then(if (floating) Modifier else Modifier.navigationBarsPadding())
         ) {
 
