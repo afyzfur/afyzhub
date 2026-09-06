@@ -196,6 +196,7 @@ private fun MessageBody(
         ReasoningBlock(
             reasoning = parsed.reasoning ?: "",
             thinking = parsed.thinking,
+            bubbleStyle = style,
             modifier = Modifier.padding(bottom = 6.dp)
         )
     }

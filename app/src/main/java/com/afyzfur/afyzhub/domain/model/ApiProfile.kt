@@ -24,7 +24,12 @@ data class ApiProfile(
     val baseUrl: String = "",
     val model: String = "",
     /** 该组上次拉取到的模型列表，避免每次重进都要重新获取 */
-    val cachedModels: List<String> = emptyList()
+    val cachedModels: List<String> = emptyList(),
+    /**
+     * 用户筛选后保留的模型。
+     * 空集合表示旧配置或尚未筛选，兼容已有配置并默认显示全部缓存模型。
+     */
+    val selectedModels: List<String> = emptyList()
 ) {
     val provider: AiProvider get() = AiProvider.fromId(providerId)
 
@@ -39,6 +44,10 @@ data class ApiProfile(
     /** 模型留空时用提供商兜底模型 */
     val effectiveModel: String
         get() = model.ifBlank { provider.fallbackModel }
+
+    /** 输入栏和模型选择页实际显示的模型。 */
+    val effectiveSelectedModels: List<String>
+        get() = if (selectedModels.isEmpty()) cachedModels else selectedModels
 }
 
 /**

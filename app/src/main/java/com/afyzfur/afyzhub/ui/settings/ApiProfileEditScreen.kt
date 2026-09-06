@@ -195,9 +195,9 @@ fun ApiProfileEditScreen(
                 SettingsCategoryTitle("连接测试")
                 SettingsGroup {
                     SettingsActionItem(
-                        icon = Icons.Default.PlayArrow,
-                        title = if (testing) "测试中…" else "测试这组配置",
-                        subtitle = "发一次最小请求，确认能否正常对话",
+                        icon = if (testing) Icons.Default.Close else Icons.Default.PlayArrow,
+                        title = if (testing) "取消测试" else "测试这组配置",
+                        subtitle = if (testing) "再次点击取消当前测试" else "发一次最小请求，确认能否正常对话",
                         onClick = { modelsViewModel.testConnection(profile) }
                     )
                     testResult?.let { result ->
@@ -244,67 +244,10 @@ fun ApiProfileEditScreen(
                 if (profile.cachedModels.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
                     SettingsGroup {
-                        val page = pageOfModels(profile.cachedModels, pageIndex)
-                        Text(
-                            text = if (page.showPager) {
-                                "可用模型（${profile.cachedModels.size}）" +
-                                    " 第 ${page.pageIndex + 1}/${page.pageCount} 页"
-                            } else {
-                                "可用模型（${profile.cachedModels.size}）"
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(
-                                start = 20.dp,
-                                end = 20.dp,
-                                top = 12.dp
-                            )
+                        ModelSelectionSection(
+                            profile = profile,
+                            onChange = viewModel::updateProfile
                         )
-                        ModelPickerList(
-                            models = page.models,
-                            selected = profile.model,
-                            onSelect = {
-                                viewModel.updateProfile(profile.copy(model = it))
-                            }
-                        )
-                        if (page.showPager) {
-                            SettingsItemDivider()
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                            ) {
-                                TextButton(
-                                    onClick = { pageIndex -= 1 },
-                                    enabled = page.hasPrevious
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text("上一页")
-                                }
-                                Text(
-                                    text = "${page.pageIndex + 1} / ${page.pageCount}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                TextButton(
-                                    onClick = { pageIndex += 1 },
-                                    enabled = page.hasNext
-                                ) {
-                                    Text("下一页")
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
 

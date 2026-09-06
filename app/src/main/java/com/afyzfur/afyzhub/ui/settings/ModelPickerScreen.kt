@@ -119,7 +119,7 @@ fun ModelPickerScreen(
                     )
                 }
 
-                if (profile.cachedModels.isEmpty()) {
+                if (profile.effectiveSelectedModels.isEmpty()) {
                     item(key = "empty-${profile.id}") {
                         // 没拉过列表时给出唯一可做的动作，而不是留一片空白
                         Text(
@@ -136,7 +136,7 @@ fun ModelPickerScreen(
                     }
                 } else {
                     items(
-                        items = profile.cachedModels,
+                        items = profile.effectiveSelectedModels,
                         key = { "${profile.id}-$it" }
                     ) { model ->
                         ModelRow(
@@ -146,9 +146,12 @@ fun ModelPickerScreen(
                             selected = profile.id == activeId && model == profile.effectiveModel,
                             onClick = {
                                 // 一次点击同时定下用哪组配置与哪个模型
-                                viewModel.updateProfile(profile.copy(model = model))
-                                viewModel.selectProfile(profile.id)
-                                onNavigateBack()
+                                // 等保存完成后再返回，确保聊天页能读到新配置
+                                viewModel.selectModelAndProfile(
+                                    profileId = profile.id,
+                                    model = model,
+                                    onComplete = { onNavigateBack() }
+                                )
                             }
                         )
                     }

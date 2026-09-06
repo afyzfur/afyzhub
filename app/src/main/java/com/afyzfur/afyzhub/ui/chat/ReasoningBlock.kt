@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -26,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
+import com.afyzfur.afyzhub.data.settings.BubbleStyle
 
 /**
  * 思考过程块，独立于正文单独成栏。
@@ -42,6 +44,7 @@ import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 fun ReasoningBlock(
     reasoning: String,
     thinking: Boolean,
+    bubbleStyle: BubbleStyle = BubbleStyle.BUBBLE,
     modifier: Modifier = Modifier
 ) {
     // null 表示未手动干预，跟随 thinking 自动展开或收起
@@ -55,8 +58,16 @@ fun ReasoningBlock(
     }
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = AppShapeTokens.SettingsGroup,
+        color = if (bubbleStyle == BubbleStyle.PLAIN) {
+            androidx.compose.ui.graphics.Color.Transparent
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        shape = if (bubbleStyle == BubbleStyle.PLAIN) {
+            RectangleShape
+        } else {
+            AppShapeTokens.SettingsGroup
+        },
         modifier = modifier.fillMaxWidth()
     ) {
         Column {
