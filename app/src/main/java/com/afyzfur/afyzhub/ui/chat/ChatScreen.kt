@@ -477,7 +477,7 @@ private fun ChatContent(
                         
                         transparent = appearance.transparentInputBar,
                         seeThrough = appearance.inputBarSeeThrough,
-                        floating = appearance.inputBarFloating,
+                        floating = appearance.inputBarFloating && appearance.inputBarDeepSeeThrough,
                         deepSeeThrough = appearance.inputBarDeepSeeThrough,
                         onBodyHeightChange = { inputBarHeight = it },
                         
