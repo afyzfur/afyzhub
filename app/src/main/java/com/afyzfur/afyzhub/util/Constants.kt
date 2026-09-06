@@ -60,6 +60,7 @@ object Constants {
 
     /** 输入栏是否增强透视（连文字一起半透，可看到背后的消息） */
     const val KEY_INPUT_BAR_DEEP_SEE_THROUGH = "chat_input_bar_deep_see_through"
+    const val KEY_WEB_SEARCH_ENABLED = "web_search_enabled"
 
     /** 输入栏是否悬浮样式（四周留边、四角全圆） */
     const val KEY_INPUT_BAR_FLOATING = "chat_input_bar_floating"

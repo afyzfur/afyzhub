@@ -63,6 +63,7 @@ fun SettingsHomeScreen(
     val profileStore by apiProfilesViewModel.store.collectAsState()
     val activeProfile = profileStore.active
     val streamEnabled by settingsViewModel.streamEnabled.collectAsState()
+    val webSearchEnabled by settingsViewModel.webSearchEnabled.collectAsState()
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -148,6 +149,13 @@ fun SettingsHomeScreen(
                         subtitle = "逐字显示回复，部分中转服务不支持",
                         checked = streamEnabled,
                         onCheckedChange = settingsViewModel::updateStreamEnabled
+                    )
+                    SettingsSwitchItem(
+                        icon = Icons.Default.Search,
+                        title = "联网搜索",
+                        subtitle = "启用模型原生联网搜索（当前仅 Gemini 支持）",
+                        checked = webSearchEnabled,
+                        onCheckedChange = settingsViewModel::updateWebSearchEnabled
                     )
                 }
 

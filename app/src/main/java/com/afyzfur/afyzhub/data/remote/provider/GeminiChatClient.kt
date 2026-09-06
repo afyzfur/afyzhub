@@ -133,7 +133,8 @@ class GeminiChatClient(
         return GenerateRequest(
             contents = contents,
             systemInstruction = systemPrompt?.let { Content(role = null, parts = listOf(Part(it))) },
-            generationConfig = config
+            generationConfig = config,
+            tools = if (settings.webSearchEnabled) listOf(Tool(googleSearch = GoogleSearch())) else null
         )
     }
 
@@ -153,7 +154,8 @@ class GeminiChatClient(
     private data class GenerateRequest(
         val contents: List<Content>,
         val systemInstruction: Content? = null,
-        val generationConfig: GenerationConfig? = null
+        val generationConfig: GenerationConfig? = null,
+        val tools: List<Tool>? = null
     )
 
     @Serializable
@@ -168,6 +170,12 @@ class GeminiChatClient(
      * generationConfig 都不发——部分模型（如 2.5 Pro）不接受
      * 把预算设成 0，会直接报错。
      */
+    @Serializable
+    private data class Tool(val googleSearch: GoogleSearch? = null)
+
+    @Serializable
+    private class GoogleSearch
+
     @Serializable
     private data class ThinkingConfig(
         val thinkingBudget: Int,

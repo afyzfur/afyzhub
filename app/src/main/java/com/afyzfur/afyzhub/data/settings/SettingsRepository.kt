@@ -46,7 +46,9 @@ data class AppSettings(
      * 放在 AppSettings 而非 ApiProfile：它更像"这次想让模型想多久"的
      * 临时选择，用户会频繁在输入栏切换，而不是某组配置的固定属性。
      */
-    val thinkingEffort: ThinkingEffort = ThinkingEffort.DEFAULT
+    val thinkingEffort: ThinkingEffort = ThinkingEffort.DEFAULT,
+    /** 是否启用模型原生联网搜索。当前仅 Gemini 支持。 */
+    val webSearchEnabled: Boolean = false
 )
 
 /**
@@ -113,6 +115,7 @@ class SettingsRepository(
         booleanPreferencesKey(Constants.KEY_INPUT_BAR_FLOATING)
     private val inputBarDeepSeeThroughKey =
         booleanPreferencesKey(Constants.KEY_INPUT_BAR_DEEP_SEE_THROUGH)
+    private val webSearchEnabledKey = booleanPreferencesKey(Constants.KEY_WEB_SEARCH_ENABLED)
     private val logRetentionKey = stringPreferencesKey(Constants.KEY_LOG_RETENTION)
     private val logEnabledKey = booleanPreferencesKey(Constants.KEY_LOG_ENABLED)
 
@@ -235,7 +238,8 @@ class SettingsRepository(
                 model = active.effectiveModel,
                 baseUrl = normalizeBaseUrl(active.effectiveBaseUrl, active.provider),
                 streamEnabled = prefs[streamKey] ?: true,
-                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey])
+                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey]),
+            webSearchEnabled = prefs[webSearchEnabledKey] ?: false
             )
         } else {
             val provider = AiProvider.fromId(prefs[providerKey])
@@ -247,7 +251,8 @@ class SettingsRepository(
                 model = readModel(prefs, provider),
                 baseUrl = readBaseUrl(prefs, provider),
                 streamEnabled = prefs[streamKey] ?: true,
-                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey])
+                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey]),
+            webSearchEnabled = prefs[webSearchEnabledKey] ?: false
             )
         }
     }
@@ -460,6 +465,10 @@ class SettingsRepository(
 
     suspend fun setInputBarDeepSeeThrough(enabled: Boolean) {
         dataStore.edit { it[inputBarDeepSeeThroughKey] = enabled }
+    }
+
+    suspend fun setWebSearchEnabled(enabled: Boolean) {
+        dataStore.edit { it[webSearchEnabledKey] = enabled }
     }
 
     /**
