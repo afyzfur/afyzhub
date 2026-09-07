@@ -32,7 +32,6 @@ class SettingsViewModel(
 
     private val _streamEnabled = MutableStateFlow(true)
     val streamEnabled: StateFlow<Boolean> = _streamEnabled.asStateFlow()
-
     private val _webSearchEnabled = MutableStateFlow(false)
     val webSearchEnabled: StateFlow<Boolean> = _webSearchEnabled.asStateFlow()
 
@@ -88,7 +87,6 @@ class SettingsViewModel(
             _selectedModel.value = settings.model
             _baseUrl.value = settings.baseUrl
             _streamEnabled.value = settings.streamEnabled
-            _webSearchEnabled.value = settings.webSearchEnabled
             // 直接展示上次拉取的结果，避免每次进入设置页都要重新获取。
             _availableModels.value = settingsRepository.cachedModels(settings.provider)
             initialized = true
@@ -202,11 +200,6 @@ class SettingsViewModel(
         // 写回旧键位，而那些值是本 ViewModel 初始化时的快照，
         // 用户之后在配置组里改过的话会被这次写入覆盖成旧值
         viewModelScope.launch { settingsRepository.setStreamEnabled(value) }
-    }
-
-    fun updateWebSearchEnabled(value: Boolean) {
-        _webSearchEnabled.value = value
-        viewModelScope.launch { settingsRepository.setWebSearchEnabled(value) }
     }
 
     fun updateApiKey(value: String) {

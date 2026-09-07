@@ -87,47 +87,22 @@ class ApiProfilesViewModel(
         }
     }
 
+
+    fun selectModelAndProfile(profileId: String, model: String, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            val current = settingsRepository.currentProfiles()
+            val profiles = current.profiles.map { p ->
+                if (p.id == profileId) p.copy(model = model) else p
+            }
+            settingsRepository.saveProfiles(current.copy(profiles = profiles, activeId = profileId))
+            onComplete()
+        }
+    }
     fun selectProfile(id: String) {
         viewModelScope.launch {
             val current = settingsRepository.currentProfiles()
             if (current.profiles.none { it.id == id }) return@launch
             settingsRepository.saveProfiles(current.copy(activeId = id))
-        }
-    }
-
-    /**
-     * 选择模型并切换配置组，完成后执行回调。
-     *
-     * 用于模型选择页：点击某个模型时，需要同时更新该组的 model 字段
-     * 并切换到该组，等两次保存都完成后再返回聊天页——否则导航发生时
-     * 数据可能还没落盘，聊天页读到的是旧配置。
-     */
-    fun selectModelAndProfile(
-        profileId: String,
-        model: String,
-        onComplete: () -> Unit = {}
-    ) {
-        viewModelScope.launch {
-            val current = settingsRepository.currentProfiles()
-            val profile = current.profiles.firstOrNull { it.id == profileId }
-            if (profile == null) {
-                onComplete()
-                return@launch
-            }
-
-            // 模型和激活组必须放进同一次写入，避免两次异步保存
-            // 之间出现旧状态覆盖新状态。
-            settingsRepository.saveProfiles(
-                current.copy(
-                    profiles = current.profiles.map {
-                        if (it.id == profileId) it.copy(model = model) else it
-                    },
-                    activeId = profileId
-                )
-            )
-
-            // DataStore 写入完成后再返回，聊天页能直接读到新配置。
-            onComplete()
         }
     }
 

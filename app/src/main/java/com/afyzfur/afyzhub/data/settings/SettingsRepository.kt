@@ -47,7 +47,6 @@ data class AppSettings(
      * 临时选择，用户会频繁在输入栏切换，而不是某组配置的固定属性。
      */
     val thinkingEffort: ThinkingEffort = ThinkingEffort.DEFAULT,
-    /** 是否启用模型原生联网搜索。当前仅 Gemini 支持。 */
     val webSearchEnabled: Boolean = false
 )
 
@@ -238,8 +237,7 @@ class SettingsRepository(
                 model = active.effectiveModel,
                 baseUrl = normalizeBaseUrl(active.effectiveBaseUrl, active.provider),
                 streamEnabled = prefs[streamKey] ?: true,
-                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey]),
-            webSearchEnabled = prefs[webSearchEnabledKey] ?: false
+                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey])
             )
         } else {
             val provider = AiProvider.fromId(prefs[providerKey])
@@ -251,8 +249,7 @@ class SettingsRepository(
                 model = readModel(prefs, provider),
                 baseUrl = readBaseUrl(prefs, provider),
                 streamEnabled = prefs[streamKey] ?: true,
-                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey]),
-            webSearchEnabled = prefs[webSearchEnabledKey] ?: false
+                thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey])
             )
         }
     }

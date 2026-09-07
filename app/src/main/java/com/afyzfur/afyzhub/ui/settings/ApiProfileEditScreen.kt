@@ -195,9 +195,9 @@ fun ApiProfileEditScreen(
                 SettingsCategoryTitle("连接测试")
                 SettingsGroup {
                     SettingsActionItem(
-                        icon = if (testing) Icons.Default.Close else Icons.Default.PlayArrow,
-                        title = if (testing) "取消测试" else "测试这组配置",
-                        subtitle = if (testing) "再次点击取消当前测试" else "发一次最小请求，确认能否正常对话",
+                        icon = Icons.Default.PlayArrow,
+                        title = if (testing) "测试中…" else "测试这组配置",
+                        subtitle = "发一次最小请求，确认能否正常对话",
                         onClick = { modelsViewModel.testConnection(profile) }
                     )
                     testResult?.let { result ->

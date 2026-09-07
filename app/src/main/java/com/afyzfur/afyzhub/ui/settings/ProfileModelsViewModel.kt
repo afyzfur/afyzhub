@@ -6,11 +6,10 @@ import com.afyzfur.afyzhub.data.remote.provider.ChatClientRegistry
 import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.domain.model.ApiProfile
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /**
@@ -71,8 +70,6 @@ class ProfileModelsViewModel(
                 } else {
                     onSuccess(models)
                 }
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 _error.value = e.message ?: "获取模型列表失败"
             } finally {
@@ -91,8 +88,8 @@ class ProfileModelsViewModel(
     val testResult: StateFlow<TestResult?> = _testResult.asStateFlow()
 
     private val _testing = MutableStateFlow(false)
-    val testing: StateFlow<Boolean> = _testing.asStateFlow()
     private var testJob: Job? = null
+    val testing: StateFlow<Boolean> = _testing.asStateFlow()
 
     /**
      * 发一次最小的对话请求，验证这组配置能否真正用起来。
@@ -102,12 +99,12 @@ class ProfileModelsViewModel(
      * 而后者才是用户实际会遇到的失败。
      */
     fun testConnection(profile: ApiProfile) {
-        if (_testing.value) { testJob?.cancel(); return }
+        if (_testing.value) return
         if (profile.apiKey.isBlank()) {
             _testResult.value = TestResult.Failure("请先填写 API Key")
             return
         }
-        testJob = viewModelScope.launch {
+        viewModelScope.launch {
             _testing.value = true
             _testResult.value = null
             val startedAt = System.currentTimeMillis()
@@ -133,16 +130,12 @@ class ProfileModelsViewModel(
                         elapsedMs = elapsed
                     )
                 }
-            } catch (e: CancellationException) {
-                // 取消属于用户操作，不显示为连接失败。
-                throw e
             } catch (e: Exception) {
                 _testResult.value = TestResult.Failure(
                     e.message ?: "请求失败，原因未知"
                 )
             } finally {
                 _testing.value = false
-                testJob = null
             }
         }
     }
