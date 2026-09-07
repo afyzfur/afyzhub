@@ -202,6 +202,11 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setStreamEnabled(value) }
     }
 
+    fun updateWebSearchEnabled(value: Boolean) {
+        _webSearchEnabled.value = value
+        viewModelScope.launch { settingsRepository.setWebSearchEnabled(value) }
+    }
+
     fun updateApiKey(value: String) {
         _apiKey.value = value
         scheduleAutoSave()
