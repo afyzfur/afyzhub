@@ -30,7 +30,8 @@ data class ApiProfile(
 ) {
     /** 获取应该显示的模型列表 */
     val effectiveSelectedModels: List<String>
-        get() = if (selectedModels.isEmpty()) cachedModels else selectedModels.filter { it in cachedModels } {
+        get() = if (selectedModels.isEmpty()) cachedModels else selectedModels.filter { it in cachedModels }
+
     val provider: AiProvider get() = AiProvider.fromId(providerId)
 
     /** 名称为空时给一个可读的兜底，避免列表里出现空白行 */

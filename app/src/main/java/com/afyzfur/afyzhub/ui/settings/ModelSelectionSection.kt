@@ -135,7 +135,7 @@ private fun ModelRow(
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ModelIcon(model = model, modifier = Modifier.size(24.dp))
+        ModelIcon(modelName = model, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(12.dp))
         Text(
             text = model,
