@@ -26,17 +26,17 @@ enum class ThemePalette(
     /** 该配色在设置页的代表色，用于色块预览 */
     val swatch: Color
 ) {
-    ORANGE("orange", "暖橙", 0f, Color(0xFFFCA43C)),
-    BLUE("blue", "静蓝", 185f, Color(0xFF3C9CFC)),
-    GREEN("green", "松绿", 105f, Color(0xFF4CAF50)),
-    PURPLE("purple", "藤紫", 240f, Color(0xFF9C7CF4)),
-    ROSE("rose", "玫红", 310f, Color(0xFFF45C8C)),
     GRAPHITE("graphite", "石墨", 0f, Color(0xFF7A7A7A)) {
         // 石墨是唯一的特例：它需要去饱和而非转色相，
         // 因此覆盖生成逻辑而不是给一个无意义的色相值
         override fun light(): ColorScheme = LightColors.desaturate()
         override fun dark(): ColorScheme = DarkColors.desaturate()
-    };
+    },
+    ORANGE("orange", "暖橙", 0f, Color(0xFFFCA43C)),
+    BLUE("blue", "静蓝", 185f, Color(0xFF3C9CFC)),
+    GREEN("green", "松绿", 105f, Color(0xFF4CAF50)),
+    PURPLE("purple", "藤紫", 240f, Color(0xFF9C7CF4)),
+    ROSE("rose", "玫红", 310f, Color(0xFFF45C8C));
 
     open fun light(): ColorScheme = LightColors.shiftHue(hueShift)
     open fun dark(): ColorScheme = DarkColors.shiftHue(hueShift)
