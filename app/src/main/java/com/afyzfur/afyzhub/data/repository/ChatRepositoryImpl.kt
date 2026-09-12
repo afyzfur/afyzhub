@@ -326,6 +326,8 @@ class ChatRepositoryImpl(
     ): CompletionResult {
         val builder = StringBuilder()
         var usage: TokenUsage? = null
+        var lastUpdateTime = 0L
+        val updateInterval = 50L // 50ms 更新一次，平衡流畅度和性能
 
         client.stream(turns, settings).collect { event ->
             when (event) {
@@ -334,13 +336,23 @@ class ChatRepositoryImpl(
                     // 用户能直接看到进展，状态文字的作用就减弱了
                     if (builder.isEmpty()) onPhase(SendPhase.RECEIVING)
                     builder.append(event.delta)
+                    
+                    // 批量更新：累积到一定时间再写数据库，避免过于频繁的更新
+                    val now = System.currentTimeMillis()
+                    if (now - lastUpdateTime >= updateInterval) {
+                        messageDao.updateContent(placeholderId, builder.toString())
+                        lastUpdateTime = now
+                    }
+                }
+                is StreamEvent.Finished -> {
+                    usage = event.usage
+                    // 确保最后的内容被写入
                     messageDao.updateContent(placeholderId, builder.toString())
                 }
-                is StreamEvent.Finished -> usage = event.usage
             }
         }
-
         return CompletionResult(content = builder.toString(), usage = usage)
+    }
     }
 
     /**
