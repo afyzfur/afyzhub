@@ -353,7 +353,6 @@ class ChatRepositoryImpl(
         }
         return CompletionResult(content = builder.toString(), usage = usage)
     }
-    }
 
     /**
      * 组装多轮上下文。
