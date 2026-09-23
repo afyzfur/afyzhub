@@ -18,6 +18,8 @@ import com.afyzfur.afyzhub.domain.model.Conversation
 import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.domain.model.SendPhase
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -389,6 +391,14 @@ class ChatRepositoryImpl(
         var receivedThisRound = false
         val updateInterval = 120L // 120ms 节流: 更频繁的写库只会放大重组开销, 流式观感差别很小
 
+        // 平滑显示: 独立协程按固定节奏把缓冲内容落库, 与网络到达节奏解耦。
+        // API 快时显示匀速推进而不是一大段突然蹦出; API 慢时原样透传。
+        val smoother = launch {
+            while (true) {
+                delay(100)
+                messageDao.updateContent(placeholderId, builder.toString())
+            }
+        }
         client.stream(turns, settings).collect { event ->
             when (event) {
                 is StreamEvent.TextDelta -> {
@@ -400,12 +410,6 @@ class ChatRepositoryImpl(
                     }
                     builder.append(event.delta)
                     
-                    // 批量更新：累积到一定时间再写数据库，避免过于频繁的更新
-                    val now = System.currentTimeMillis()
-                    if (now - lastUpdateTime >= updateInterval) {
-                        messageDao.updateContent(placeholderId, builder.toString())
-                        lastUpdateTime = now
-                    }
                 }
                 is StreamEvent.Finished -> {
                     usage = event.usage
@@ -414,6 +418,7 @@ class ChatRepositoryImpl(
                 }
             }
         }
+        smoother.cancel()
         return CompletionResult(content = builder.toString(), usage = usage)
     }
 

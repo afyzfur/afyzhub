@@ -159,7 +159,7 @@ fun ChatScreen(
                     // (含容差)即恢复。若在所有非滚动帧都结算, 流式
                     // 内容增长的瞬间 atBottom 会先变 false(布局先
                     // 变、贴底滚动后到), 会把正常跟随误杀
-                        autoScroll = atBottom
+                        autoScroll = atBottom && !followPaused.value
                         if (atBottom) followPaused.value = false
                 }
                 wasScrolling = scrolling
@@ -171,7 +171,7 @@ fun ChatScreen(
     LaunchedEffect(messages.size, lastContentLength) {
         if (messages.isEmpty()) return@LaunchedEffect
         // 用户刚发话: 强制回底, 自己的话必须进视野, 否则像发送失败
-        if (messages.last().isFromUser) autoScroll = true
+        if (messages.last().isFromUser && !followPaused.value) autoScroll = true
         // 手势/甩动进行中不发起程序滚动：滚动互斥锁被手势持有,
         // scrollToItem 会挂起排队, 手一松就补执行, 视口被拽回底部
         // ——松手后的位置结算会按 atBottom 决定是否恢复, 不会漏

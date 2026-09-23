@@ -528,8 +528,8 @@ private fun SearchBlock(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(MaterialTheme.shapes.small)
-                                .clickable { onLinkClick?.invoke(url) }
                                 .padding(vertical = 5.dp)
+                                .clickable { onLinkClick?.invoke(url) }
                         ) {
                             // 站点图标: 直连 favicon, 失败退首字母
                             SiteIcon(url = url, size = 16.dp)
