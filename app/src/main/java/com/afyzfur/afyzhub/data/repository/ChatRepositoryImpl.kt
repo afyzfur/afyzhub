@@ -18,6 +18,8 @@ import com.afyzfur.afyzhub.domain.model.Conversation
 import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.domain.model.SendPhase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
@@ -393,7 +395,7 @@ class ChatRepositoryImpl(
 
         // 平滑显示: 独立协程按固定节奏把缓冲内容落库, 与网络到达节奏解耦。
         // API 快时显示匀速推进而不是一大段突然蹦出; API 慢时原样透传。
-        val smoother = launch {
+        val smoother = CoroutineScope(Dispatchers.IO).launch {
             while (true) {
                 delay(100)
                 messageDao.updateContent(placeholderId, builder.toString())
