@@ -375,6 +375,23 @@ class WebSearchService(
                 .replace("<web_search>", "")
                 .replace("</web_search>", "")
         }
+        /**
+         * 去重正文里重复的搜索标签对。
+         *
+         * 二次请求以第一轮内容(含搜索标签)为流式起点,
+         * 若模型又复读一个标签, 最终内容里会出现两个,
+         * UI 就渲染出两个搜索块(其中一个从未真正搜过,
+         * 永远显示“正在获取…”)。这里把内容相同的
+         * 搜索标签只保留第一个。
+         */
+        fun dedupeSearchTags(content: String): String {
+            val seen = HashSet<String>()
+            val regex = Regex("""<web_search>(.*?)</web_search>""", RegexOption.DOT_MATCHES_ALL)
+            return regex.replace(content) { m ->
+                val q = m.groupValues[1].trim()
+                if (seen.add(q)) m.value else ""
+            }
+        }
         fun stripModelEchoTags(content: String): String {
             // 只剥模型复读的 sources 标签对: 复读的闭合 sources 会把整段正文
             // 当来源剥掉(正文消失)。sources 内的文本(往往是正文)保留。

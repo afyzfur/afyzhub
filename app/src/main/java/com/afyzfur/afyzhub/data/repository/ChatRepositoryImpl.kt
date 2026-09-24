@@ -206,7 +206,9 @@ class ChatRepositoryImpl(
                 val cleanedSecond = WebSearchService.stripBareUrlLines(
                     WebSearchService.stripModelEchoTags(secondOutcome.content)
                 )
-                reply = cleanedSecond + sourcesBlock
+                // 第二轮以第一轮内容为流式起点, 若模型又复读一个搜索标签,
+                // 正文里会有两个搜索块(第二个从未真正搜过)。这里去重。
+                reply = WebSearchService.dedupeSearchTags(cleanedSecond) + sourcesBlock
                 if (secondOutcome.content.isBlank()) {
                     throw IllegalStateException("模型返回内容为空")
                 }
