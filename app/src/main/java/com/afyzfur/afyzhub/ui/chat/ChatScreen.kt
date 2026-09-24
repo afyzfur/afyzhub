@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.material.icons.Icons
@@ -477,6 +478,21 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    // 监听手势放在滚动容器外层: LazyColumn 会消耗指针事件,
+                    // 挂在它自身的 modifier 上不一定收得到抬起; 放在外层
+                    // 并用 Initial 通道, 确保按下/抬起都能准确捕获。
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            lastTouchAt.value = System.currentTimeMillis()
+                            pressedState.value = true
+                            do {
+                                val ev = awaitPointerEvent(PointerEventPass.Initial)
+                            } while (ev.changes.any { it.pressed })
+                            lastTouchAt.value = System.currentTimeMillis()
+                            pressedState.value = false
+                        }
+                    }
             ) {
                 Column(
                     modifier = Modifier
@@ -496,26 +512,7 @@ private fun ChatContent(
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxWidth()
-                            .pointerInput(Unit) {
-                                // 按下暂停抢滚; 累计上滑超过阈值视为主动离开底部,
-                                // 上滑超阈值即锁死跟随; 解锁唯一途径: 滑回最底部(settle 结算处)
-                                // 按下置位: 暂停程序滚动; 抬起解除。
-                                // 是否恢复跟随由松手位置(是否在底部)在 effect 里结算
-                                awaitEachGesture {
-                                    awaitFirstDown(requireUnconsumed = false)
-                                    lastTouchAt.value = System.currentTimeMillis()
-                                    pressedState.value = true
-                                    while (true) {
-                                        val ev = awaitPointerEvent()
-                                        val pressed = ev.changes.any { it.pressed }
-                                        lastTouchAt.value = System.currentTimeMillis()
-                                        if (!pressed) break
-                                    }
-                                    lastTouchAt.value = System.currentTimeMillis()
-                                    pressedState.value = false
-                                }
-                            },
+                            .fillMaxWidth(),
                         state = listState,
                         contentPadding = PaddingValues(
                             start = 16.dp,
