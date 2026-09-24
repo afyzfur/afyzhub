@@ -372,8 +372,8 @@ class WebSearchService(
          */
         fun stripSearchTagsOnly(content: String): String {
             return content
-                .replace( + LT + web_search + GT + , )
-                .replace( + LT + /web_search + GT + , )
+                .replace("<web_search>", "")
+                .replace("</web_search>", "")
         }
         fun stripModelEchoTags(content: String): String {
             // 只剥模型复读的 sources 标签对: 复读的闭合 sources 会把整段正文
