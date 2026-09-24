@@ -292,27 +292,45 @@ class WebSearchService(
          * - 要求查询词精炼——它就是搜索框里的输入
          */
         fun instruction(): String = """
-            |你可以在需要实时或最新信息时使用网络搜索。使用方法：
-            |只输出一行搜索请求，用标签包住完整的搜索词，随后立即停止输出，
-            |例如： <web_search>2025中秋节是几月几号</web_search>
-            |或： <web_search>OpenAI最新模型发布时间</web_search>
-            |标签内必须是你真实想搜索的内容，绝不能照抄示例或输出占位词。
-            |系统会执行搜索并把结果提供给你，你基于结果继续回答。
-            |如果无需搜索或已有足够信息，直接回答，不要输出任何标签。
+            |你可以在需要实时或最新信息时使用网络搜索。
+            |方法：紧接着你只输出一行，把你真实想搜的完整关键词写在下面这个标签内，然后立即停止输出：
+            |<web_search>北京今日天气</web_search>
+            |上例仅示意格式，务必换成你自己想搜的内容；
+            |绝不能照抄示例、也不能输出“关键词”这类占位词。
+            |系统会执行搜索并把结果提供给你，你再基于结果回答。
+            |无需搜索时直接回答，不要输出任何标签。
         """.trimMargin()
         /** 从模型输出中提取搜索查询词 */
         fun extractQuery(reply: String): String? {
-            val m = Regex("""<web_search>(.*?)</web_search>""", RegexOption.DOT_MATCHES_ALL)
-                .find(reply)
-                ?: Regex("""<web_search>(.*)""", RegexOption.DOT_MATCHES_ALL)
-                    .find(reply)
-            val q = m?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() } ?: return null
-            // 模型偶尔复读指令占位词而非给出真实查询: 视为无效, 不触发搜索
-            val placeholders = setOf("关键词", "要搜的词", "搜索词", "搜索关键词", "query", "search", "2025中秋节是几月几号", "openai最新模型发布时间")
-            return if (q.lowercase() in placeholders) null else q
+            // 容错: 部分模型把标签写进代码围栏、或拼成大写/带空格,
+            // 也有把搜索词包在引号里的。去掉代码围栏后大小写不敏感地取。
+            val stripped = reply.replace("```", "")
+            val open = "<web_search>"
+            val openLoose = "<web_search"
+            val close = "</web_search>"
+            val lowered = stripped.lowercase()
+            var q: String? = null
+            val oi = lowered.indexOf(open)
+            if (oi >= 0) {
+                val ci = lowered.indexOf(close, oi + open.length)
+                if (ci >= 0) q = stripped.substring(oi + open.length, ci)
+            }
+            if (q == null) {
+                val li = lowered.indexOf(openLoose)
+                if (li >= 0) {
+                    var rest = stripped.substring(li + openLoose.length)
+                    val gt = rest.indexOf('>')
+                    if (gt >= 0) rest = rest.substring(gt + 1)
+                    val nl = rest.indexOf('\n')
+                    if (nl >= 0) rest = rest.substring(0, nl)
+                    q = rest
+                }
+            }
+            val cleaned = q?.trim()?.trim('"', '\'', '“', '”', ',')?.takeIf { it.isNotBlank() } ?: return null
+            val placeholders = setOf("关键词", "要搜的词", "搜索词", "搜索关键词", "query", "search", "你真实想搜索的内容", "2025中秋节是几月几号", "openai最新模型发布时间")
+            return if (cleaned.lowercase() in placeholders) null else cleaned
         }
-
-        /** 把搜索结果格式化为注入上下文的文本 */
+                /** 把搜索结果格式化为注入上下文的文本 */
         fun formatResults(results: List<Result>): String {
             if (results.isEmpty()) {
                 return "（搜索没有返回结果。请基于已有知识回答，并向用户说明信息可能过时。）"

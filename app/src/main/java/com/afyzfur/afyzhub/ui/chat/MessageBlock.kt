@@ -513,7 +513,7 @@ private fun SearchBlock(
             }
             // 来源列表: favicon + 标题, 点整行进内置浏览器
             AnimatedVisibility(visible = expanded) {
-                Column(modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp)) {
+                Column(modifier = Modifier.padding(bottom = 10.dp)) {
                     if (sources.isEmpty()) {
                         // streaming: sources not yet persisted
                         Text(
@@ -527,9 +527,9 @@ private fun SearchBlock(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(MaterialTheme.shapes.small)
-                                .padding(vertical = 5.dp)
+                                .clip(AppShapeTokens.SettingsGroup)
                                 .clickable { onLinkClick?.invoke(url) }
+                                .padding(horizontal = 14.dp, vertical = 5.dp)
                         ) {
                             // 站点图标: 直连 favicon, 失败退首字母
                             SiteIcon(url = url, size = 16.dp)

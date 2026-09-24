@@ -389,38 +389,61 @@ class ChatRepositoryImpl(
         // 标签都是这条回复的一部分, 覆盖式重置会全部丢失
         val builder = StringBuilder(initialContent)
         var usage: TokenUsage? = null
-        var lastUpdateTime = 0L
         var receivedThisRound = false
-        val updateInterval = 120L // 120ms 节流: 更频繁的写库只会放大重组开销, 流式观感差别很小
-
-        // 平滑显示: 独立协程按固定节奏把缓冲内容落库, 与网络到达节奏解耦。
-        // API 快时显示匀速推进而不是一大段突然蹦出; API 慢时原样透传。
+        // 平滑显示: 揭示进度与网络到达节奏解耦。网络是突发式投递的,
+        // 若直接把缓冲区写库, 会出现“几百毫秒无变化→突然蹦一大段”的一顿一顿。
+        // 改为逐字揭示: 每 40ms 把“已揭示”部分落库,
+        // 步长按积压量自适应推进——API 一次给一大段也逐字显现,
+        // API 慢时原样透传, 观感始终丝滑。
+        var lastWritten = ""
+        val revealLock = Any()
+        var networkDone = false
+        var revealed = initialContent.length
         val smoother = CoroutineScope(Dispatchers.IO).launch {
             while (true) {
-                delay(100)
-                messageDao.updateContent(placeholderId, builder.toString())
-            }
-        }
-        client.stream(turns, settings).collect { event ->
-            when (event) {
-                is StreamEvent.TextDelta -> {
-                    // 首个片段到达即离开等待阶段。此后内容在陆续显现，
-                    // 用户能直接看到进展，状态文字的作用就减弱了
-                    if (!receivedThisRound) {
-                        receivedThisRound = true
-                        onPhase(SendPhase.RECEIVING)
+                delay(33)
+                val snapshot: String
+                val finished: Boolean
+                synchronized(revealLock) {
+                    val full = builder.toString()
+                    if (revealed < full.length) {
+                        val backlog = full.length - revealed
+                        // 每个节拍揭示一定比例的积压:既保证小增量跟得上,
+                        // 又保证大突发能在 ~200ms 内追平,不会无限落后后爆发
+                        revealed += maxOf(2, (backlog * 0.4).toInt())
+                        if (revealed > full.length) revealed = full.length
                     }
-                    builder.append(event.delta)
-                    
+                    snapshot = full.substring(0, minOf(revealed, full.length))
+                    finished = networkDone && revealed >= builder.length
                 }
-                is StreamEvent.Finished -> {
-                    usage = event.usage
-                    // 确保最后的内容被写入
-                    messageDao.updateContent(placeholderId, builder.toString())
+                if (snapshot != lastWritten) {
+                    messageDao.updateContent(placeholderId, snapshot)
+                    lastWritten = snapshot
                 }
+                if (finished) break
             }
         }
-        smoother.cancel()
+        try {
+            client.stream(turns, settings).collect { event ->
+                when (event) {
+                    is StreamEvent.TextDelta -> {
+                        if (!receivedThisRound) {
+                            receivedThisRound = true
+                            onPhase(SendPhase.RECEIVING)
+                        }
+                        synchronized(revealLock) { builder.append(event.delta) }
+                    }
+                    is StreamEvent.Finished -> {
+                        usage = event.usage
+                    }
+                }
+            }
+        } finally {
+            // 无论成功或异常, 都结束平滑器, 避免漂浪下去
+            synchronized(revealLock) { networkDone = true }
+            smoother.join()
+        }
+        messageDao.updateContent(placeholderId, builder.toString())
         return CompletionResult(content = builder.toString(), usage = usage)
     }
 

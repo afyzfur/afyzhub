@@ -128,12 +128,9 @@ fun ChatScreen(
      * - 手势结束（settle）时按最终位置结算：停在底部就恢复跟随
      */
     var autoScroll by remember(currentConversationId) { mutableStateOf(true) }
-    // 手指按下列表任意位置(含未拖动)即暂停抢滚, 抬起恢复 —— 消除按下未过slop窗口被拽回的竞态
+    // 手指按下即置位: 手势进行中暂停程序滚动, 抬起后按最终位置结算
     val pressedState = remember { mutableStateOf(false) }
     val lastTouchAt = remember { mutableStateOf(0L) }
-    // 上滑意图: 一旦用户向上拖过阈值即暂停跟随, 滑回底部才恢复 ——
-    // 解决松手后 atBottom 误判为 true 导致的自动回底
-    val followPaused = remember { mutableStateOf(false) }
 
     // 视口是否停在（或接近）列表底部。128px 容差："差一点到底"也认作
     // 到底，否则恢复条件苛刻到手松开后仍差 1px 而不生效
@@ -145,48 +142,39 @@ fun ChatScreen(
     }
 
     LaunchedEffect(listState) {
-        // 手势/甩动一开始就停跟随, 不等离开容差区：程序滚动
-        // (scrollToItem) 在手势持有滚动锁时会挂起排队, 手指一松
-        // 就执行、把视口拽回底部。越早关掉跟随, 排队的滚动越少;
-        // 误停的代价为零——松手时结束沿结算会按位置恢复
-        var wasScrolling = false
-        snapshotFlow { listState.isScrollInProgress }
-            .collect { scrolling ->
-                if (scrolling) {
-                    autoScroll = false
-                } else if (wasScrolling) {
-                    // 只在手势结束沿(true→false)结算, 停在底部区
-                    // (含容差)即恢复。若在所有非滚动帧都结算, 流式
-                    // 内容增长的瞬间 atBottom 会先变 false(布局先
-                    // 变、贴底滚动后到), 会把正常跟随误杀
-                        autoScroll = atBottom && !followPaused.value
-                        if (atBottom) followPaused.value = false
+        // 用户手势结束时(按下→抬起)结算: 停在最底部才恢复跟随,
+        // 上滑离开底部即锁死。只监听手势状态, 程序自身滚动不触发,
+        // 因此不会像监控 isScrollInProgress 那样误关跟随。
+        snapshotFlow { pressedState.value }
+            .collect { pressing ->
+                if (pressing) return@collect
+                autoScroll = atBottom
+                // 抬手后惯性滑动可能仍在继续, 此刻 atBottom 可能还没停稳。
+                // 稍后复查一次(若期间没再按下), 避免停在底部却没恢复跟随
+                val stamp = System.currentTimeMillis()
+                delay(420)
+                if (!pressedState.value && System.currentTimeMillis() - stamp >= 400) {
+                    autoScroll = atBottom
                 }
-                wasScrolling = scrolling
             }
     }
-
     // 流式输出时最后一条消息内容会持续变化，需要一并作为滚动触发条件。
     val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
     LaunchedEffect(messages.size, lastContentLength) {
         if (messages.isEmpty()) return@LaunchedEffect
         // 用户刚发话: 强制回底, 自己的话必须进视野, 否则像发送失败
-        if (messages.last().isFromUser && !followPaused.value) autoScroll = true
-        // 手势/甩动进行中不发起程序滚动：滚动互斥锁被手势持有,
-        // scrollToItem 会挂起排队, 手一松就补执行, 视口被拽回底部
-        // ——松手后的位置结算会按 atBottom 决定是否恢复, 不会漏
-        if (autoScroll && !followPaused.value && System.currentTimeMillis() - lastTouchAt.value > 320) {
-            // 流式增量高频触发本 effect, 重启会取消上一次排队的滚动;
-            // delay+复查把 "检查时未按下、发起时已按下"的竞态窗口压到最小,
-            // 否则排队中的 scrollToItem 会在用户松手后执行, 把视口拽回底部
+        if (messages.last().isFromUser) autoScroll = true
+        // 手势进行中不发起程序滚动：滚动互斥锁被手势持有,
+        // scrollToItem 会挂起排队, 手一松就补执行, 视口被拽回底部。
+        // 松手后的位置结算会按 atBottom 决定是否恢复, 不会漏
+        if (autoScroll && !pressedState.value && System.currentTimeMillis() - lastTouchAt.value > 300) {
             delay(96)
-            if (autoScroll && !followPaused.value && System.currentTimeMillis() - lastTouchAt.value > 320) {
-                // 索引等于消息数: 列表末尾的 bottom-anchor, 详 LazyColumn 内注释
+            if (autoScroll && !pressedState.value && System.currentTimeMillis() - lastTouchAt.value > 300) {
+                // 索引等于消息数: 列表末尾的 bottom-anchor
                 listState.scrollToItem(messages.size)
             }
         }
     }
-
     val settings by hostViewModel.settings.collectAsState()
     val uiPreferences by hostViewModel.uiPreferences.collectAsState()
     val currentTitle = conversations.firstOrNull { it.id == currentConversationId }?.title
@@ -252,9 +240,7 @@ fun ChatScreen(
             error = error,
             listState = listState,
             pressedState = pressedState,
-            followPaused = followPaused,
             lastTouchAt = lastTouchAt,
-            onStopFollow = { autoScroll = false },
             inputText = inputText,
             onInputChange = { inputText = it },
             onOpenDrawer = { scope.launch { drawerState.open() } },
@@ -380,9 +366,7 @@ private fun ChatContent(
     error: String?,
     listState: LazyListState,
     pressedState: androidx.compose.runtime.MutableState<Boolean>,
-    followPaused: androidx.compose.runtime.MutableState<Boolean>,
     lastTouchAt: androidx.compose.runtime.MutableState<Long>,
-    onStopFollow: () -> Unit,
     inputText: String,
     onInputChange: (String) -> Unit,
     onOpenDrawer: () -> Unit,
@@ -498,18 +482,16 @@ private fun ChatContent(
                             .pointerInput(Unit) {
                                 // 按下暂停抢滚; 累计上滑超过阈值视为主动离开底部,
                                 // 上滑超阈值即锁死跟随; 解锁唯一途径: 滑回最底部(settle 结算处)
+                                // 按下置位: 暂停程序滚动; 抬起解除。
+                                // 是否恢复跟随由松手位置(是否在底部)在 effect 里结算
                                 awaitEachGesture {
-                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    awaitFirstDown(requireUnconsumed = false)
                                     lastTouchAt.value = System.currentTimeMillis()
                                     pressedState.value = true
-                                    var travel = 0f
                                     while (true) {
                                         val ev = awaitPointerEvent()
                                         val pressed = ev.changes.any { it.pressed }
-                                        val delta = ev.changes.sumOf { it.positionChange().y.toDouble() }.toFloat()
                                         lastTouchAt.value = System.currentTimeMillis()
-                                        travel += delta
-                                        if (travel < -24f) followPaused.value = true
                                         if (!pressed) break
                                     }
                                     lastTouchAt.value = System.currentTimeMillis()
