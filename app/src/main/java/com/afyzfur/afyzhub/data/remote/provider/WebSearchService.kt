@@ -348,6 +348,22 @@ class WebSearchService(
          * 复读的 web_search 会在正文里多出搜索块。这里剥掉标签对本身,
          * sources 内的文本(往往是正文)保留, 官方来源块由发送流程统一追加。
          */
+        /**
+         * 剔掉正文中“整行只有网址”的裸链接。
+         *
+         * 部分模型把搜索到的链接一行一条直接摆出来当正文, 而来源已由
+         * 界面的搜索块单独展示, 正文再罗列只是噪音。只删“从行首到行尾
+         * 整行就是一个网址”的行, 句子里嵌的链接不动。
+         */
+        fun stripBareUrlLines(content: String): String {
+            return content.lines()
+                .filterNot { line ->
+                    val s = line.trim()
+                    (s.startsWith("http://") || s.startsWith("https://")) && (!s.contains(" "))
+                }
+                .joinToString("\n")
+                .trim()
+        }
         fun stripModelEchoTags(content: String): String {
             // 只剥模型复读的 sources 标签对: 复读的闭合 sources 会把整段正文
             // 当来源剥掉(正文消失)。sources 内的文本(往往是正文)保留。

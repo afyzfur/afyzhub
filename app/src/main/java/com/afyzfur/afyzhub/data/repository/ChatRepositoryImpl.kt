@@ -189,7 +189,8 @@ class ChatRepositoryImpl(
                         role = "user",
                         content = "以下是「" + searchQuery + "」的搜索结果：\n\n" +
                             WebSearchService.formatResults(results) +
-                            "\n\n请基于以上结果继续回答。"
+                            "\n\n请基于以上结果，用中文直接给出完整的正文回答，" +
+                            "不要罗列链接、标题或网址列表（来源已由界面单独展示）。"
                     )
                 )
                 val secondOutcome = if (settings.streamEnabled) {
@@ -201,7 +202,9 @@ class ChatRepositoryImpl(
                 // 模型有时复读上下文里的搜索/来源标签: 复读的闭合 sources 会把
                 // 整段正文当来源剥掉(表现为回答输出完突然消失)。这里在拼接
                 // 官方 sources 块之前先清掉模型自己输出的这类标签
-                val cleanedSecond = WebSearchService.stripModelEchoTags(secondOutcome.content)
+                val cleanedSecond = WebSearchService.stripBareUrlLines(
+                    WebSearchService.stripModelEchoTags(secondOutcome.content)
+                )
                 reply = cleanedSecond + sourcesBlock
                 if (secondOutcome.content.isBlank()) {
                     throw IllegalStateException("模型返回内容为空")

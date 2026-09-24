@@ -167,12 +167,13 @@ fun ChatScreen(
         // 手势进行中不发起程序滚动：滚动互斥锁被手势持有,
         // scrollToItem 会挂起排队, 手一松就补执行, 视口被拽回底部。
         // 松手后的位置结算会按 atBottom 决定是否恢复, 不会漏
-        if (autoScroll && !pressedState.value && System.currentTimeMillis() - lastTouchAt.value > 300) {
-            delay(96)
-            if (autoScroll && !pressedState.value && System.currentTimeMillis() - lastTouchAt.value > 300) {
-                // 索引等于消息数: 列表末尾的 bottom-anchor
-                listState.scrollToItem(messages.size)
-            }
+        // 流式跟随必须“立即”贴近底部。此前把滚动放在带 delay(96) 的
+        // LaunchedEffect 里, 而流式内容每约 33ms 变一次 → effect 不断重启,
+        // delay 永远走不完, 结果只有输出停下后才滚一次。改为每次内容
+        // 变化立即发起滚动, 复用系统滚动互斥锁自然节流。
+        if (autoScroll && !pressedState.value && System.currentTimeMillis() - lastTouchAt.value > 200) {
+            // 索引等于消息数: 列表末尾的 bottom-anchor
+            listState.scrollToItem(messages.size)
         }
     }
     val settings by hostViewModel.settings.collectAsState()
