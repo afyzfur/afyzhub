@@ -133,16 +133,26 @@ fun ChatScreen(
     val pressedState = remember { mutableStateOf(false) }
     val lastTouchAt = remember { mutableStateOf(0L) }
 
-    // 跟随判定: 看列表末尾那条内容“是否还在视口内可见”。
-    // scrollToItem(messages.size) 会把末尾锚点滚进视口; 用户上滑后
-    // 末尾项移出视口, layoutInfo 里就看不到它。这个判定与列表长短、
-    // 是否可继续滚动都无关, 也不依赖任何手势事件。
+    // 跟随判定: 末尾项的底边是否真的到达视口底部。
+    // 只判“末尾项是否可见”太宽松——最后一条 AI 消息很高时, 上滑一点点
+    // 它仍在可见范围内, 会被误判为“还在底部”而继续跟随。改为算末项
+    // 底边的绝对 position: 必须贴到(或越过)视口底部才算贴底, 上滑
+    // 哪怕一点都会让它上移、离开底部, 从此不再跟随。
     val atBottom by remember(listState) {
         derivedStateOf {
             val info = listState.layoutInfo
             val lastIndex = info.totalItemsCount - 1
             if (lastIndex < 0) false
-            else info.visibleItemsInfo.any { it.index == lastIndex }
+            else {
+                val last = info.visibleItemsInfo.firstOrNull { it.index == lastIndex }
+                if (last == null) false
+                else {
+                    val viewportBottom = info.viewportEndOffset
+                    val lastBottom = last.offset + last.size
+                    // 容差 2px: 布局舍入误差, 不影响灵敏度
+                    lastBottom >= viewportBottom - 2
+                }
+            }
         }
     }
     val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
