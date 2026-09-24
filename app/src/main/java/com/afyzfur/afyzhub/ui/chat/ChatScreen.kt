@@ -142,21 +142,38 @@ fun ChatScreen(
     }
 
     LaunchedEffect(listState) {
-        // 用户手势结束时(按下→抬起)结算: 停在最底部才恢复跟随,
-        // 上滑离开底部即锁死。只监听手势状态, 程序自身滚动不触发,
-        // 因此不会像监控 isScrollInProgress 那样误关跟随。
-        snapshotFlow { pressedState.value }
-            .collect { pressing ->
-                if (pressing) return@collect
-                autoScroll = atBottom
-                // 抬手后惯性滑动可能仍在继续, 此刻 atBottom 可能还没停稳。
-                // 稍后复查一次(若期间没再按下), 避免停在底部却没恢复跟随
-                val stamp = System.currentTimeMillis()
-                delay(420)
-                if (!pressedState.value && System.currentTimeMillis() - stamp >= 400) {
-                    autoScroll = atBottom
-                }
+        // 跟随开关的 “关” 点在按下那一刻(拖拽中与松手瞬间都不抢滚);
+        // “开” 点必须等惯性滚动完全停止后按最终位置决定。
+        // 若在松手时就结算, 快速上滑的惯性还没开始, 此刻列表
+        // 仍在底部 → atBottom 误判为 true → 跟随被错误恢复,
+        // 随后惯性把列表带离底部却被拽回, 就是“松手又归底”。
+        snapshotFlow { pressedState.value }.collect { pressing ->
+            if (pressing) {
+                autoScroll = false
+                return@collect
             }
+            // 抬手时若滚动已停(慢拖后原地松手, 没有惯性), 不会产生
+            // “滚动→停止” 的结束沿, 此处补一次结算。等 60ms 让可能的
+            // 惯性先起来: 若真在惯性中就交给滚动停止沿处理, 避免快速
+            // 上滑的惯性还没开始就被误判为停在底部。
+            delay(60)
+            if (!pressedState.value && !listState.isScrollInProgress && atBottom) {
+                autoScroll = true
+            }
+        }
+    }
+    LaunchedEffect(listState) {
+        var wasScrolling = false
+        snapshotFlow { listState.isScrollInProgress }.collect { now ->
+            // 只在 “滚动 → 停止” 且真的停在底部时恢复跟随;
+            // 关闭只由按下触发。不在此处关: 程序自身滚动结束的瞬间,
+            // 若内容刚好又增长, atBottom 会暂时为 false(只是落后一拍),
+            // 若据此关掉跟随就会卡住不再跟随。
+            if (!now && wasScrolling && !pressedState.value && atBottom) {
+                autoScroll = true
+            }
+            wasScrolling = now
+        }
     }
     // 流式输出时最后一条消息内容会持续变化，需要一并作为滚动触发条件。
     val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
