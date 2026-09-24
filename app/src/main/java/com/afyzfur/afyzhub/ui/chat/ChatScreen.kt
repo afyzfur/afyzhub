@@ -175,12 +175,12 @@ fun ChatScreen(
         // 手势/甩动进行中不发起程序滚动：滚动互斥锁被手势持有,
         // scrollToItem 会挂起排队, 手一松就补执行, 视口被拽回底部
         // ——松手后的位置结算会按 atBottom 决定是否恢复, 不会漏
-        if (autoScroll && System.currentTimeMillis() - lastTouchAt.value > 320) {
+        if (autoScroll && !followPaused.value && System.currentTimeMillis() - lastTouchAt.value > 320) {
             // 流式增量高频触发本 effect, 重启会取消上一次排队的滚动;
             // delay+复查把 "检查时未按下、发起时已按下"的竞态窗口压到最小,
             // 否则排队中的 scrollToItem 会在用户松手后执行, 把视口拽回底部
             delay(96)
-            if (autoScroll && System.currentTimeMillis() - lastTouchAt.value > 320) {
+            if (autoScroll && !followPaused.value && System.currentTimeMillis() - lastTouchAt.value > 320) {
                 // 索引等于消息数: 列表末尾的 bottom-anchor, 详 LazyColumn 内注释
                 listState.scrollToItem(messages.size)
             }
