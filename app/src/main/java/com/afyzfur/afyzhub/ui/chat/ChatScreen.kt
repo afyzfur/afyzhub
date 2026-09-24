@@ -128,29 +128,31 @@ fun ChatScreen(
      *   生效，否则快速上滑会被中途到达的增量拽回底部
      * - 手势结束（settle）时按最终位置结算：停在底部就恢复跟随
      */
-    // 跟随不再依赖开关状态: 由 atBottom(末尾项是否可见) + 内容变化直接决定
     // 手指按下即置位: 手势进行中暂停程序滚动, 抬起后按最终位置结算
     val pressedState = remember { mutableStateOf(false) }
     val lastTouchAt = remember { mutableStateOf(0L) }
 
-    // 跟随判定: 末尾项的底边是否真的到达视口底部。
-    // 只判“末尾项是否可见”太宽松——最后一条 AI 消息很高时, 上滑一点点
-    // 它仍在可见范围内, 会被误判为“还在底部”而继续跟随。改为算末项
-    // 底边的绝对 position: 必须贴到(或越过)视口底部才算贴底, 上滑
-    // 哪怕一点都会让它上移、离开底部, 从此不再跟随。
-    val atBottom by remember(listState) {
-        derivedStateOf {
-            val info = listState.layoutInfo
-            val lastIndex = info.totalItemsCount - 1
-            if (lastIndex < 0) false
-            else {
-                val last = info.visibleItemsInfo.firstOrNull { it.index == lastIndex }
-                if (last == null) false
-                else {
-                    val viewportBottom = info.viewportEndOffset
-                    val lastBottom = last.offset + last.size
-                    // 容差 2px: 布局舍入误差, 不影响灵敏度
-                    lastBottom >= viewportBottom - 2
+    // 是否“因用户上滑而脱离底部”。这是一个带记忆的粘滞标记, 而不是瞬时
+    // 位置判定: 流式内容持续增长时每帧位置都在变, 瞬时判定会被增长
+    // 本身干扰。标记的清除只有一个条件: 用户手动回到底部。
+    var userScrolledAway by remember(currentConversationId) { mutableStateOf(false) }
+    // 区分“这一轮滚动是谁发起的”: 程序发起滚动前把 programmatic 置真,
+    // 滚动结束时若 programmatic 为真, 说明是我们自己滚的, 不改变标记。
+    // 之前不区分来源时, 程序滚动的结束沿恰好撞上内容增长, 会误置标记
+    // 导致“默认不跟随”。
+    var scrollByProgram by remember { mutableStateOf(false) }
+    LaunchedEffect(listState) {
+        var wasScrolling = false
+        snapshotFlow { listState.isScrollInProgress }.collect { now ->
+            if (now) {
+                wasScrolling = true
+            } else if (wasScrolling) {
+                wasScrolling = false
+                if (scrollByProgram) {
+                    scrollByProgram = false
+                } else {
+                    // 用户手势: 结束若不在底部则脱离, 到底则复位
+                    userScrolledAway = listState.canScrollForward
                 }
             }
         }
@@ -158,13 +160,16 @@ fun ChatScreen(
     val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
     LaunchedEffect(messages.size, lastContentLength) {
         if (messages.isEmpty()) return@LaunchedEffect
-        // 紧接着用户发话: 无条件回底, 自己的话必须进视野
+        // 紧接着用户发话: 无条件回底并清除脱离标记, 自己的话必须进视野
         if (messages.last().isFromUser) {
+            userScrolledAway = false
+            scrollByProgram = true
             listState.scrollToItem(messages.size)
             return@LaunchedEffect
         }
-        // 流式内容增长: 只有末尾项仍在视口内(用户没上滑离开底部)才跟随
-        if (atBottom) {
+        // 流式内容增长: 用户未脱离底部才跟随
+        if (!userScrolledAway) {
+            scrollByProgram = true
             listState.scrollToItem(messages.size)
         }
     }
