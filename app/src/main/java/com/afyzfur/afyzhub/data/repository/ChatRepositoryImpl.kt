@@ -184,13 +184,14 @@ class ChatRepositoryImpl(
                     results.joinToString("\n") { it.title.replace('\n', ' ') + " :: " + it.url } +
                     "\n" + SEARCH_SOURCES_CLOSE
                 val searchedTurns = turns + listOf(
-                    ChatTurn(role = "assistant", content = reply + sourcesBlock),
+                    ChatTurn(role = "assistant", content = WebSearchService.stripSearchTagsOnly(reply) + sourcesBlock),
                     ChatTurn(
                         role = "user",
                         content = "以下是「" + searchQuery + "」的搜索结果：\n\n" +
                             WebSearchService.formatResults(results) +
-                            "\n\n请基于以上结果，用中文直接给出完整的正文回答，" +
-                            "不要罗列链接、标题或网址列表（来源已由界面单独展示）。"
+                            "\n\n请基于以上结果，用中文直接给出完整的正文回答。" +
+                            "不要罗列链接、标题或网址列表（来源已由界面单独展示）；" +
+                            "也不要再输出任何搜索标签，搜索已完成。"
                     )
                 )
                 val secondOutcome = if (settings.streamEnabled) {

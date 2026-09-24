@@ -128,52 +128,33 @@ fun ChatScreen(
      *   生效，否则快速上滑会被中途到达的增量拽回底部
      * - 手势结束（settle）时按最终位置结算：停在底部就恢复跟随
      */
-    var autoScroll by remember(currentConversationId) { mutableStateOf(true) }
+    // 跟随不再依赖开关状态: 由 atBottom(末尾项是否可见) + 内容变化直接决定
     // 手指按下即置位: 手势进行中暂停程序滚动, 抬起后按最终位置结算
     val pressedState = remember { mutableStateOf(false) }
     val lastTouchAt = remember { mutableStateOf(0L) }
 
-    // 视口是否停在（或接近）列表底部。128px 容差："差一点到底"也认作
-    // 到底，否则恢复条件苛刻到手松开后仍差 1px 而不生效
-    // canScrollForward=false 即"下方再无内容", 是真正的底部判定。
-    // 旧的"最后一项底边位置"判定在单条消息超一屏时失效: 视口停在
-    // 该消息内部时, 各项坐标条件全部误真, 松手即被拽回底部
+    // 跟随判定: 看列表末尾那条内容“是否还在视口内可见”。
+    // scrollToItem(messages.size) 会把末尾锚点滚进视口; 用户上滑后
+    // 末尾项移出视口, layoutInfo 里就看不到它。这个判定与列表长短、
+    // 是否可继续滚动都无关, 也不依赖任何手势事件。
     val atBottom by remember(listState) {
-        derivedStateOf { !listState.canScrollForward }
-    }
-
-    // 区分滚动来源: 程序自己发起的滚动(自行计数)与用户手势。
-    // 只有用户手势才会改变跟随开关; 程序滚动无论起点终点都不参与判定。
-    var programmaticScrolls by remember { mutableStateOf(0) }
-    LaunchedEffect(listState) {
-        var wasScrolling = false
-        snapshotFlow { listState.isScrollInProgress }.collect { now ->
-            if (now) {
-                wasScrolling = true
-            } else if (wasScrolling) {
-                wasScrolling = false
-                // 本次滚动结束: 若这是程序自己发起的(计数 > 0), 说明是
-                // 我们把它滚到底部的, 绝不能据此打开跟随(否则自激: 滚到底
-                // →判定到底→继续跟随, 用户上滑也会被拽回)。
-                // 只有用户手势结束才按最终位置结算。
-                if (programmaticScrolls > 0) {
-                    programmaticScrolls--
-                } else {
-                    // 用户手势: 停在底部才恢复跟随
-                    autoScroll = atBottom
-                }
-            }
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val lastIndex = info.totalItemsCount - 1
+            if (lastIndex < 0) false
+            else info.visibleItemsInfo.any { it.index == lastIndex }
         }
     }
-    // 流式输出时最后一条消息内容会持续变化, 需要一并作为滚动触发条件。
     val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
     LaunchedEffect(messages.size, lastContentLength) {
         if (messages.isEmpty()) return@LaunchedEffect
-        // 用户刚发话: 自己的话必须进视野。这是唯一无条件回底的情形
-        val justSent = messages.last().isFromUser
-        if (justSent) autoScroll = true
-        if (autoScroll) {
-            programmaticScrolls++
+        // 紧接着用户发话: 无条件回底, 自己的话必须进视野
+        if (messages.last().isFromUser) {
+            listState.scrollToItem(messages.size)
+            return@LaunchedEffect
+        }
+        // 流式内容增长: 只有末尾项仍在视口内(用户没上滑离开底部)才跟随
+        if (atBottom) {
             listState.scrollToItem(messages.size)
         }
     }

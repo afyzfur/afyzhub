@@ -364,6 +364,17 @@ class WebSearchService(
                 .joinToString("\n")
                 .trim()
         }
+        /**
+         * 剥掉内容里的搜索标签对, 只留内部文字。
+         *
+         * 二次请求时把第一轮回复当作历史传回, 若其中残留 web_search
+         * 标签, 模型会学着再输出一遍、触发重复搜索。传回前先剥掉。
+         */
+        fun stripSearchTagsOnly(content: String): String {
+            return content
+                .replace( + LT + web_search + GT + , )
+                .replace( + LT + /web_search + GT + , )
+        }
         fun stripModelEchoTags(content: String): String {
             // 只剥模型复读的 sources 标签对: 复读的闭合 sources 会把整段正文
             // 当来源剥掉(正文消失)。sources 内的文本(往往是正文)保留。
