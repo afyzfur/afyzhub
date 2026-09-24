@@ -142,55 +142,38 @@ fun ChatScreen(
         derivedStateOf { !listState.canScrollForward }
     }
 
-    LaunchedEffect(listState) {
-        // 跟随开关的 “关” 点在按下那一刻(拖拽中与松手瞬间都不抢滚);
-        // “开” 点必须等惯性滚动完全停止后按最终位置决定。
-        // 若在松手时就结算, 快速上滑的惯性还没开始, 此刻列表
-        // 仍在底部 → atBottom 误判为 true → 跟随被错误恢复,
-        // 随后惯性把列表带离底部却被拽回, 就是“松手又归底”。
-        snapshotFlow { pressedState.value }.collect { pressing ->
-            if (pressing) {
-                autoScroll = false
-                return@collect
-            }
-            // 抬手时若滚动已停(慢拖后原地松手, 没有惯性), 不会产生
-            // “滚动→停止” 的结束沿, 此处补一次结算。等 60ms 让可能的
-            // 惯性先起来: 若真在惯性中就交给滚动停止沿处理, 避免快速
-            // 上滑的惯性还没开始就被误判为停在底部。
-            delay(60)
-            if (!pressedState.value && !listState.isScrollInProgress && atBottom) {
-                autoScroll = true
-            }
-        }
-    }
+    // 区分滚动来源: 程序自己发起的滚动(自行计数)与用户手势。
+    // 只有用户手势才会改变跟随开关; 程序滚动无论起点终点都不参与判定。
+    var programmaticScrolls by remember { mutableStateOf(0) }
     LaunchedEffect(listState) {
         var wasScrolling = false
         snapshotFlow { listState.isScrollInProgress }.collect { now ->
-            // 只在 “滚动 → 停止” 且真的停在底部时恢复跟随;
-            // 关闭只由按下触发。不在此处关: 程序自身滚动结束的瞬间,
-            // 若内容刚好又增长, atBottom 会暂时为 false(只是落后一拍),
-            // 若据此关掉跟随就会卡住不再跟随。
-            if (!now && wasScrolling && !pressedState.value && atBottom) {
-                autoScroll = true
+            if (now) {
+                wasScrolling = true
+            } else if (wasScrolling) {
+                wasScrolling = false
+                // 本次滚动结束: 若这是程序自己发起的(计数 > 0), 说明是
+                // 我们把它滚到底部的, 绝不能据此打开跟随(否则自激: 滚到底
+                // →判定到底→继续跟随, 用户上滑也会被拽回)。
+                // 只有用户手势结束才按最终位置结算。
+                if (programmaticScrolls > 0) {
+                    programmaticScrolls--
+                } else {
+                    // 用户手势: 停在底部才恢复跟随
+                    autoScroll = atBottom
+                }
             }
-            wasScrolling = now
         }
     }
-    // 流式输出时最后一条消息内容会持续变化，需要一并作为滚动触发条件。
+    // 流式输出时最后一条消息内容会持续变化, 需要一并作为滚动触发条件。
     val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
     LaunchedEffect(messages.size, lastContentLength) {
         if (messages.isEmpty()) return@LaunchedEffect
-        // 用户刚发话: 强制回底, 自己的话必须进视野, 否则像发送失败
-        if (messages.last().isFromUser) autoScroll = true
-        // 手势进行中不发起程序滚动：滚动互斥锁被手势持有,
-        // scrollToItem 会挂起排队, 手一松就补执行, 视口被拽回底部。
-        // 松手后的位置结算会按 atBottom 决定是否恢复, 不会漏
-        // 流式跟随必须“立即”贴近底部。此前把滚动放在带 delay(96) 的
-        // LaunchedEffect 里, 而流式内容每约 33ms 变一次 → effect 不断重启,
-        // delay 永远走不完, 结果只有输出停下后才滚一次。改为每次内容
-        // 变化立即发起滚动, 复用系统滚动互斥锁自然节流。
-        if (autoScroll && !pressedState.value && System.currentTimeMillis() - lastTouchAt.value > 200) {
-            // 索引等于消息数: 列表末尾的 bottom-anchor
+        // 用户刚发话: 自己的话必须进视野。这是唯一无条件回底的情形
+        val justSent = messages.last().isFromUser
+        if (justSent) autoScroll = true
+        if (autoScroll) {
+            programmaticScrolls++
             listState.scrollToItem(messages.size)
         }
     }
