@@ -186,7 +186,10 @@ class ChatRepositoryImpl(
                     SEARCH_SOURCES_OPEN + "\n" +
                     results.joinToString("\n") { it.title.replace('\n', ' ') + " :: " + it.url } +
                     "\n" + SEARCH_SOURCES_CLOSE
-                val searchedTurns = turns + listOf(
+                // 用户原始问题: 搜索查询词可能比问题窄(模型缩写), 回答必须
+                // 覆盖完整需求。从上下文取最后一条 user 轮, retry 路径同样有效。
+                val originalQuestion = turns.lastOrNull { it.role == "user" }?.content ?: searchQuery
+                                val searchedTurns = turns + listOf(
                     // 第二轮请求的 assistant 历史: 保留第一轮原始内容(含搜索
                     // 标签, 代表"我已发起这次搜索"), 并在末尾追加占位说明,
                     // 让模型明确知道搜索已执行、现在该基于结果回答。
@@ -202,7 +205,6 @@ class ChatRepositoryImpl(
                         // 带上用户原始问题: 搜索查询词可能比问题窄(模型缩写),
                         // 回答必须覆盖完整需求而不只是查询词。
                         // 用户问题从上下文取(最后一条 user 轮), retry 路径同样有效。
-                        val originalQuestion = turns.lastOrNull { it.role == "user" }?.content ?: searchQuery
                         content = "以下是「" + searchQuery + "」的搜索结果：\n\n" +
                             WebSearchService.formatResults(results) +
                             "\n\n用户的原始问题是：「" + originalQuestion + "」。" +
