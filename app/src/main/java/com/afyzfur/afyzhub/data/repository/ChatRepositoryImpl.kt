@@ -201,9 +201,11 @@ class ChatRepositoryImpl(
                         role = "user",
                         // 带上用户原始问题: 搜索查询词可能比问题窄(模型缩写),
                         // 回答必须覆盖完整需求而不只是查询词。
+                        // 用户问题从上下文取(最后一条 user 轮), retry 路径同样有效。
+                        val originalQuestion = turns.lastOrNull { it.role == "user" }?.content ?: searchQuery
                         content = "以下是「" + searchQuery + "」的搜索结果：\n\n" +
                             WebSearchService.formatResults(results) +
-                            "\n\n用户的原始问题是：「" + content + "」。" +
+                            "\n\n用户的原始问题是：「" + originalQuestion + "」。" +
                             "请结合搜索结果与原始问题，用中文直接给出完整的正文回答；" +
                             "搜索结果可能只覆盖了问题的一部分，不足的部分可用你的知识补充。" +
                             "不要罗列链接、标题或网址列表（来源已由界面单独展示）；" +
