@@ -481,7 +481,19 @@ class ChatRepositoryImpl(
         }
         val turns = usable
             .takeLast(Constants.MAX_CONTEXT_MESSAGES)
-            .map { ChatTurn(role = it.role, content = it.content) }
+            .map {
+                // 助手历史里的协议标签(web_search/sources)只服务 UI 渲染,
+                // 原样传回会诱导模型复读: 上一轮的搜索标签会让模型在
+                // 新一轮里模仿着再输出标签, 造成重复搜索/重复回答。
+                val c = if (it.role == Constants.ROLE_ASSISTANT) {
+                    WebSearchService.stripSearchTagsOnly(
+                        WebSearchService.stripModelEchoTags(it.content)
+                    )
+                } else {
+                    it.content
+                }
+                ChatTurn(role = it.role, content = c)
+            }
 
         // 系统提示词注入在对话最前：约束是"这个助手是什么样"，
         // 属于所有轮次的前置条件，放在历史消息之后会失去效力
