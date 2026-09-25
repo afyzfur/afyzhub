@@ -370,6 +370,20 @@ class WebSearchService(
          * 二次请求时把第一轮回复当作历史传回, 若其中残留 web_search
          * 标签, 模型会学着再输出一遍、触发重复搜索。传回前先剥掉。
          */
+        /**
+         * 第一轮内容只保留到第一个搜索标签的闭标签为止。
+         *
+         * 模型常在输出搜索标签后继续写“根据搜索结果…”之类的草稿,
+         * 而真正的回答来自第二轮。草稿留在正文里会和第二轮回答重复,
+         * 表现为“回答两次”。这里把标签之后的内容全部截掉。
+         */
+        fun truncateAfterFirstSearchTag(content: String): String {
+            val oi = content.indexOf("<web_search>")
+            if (oi < 0) return content
+            val ci = content.indexOf("</web_search>", oi)
+            if (ci < 0) return content
+            return content.substring(0, ci + "</web_search>".length)
+        }
         fun stripSearchTagsOnly(content: String): String {
             return content
                 .replace("<web_search>", "")

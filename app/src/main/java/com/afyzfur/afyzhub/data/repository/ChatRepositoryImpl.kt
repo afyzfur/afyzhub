@@ -203,12 +203,24 @@ class ChatRepositoryImpl(
                 // 模型有时复读上下文里的搜索/来源标签: 复读的闭合 sources 会把
                 // 整段正文当来源剥掉(表现为回答输出完突然消失)。这里在拼接
                 // 官方 sources 块之前先清掉模型自己输出的这类标签
+                // 第二轮流式起点是第一轮内容(initialContent=reply), 所以:
+                // - 流式时从 reply 之后截出的才是第二轮自己的输出; 非流式时
+                //   complete 返回的就是纯第二轮内容。复读的 web_search 标签
+                //   全部剥掉——它们的查询从未被真正搜索, 留着会多出一个永远
+                //   “正在获取…”的搜索块(即“第二次搜索不到”)。
+                val secondRoundPart = if (settings.streamEnabled && secondOutcome.content.length > reply.length) {
+                    secondOutcome.content.substring(reply.length)
+                } else {
+                    secondOutcome.content
+                }
                 val cleanedSecond = WebSearchService.stripBareUrlLines(
-                    WebSearchService.stripModelEchoTags(secondOutcome.content)
+                    WebSearchService.stripSearchTagsOnly(
+                        WebSearchService.stripModelEchoTags(secondRoundPart)
+                    )
                 )
-                // 第二轮以第一轮内容为流式起点, 若模型又复读一个搜索标签,
-                // 正文里会有两个搜索块(第二个从未真正搜过)。这里去重。
-                reply = WebSearchService.dedupeSearchTags(cleanedSecond) + sourcesBlock
+                // 第一轮内容截到第一个搜索标签为止: 模型在标签后继续输出
+                // 的内容是搜索前草稿, 和第二轮回答重复(“回答两次”的真凶)。
+                reply = WebSearchService.truncateAfterFirstSearchTag(reply) + cleanedSecond + sourcesBlock
                 if (secondOutcome.content.isBlank()) {
                     throw IllegalStateException("模型返回内容为空")
                 }
