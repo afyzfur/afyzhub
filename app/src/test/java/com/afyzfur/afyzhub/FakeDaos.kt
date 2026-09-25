@@ -68,7 +68,8 @@ class FakeMessageDao : MessageDao {
         model: String?,
         promptTokens: Int?,
         completionTokens: Int?,
-        latencyMs: Long?
+        latencyMs: Long?,
+        cachedTokens: Int?
     ) {
         state.value = state.value.map {
             if (it.id == id) {
@@ -78,7 +79,8 @@ class FakeMessageDao : MessageDao {
                     model = model,
                     promptTokens = promptTokens,
                     completionTokens = completionTokens,
-                    latencyMs = latencyMs
+                    latencyMs = latencyMs,
+                    cachedTokens = cachedTokens
                 )
             } else {
                 it
