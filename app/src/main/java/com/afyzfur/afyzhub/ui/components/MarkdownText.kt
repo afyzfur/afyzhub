@@ -16,6 +16,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -38,6 +39,7 @@ import com.afyzfur.afyzhub.util.markdown.InlineSpan
 import com.afyzfur.afyzhub.util.markdown.InlineStyle
 import com.afyzfur.afyzhub.util.markdown.MarkdownBlock
 import com.afyzfur.afyzhub.util.markdown.MarkdownParser
+import kotlinx.coroutines.delay
 
 /**
  * 渲染 Markdown 文本。
@@ -59,7 +61,16 @@ fun MarkdownText(
     /** 链接点击回调。不传时链接仅渲染样式，不可点。 */
     onLinkClick: ((String) -> Unit)? = null
 ) {
-    val blocks = remember(text) { MarkdownParser.parse(text) }
+    // 流式时 text 每 60ms 变一次, 逐次全量解析会让长文频繁
+    // 重建整个块列表。以 300ms 粒度对齐解析: 文本在窗口内
+    // 连续变化时只解析一次, 停止后立即跟上最终内容。
+    // 聊天正文为纯文本流, 300ms 内的解析延迟不可感知。
+    var parsedSource by remember { mutableStateOf(text) }
+    LaunchedEffect(text) {
+        delay(280)
+        if (parsedSource != text) parsedSource = text
+    }
+    val blocks = remember(parsedSource) { MarkdownParser.parse(parsedSource) }
 
     if (blocks.isEmpty()) {
         Text(text = text, color = color, modifier = modifier)

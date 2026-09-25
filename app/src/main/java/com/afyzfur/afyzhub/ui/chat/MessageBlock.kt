@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.ui.unit.Dp
@@ -273,7 +274,11 @@ private fun MessageBody(
             }
         ) {
             Box(
-                modifier = longPress.padding(horizontal = 16.dp, vertical = 12.dp)
+                // 高度动画: 流式逐字写入时高度每帧跳变是闪烁的主要来源,
+                // 动画把跳变平滑为过渡(默认 spring 已足够快, 不拖沓)
+                modifier = longPress
+                    .animateContentSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 content()
             }
@@ -282,11 +287,13 @@ private fun MessageBody(
         // 助手侧撑满宽度让代码块与表格完整展开；用户侧不撑满，
         // 否则容器占满整行后文本会从左边缘开始排，与靠右的意图相反
         BubbleStyle.PLAIN -> Box(
+            // 同 BUBBLE: 平滑流式期间的高度变化
             modifier = if (fromUser) {
-                longPress
+                longPress.animateContentSize()
             } else {
                 Modifier
                     .fillMaxWidth()
+                    .animateContentSize()
                     .then(longPress)
             }
         ) {

@@ -257,3 +257,28 @@ fun parseContentBlocks(content: String): List<ContentBlock> {
 /** 所有正文段拼接(用于持久化摘要等场景) */
 fun joinAnswerBlocks(blocks: List<ContentBlock>): String =
     blocks.filterIsInstance<ContentBlock.Answer>().joinToString("\n\n") { it.text }.trim()
+
+
+/**
+ * 多轮上下文用的深度清洗。与 stripSearchTagsOnly/stripModelEchoTags
+ * 只剥标签符号不同, 这里把标签连同内容一起处理:
+ * - web_search 标签整体替换为 [搜索: 查询]
+ *   —— 只剥标签会让查询词裸露成正文, 模型语义困惑;
+ * - sources 标签整块(含标题::链接)替换为 [已附搜索来源]
+ *   —— 若保留明文, 模型认为上一轮已有搜索结果, 新一轮该搜索
+ *   时不再输出搜索标签(表现为第二次搜不到)。
+ * 仅用于发给模型的历史, 不影响 UI 存储内容。
+ */
+fun sanitizeHistory(content: String): String {
+    var out = content
+    out = Regex("\<web_search>\" + ".*?" + "\</web_search>\", 
+        setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
+        .replace(out) { m -> "[搜索: " + m.groupValues[1].trim() + "]" }
+    out = Regex("\<sources>\" + ".*?" + "\</sources>\", 
+        setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
+        .replace(out, "[已附搜索来源]")
+    // 未闭合标签兜底: 把残段的开/闭符号也换成对应文本
+    out = out.replace("\<web_search>\", "[搜索: ").replace("\</web_search>\", "]")
+    out = out.replace("\<sources>\", "").replace("\</sources>\", "")
+    return out
+}

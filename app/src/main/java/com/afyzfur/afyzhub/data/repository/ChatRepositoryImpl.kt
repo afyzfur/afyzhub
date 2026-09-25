@@ -18,6 +18,7 @@ import com.afyzfur.afyzhub.domain.model.Conversation
 import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.domain.model.SendPhase
+import com.afyzfur.afyzhub.domain.model.sanitizeHistory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -428,19 +429,41 @@ class ChatRepositoryImpl(
         var revealed = initialContent.length
         val smoother = CoroutineScope(Dispatchers.IO).launch {
             while (true) {
-                delay(33)
+                delay(60)
                 val snapshot: String
                 val finished: Boolean
                 synchronized(revealLock) {
                     val full = builder.toString()
                     if (revealed < full.length) {
                         val backlog = full.length - revealed
-                        // 每个节拍揭示一定比例的积压:既保证小增量跟得上,
-                        // 又保证大突发能在 ~200ms 内追平,不会无限落后后爆发
-                        revealed += maxOf(2, (backlog * 0.4).toInt())
+                        // 每个节拍揭示一定比例的积压。每 60ms 落库一次
+                        // (原 33ms): 写库触发整个列表 Flow 重发, 频率直接
+                        // 决定重组开销; 单次多揭 2 字补偿节拍变慢的观感,
+                        // 大突发仍按比例 200ms 内追平
+                        revealed += maxOf(3, (backlog * 0.4).toInt())
                         if (revealed > full.length) revealed = full.length
                     }
-                    snapshot = full.substring(0, minOf(revealed, full.length))
+                    // 半标签防护: 截断点若落在协议标签的中间, 库里会短暂
+                    // 出现 "<thi…" 这类残段, UI 解析不稳定造成闪烁。
+                    // 遇到不完整标签时把揭示点回退到标签开始之前。
+                    var cut = minOf(revealed, full.length)
+                    if (cut > 0 && cut < full.length) {
+                        val scanStart = maxOf(0, cut - 14)
+                        val tail = full.substring(scanStart, cut)
+                        for (tag in listOf("<think>", "</think>", "<web_search>", "</web_search>", "<sources>", "</sources>")) {
+                            var k = maxOf(0, tail.length - tag.length + 1)
+                            while (k < tail.length) {
+                                val cand = tail.substring(k)
+                                if (cand.length < tag.length && tag.startsWith(cand)) {
+                                    cut = scanStart + k
+                                    k = tail.length
+                                } else {
+                                    k++
+                                }
+                            }
+                        }
+                    }
+                    snapshot = full.substring(0, cut)
                     finished = networkDone && revealed >= builder.length
                 }
                 if (snapshot != lastWritten) {
@@ -494,10 +517,12 @@ class ChatRepositoryImpl(
                 // 助手历史里的协议标签(web_search/sources)只服务 UI 渲染,
                 // 原样传回会诱导模型复读: 上一轮的搜索标签会让模型在
                 // 新一轮里模仿着再输出标签, 造成重复搜索/重复回答。
+                // 深度清洗: web_search 标签连查询词替换为 [搜索: x],
+                // sources 块连同标题::链接整体替换为 [已附搜索来源]。
+                // 若只剥标签, 查询词裸露、来源明文残留, 模型会认为
+                // 上一轮已有搜索结果, 新一轮不再发搜索标签(搜不到)。
                 val c = if (it.role == Constants.ROLE_ASSISTANT) {
-                    WebSearchService.stripSearchTagsOnly(
-                        WebSearchService.stripModelEchoTags(it.content)
-                    )
+                    sanitizeHistory(it.content)
                 } else {
                     it.content
                 }
