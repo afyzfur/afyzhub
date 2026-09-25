@@ -16,7 +16,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -61,16 +60,10 @@ fun MarkdownText(
     /** 链接点击回调。不传时链接仅渲染样式，不可点。 */
     onLinkClick: ((String) -> Unit)? = null
 ) {
-    // 流式时 text 高频变化, 逐次全量解析会让长文频繁重建
-    // 整个块列表。以 150ms 防抖窗口对齐解析: 连续变化时
-    // 只在稳定 150ms 后解析一次(结束即最终态), 期间渲染
-    // 旧的块结构, 视觉连续无闪烁。
-    var parsedSource by remember { mutableStateOf(text) }
-    LaunchedEffect(text) {
-        delay(150)
-        if (parsedSource != text) parsedSource = text
-    }
-    val blocks = remember(parsedSource) { MarkdownParser.parse(parsedSource) }
+    // 直接以当前文本解析。写库节奏已是 120ms 一次, parse 频率与之
+    // 一致; 此前的防抖方案因文本变化重启 delay 而永远无法完成,
+    // 导致渲染滞后、网络间隙时一次性跳出一大段, 已删除。
+    val blocks = remember(text) { MarkdownParser.parse(text) }
 
     if (blocks.isEmpty()) {
         Text(text = text, color = color, modifier = modifier)

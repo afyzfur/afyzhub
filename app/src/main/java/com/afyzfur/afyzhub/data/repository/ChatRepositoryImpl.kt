@@ -199,9 +199,13 @@ class ChatRepositoryImpl(
 
                     ChatTurn(
                         role = "user",
+                        // 带上用户原始问题: 搜索查询词可能比问题窄(模型缩写),
+                        // 回答必须覆盖完整需求而不只是查询词。
                         content = "以下是「" + searchQuery + "」的搜索结果：\n\n" +
                             WebSearchService.formatResults(results) +
-                            "\n\n请基于以上结果，用中文直接给出完整的正文回答。" +
+                            "\n\n用户的原始问题是：「" + content + "」。" +
+                            "请结合搜索结果与原始问题，用中文直接给出完整的正文回答；" +
+                            "搜索结果可能只覆盖了问题的一部分，不足的部分可用你的知识补充。" +
                             "不要罗列链接、标题或网址列表（来源已由界面单独展示）；" +
                             "也不要再输出任何搜索标签，搜索已完成。"
                     )
@@ -437,14 +441,14 @@ class ChatRepositoryImpl(
         var revealed = initialContent.length
         val smoother = CoroutineScope(Dispatchers.IO).launch {
             while (true) {
-                delay(120)
+                delay(80)
                 val snapshot: String
                 val finished: Boolean
                 synchronized(revealLock) {
                     val full = builder.toString()
                     if (revealed < full.length) {
                         val backlog = full.length - revealed
-                        // 每个节拍揭示一定比例的积压。每 120ms 落库一次
+                        // 每个节拍揭示一定比例的积压。每 80ms 落库一次
                         // (写库触发整个列表 Flow 重发, 频率直接决定重组
                         // 开销); 单次按 55% 揭示, 视觉平滑的同时约 2-3 次
                         // 即可追平积压, 出字节奏与阅读速度匹配
