@@ -97,11 +97,16 @@ private fun MarkdownBlockView(
     documentMode: Boolean = false,
     onLinkClick: ((String) -> Unit)? = null
 ) {
+    // 所有块共用的主题色: 一次取用, 各分支直接传参。
+    val linkColor = MaterialTheme.colorScheme.primary
+    val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest
     when (block) {
         is MarkdownBlock.Paragraph -> {
-            // 流式时 text 每 33ms 变一次, toAnnotatedString 全量重建开销大,
-            // 缓存后同一段文本直接复用, 只在内容真正变化时重算。
-            val annotated = remember(block.spans) { block.spans.toAnnotatedString() }
+            // 流式时文本高频变化, 构建标注串开销大; 用 remember 缓存,
+            // 同一段文本(以及主题色)不变时直接复用上次结果。
+            val annotated = remember(block.spans, linkColor, codeBackground) {
+                block.spans.buildAnnotated(linkColor, codeBackground)
+            }
             if (onLinkClick != null) {
                 LinkAwareText(
                     text = annotated,
@@ -120,7 +125,7 @@ private fun MarkdownBlockView(
 
         is MarkdownBlock.Heading -> if (onLinkClick != null) {
             LinkAwareText(
-                text = block.spans.toAnnotatedString(),
+                text = block.spans.buildAnnotated(linkColor, codeBackground),
                 color = color,
                 style = if (documentMode) {
                     when (block.level) {
@@ -140,7 +145,7 @@ private fun MarkdownBlockView(
                 onLinkClick = onLinkClick
             )
         } else Text(
-            text = block.spans.toAnnotatedString(),
+            text = block.spans.buildAnnotated(linkColor, codeBackground),
             color = color,
             // 各级差距拉开：原先 titleMedium 与 titleSmall 只差 2sp，
             // 二级与三级标题几乎看不出层级，更新日志里的版本号
@@ -178,14 +183,14 @@ private fun MarkdownBlockView(
             )
             if (onLinkClick != null) {
                 LinkAwareText(
-                    text = block.spans.toAnnotatedString(),
+                    text = block.spans.buildAnnotated(linkColor, codeBackground),
                     color = color,
                     style = MaterialTheme.typography.bodyLarge,
                     onLinkClick = onLinkClick
                 )
             } else {
                 Text(
-                    text = block.spans.toAnnotatedString(),
+                    text = block.spans.buildAnnotated(linkColor, codeBackground),
                     color = color,
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -203,14 +208,14 @@ private fun MarkdownBlockView(
             Spacer(modifier = Modifier.width(8.dp))
             if (onLinkClick != null) {
                 LinkAwareText(
-                    text = block.spans.toAnnotatedString(),
+                    text = block.spans.buildAnnotated(linkColor, codeBackground),
                     color = color.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodyMedium,
                     onLinkClick = onLinkClick
                 )
             } else {
                 Text(
-                    text = block.spans.toAnnotatedString(),
+                    text = block.spans.buildAnnotated(linkColor, codeBackground),
                     color = color.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodyMedium,
                     fontStyle = FontStyle.Italic
@@ -312,13 +317,10 @@ private fun LinkAwareText(
  * [LinkAwareText] 的手势检测反查注释得到。不用 LinkAnnotation：
  * 该 API 在不同 Compose 小版本间签名变动过，标注法自 1.0 起稳定。
  */
-@Composable
-private fun List<InlineSpan>.toAnnotatedString(): AnnotatedString {
-    val linkColor = MaterialTheme.colorScheme.primary
-    val codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest
+private fun List<InlineSpan>.buildAnnotated(linkColor: Color, codeBackground: Color): AnnotatedString {
 
     return buildAnnotatedString {
-        this@toAnnotatedString.forEach { span ->
+        this@buildAnnotated.forEach { span ->
             val style = SpanStyle(
                 fontWeight = if (InlineStyle.BOLD in span.styles) FontWeight.Bold else null,
                 fontStyle = if (InlineStyle.ITALIC in span.styles) FontStyle.Italic else null,
