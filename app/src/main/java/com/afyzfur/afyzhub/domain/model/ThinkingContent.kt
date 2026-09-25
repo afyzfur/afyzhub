@@ -270,15 +270,32 @@ fun joinAnswerBlocks(blocks: List<ContentBlock>): String =
  * 仅用于发给模型的历史, 不影响 UI 存储内容。
  */
 fun sanitizeHistory(content: String): String {
+    // 标签用 unicode 转义书写(避免源码里出现尖括号):
+    val O_WS = "\u003Cweb_search\u003E"
+    val C_WS = "\u003C/web_search\u003E"
+    val O_SR = "\u003Csources\u003E"
+    val C_SR = "\u003C/sources\u003E"
     var out = content
-    out = Regex("\<web_search>\" + ".*?" + "\</web_search>\", 
-        setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
-        .replace(out) { m -> "[搜索: " + m.groupValues[1].trim() + "]" }
-    out = Regex("\<sources>\" + ".*?" + "\</sources>\", 
-        setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
-        .replace(out, "[已附搜索来源]")
-    // 未闭合标签兜底: 把残段的开/闭符号也换成对应文本
-    out = out.replace("\<web_search>\", "[搜索: ").replace("\</web_search>\", "]")
-    out = out.replace("\<sources>\", "").replace("\</sources>\", "")
+    // 1) 搜索标签对 -> [搜索: 查询](查询词不裸露成正文)
+    var p = out.indexOf(O_WS)
+    while (p >= 0) {
+        val e = out.indexOf(C_WS, p + O_WS.length)
+        if (e < 0) break
+        val q = out.substring(p + O_WS.length, e).trim()
+        out = out.substring(0, p) + "[搜索: " + q + "]" + out.substring(e + C_WS.length)
+        p = out.indexOf(O_WS, p + 1)
+    }
+    // 2) 来源块整块(含标题::链接) -> [已附搜索来源]
+    //    保留明文会让模型认为已有搜索结果, 新一轮不再发标签
+    p = out.indexOf(O_SR)
+    while (p >= 0) {
+        val e = out.indexOf(C_SR, p + O_SR.length)
+        if (e < 0) break
+        out = out.substring(0, p) + "[已附搜索来源]" + out.substring(e + C_SR.length)
+        p = out.indexOf(O_SR, p + 1)
+    }
+    // 3) 残段兜底: 单独的开/闭符号
+    out = out.replace(O_WS, "[搜索: ").replace(C_WS, "]")
+    out = out.replace(O_SR, "").replace(C_SR, "")
     return out
 }
