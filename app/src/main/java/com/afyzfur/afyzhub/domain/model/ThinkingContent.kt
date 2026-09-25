@@ -276,26 +276,25 @@ fun sanitizeHistory(content: String): String {
     val O_SR = "\u003Csources\u003E"
     val C_SR = "\u003C/sources\u003E"
     var out = content
-    // 1) 搜索标签对 -> [搜索: 查询](查询词不裸露成正文)
+    // 1) 搜索标签对整对删除(连查询词): 任何残留痕迹——无论是裸查询词
+    //    还是 [搜索: q] 标记——都会让模型误判上一轮的搜索状态
     var p = out.indexOf(O_WS)
     while (p >= 0) {
         val e = out.indexOf(C_WS, p + O_WS.length)
         if (e < 0) break
-        val q = out.substring(p + O_WS.length, e).trim()
-        out = out.substring(0, p) + "[搜索: " + q + "]" + out.substring(e + C_WS.length)
+        out = out.substring(0, p) + out.substring(e + C_WS.length)
         p = out.indexOf(O_WS, p + 1)
     }
-    // 2) 来源块整块(含标题::链接) -> [已附搜索来源]
-    //    保留明文会让模型认为已有搜索结果, 新一轮不再发标签
+    // 2) 来源块整块删除(含标题::链接)
     p = out.indexOf(O_SR)
     while (p >= 0) {
         val e = out.indexOf(C_SR, p + O_SR.length)
         if (e < 0) break
-        out = out.substring(0, p) + "[已附搜索来源]" + out.substring(e + C_SR.length)
+        out = out.substring(0, p) + out.substring(e + C_SR.length)
         p = out.indexOf(O_SR, p + 1)
     }
     // 3) 残段兜底: 单独的开/闭符号
-    out = out.replace(O_WS, "[搜索: ").replace(C_WS, "]")
+    out = out.replace(O_WS, "").replace(C_WS, "")
     out = out.replace(O_SR, "").replace(C_SR, "")
     return out
 }

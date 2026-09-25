@@ -168,6 +168,7 @@ class ChatRepositoryImpl(
             // grounding, 不会输出搜索标签, 此块自然跳过
             var searchUsage = outcome.usage
             val searchQuery = WebSearchService.extractQuery(reply)
+            android.util.Log.d("AfyzSearch", "extractQuery=" + searchQuery + " replyLen=" + reply.length)
             if (searchQuery != null &&
                 settings.webSearchEnabled &&
                 settings.inAppBrowserEnabled &&
@@ -175,6 +176,7 @@ class ChatRepositoryImpl(
             ) {
                 onPhase(SendPhase.SEARCHING)
                 val results = webSearchService.search(searchQuery, engineId = settings.searchEngine)
+                android.util.Log.d("AfyzSearch", "searchDone size=" + results.size + " q=" + searchQuery)
                 // 结果已拿到，进入读取整理阶段；结果为空时直接跳过
                 // BROWSING，让模型按无结果路径兜底回答
                 if (results.isNotEmpty()) onPhase(SendPhase.BROWSING)
@@ -192,7 +194,7 @@ class ChatRepositoryImpl(
                     // 没搜成而在二轮再发一次搜索(重复搜索的根源)。
                     ChatTurn(
                         role = "assistant",
-                        content = reply + "\n[已执行搜索，等待结果…这是部分输出]" + sourcesBlock
+                        content = reply + "\n（以上为我本轮已输出的内容：已发起网络搜索并停止输出，等待系统返回搜索结果后继续回答。）" + sourcesBlock
                     ),
 
                     ChatTurn(
@@ -223,14 +225,20 @@ class ChatRepositoryImpl(
                 } else {
                     secondOutcome.content
                 }
-                val cleanedSecond = WebSearchService.stripBareUrlLines(
+                var cleanedSecond = WebSearchService.stripBareUrlLines(
                     WebSearchService.stripSearchTagsOnly(
                         WebSearchService.stripModelEchoTags(secondRoundPart)
                     )
                 )
+                // 模型有时会把二轮上下文里的占位句复读进正文,
+                // 表现为正文开头出现一句奇怪的括号说明。剥掉它。
+                cleanedSecond = cleanedSecond.replace(
+                    "（以上为我本轮已输出的内容：已发起网络搜索并停止输出，等待系统返回搜索结果后继续回答。）", ""
+                )
                 // 第一轮内容截到第一个搜索标签为止: 模型在标签后继续输出
                 // 的内容是搜索前草稿, 和第二轮回答重复(“回答两次”的真凶)。
                 reply = WebSearchService.truncateAfterFirstSearchTag(reply) + cleanedSecond + sourcesBlock
+                android.util.Log.d("AfyzSearch", "finalized replyLen=" + reply.length + " hasTag=" + reply.contains("<web_search>"))
                 if (secondOutcome.content.isBlank()) {
                     throw IllegalStateException("模型返回内容为空")
                 }
@@ -429,18 +437,18 @@ class ChatRepositoryImpl(
         var revealed = initialContent.length
         val smoother = CoroutineScope(Dispatchers.IO).launch {
             while (true) {
-                delay(60)
+                delay(120)
                 val snapshot: String
                 val finished: Boolean
                 synchronized(revealLock) {
                     val full = builder.toString()
                     if (revealed < full.length) {
                         val backlog = full.length - revealed
-                        // 每个节拍揭示一定比例的积压。每 60ms 落库一次
-                        // (原 33ms): 写库触发整个列表 Flow 重发, 频率直接
-                        // 决定重组开销; 单次多揭 2 字补偿节拍变慢的观感,
-                        // 大突发仍按比例 200ms 内追平
-                        revealed += maxOf(3, (backlog * 0.4).toInt())
+                        // 每个节拍揭示一定比例的积压。每 120ms 落库一次
+                        // (写库触发整个列表 Flow 重发, 频率直接决定重组
+                        // 开销); 单次按 55% 揭示, 视觉平滑的同时约 2-3 次
+                        // 即可追平积压, 出字节奏与阅读速度匹配
+                        revealed += maxOf(6, (backlog * 0.55).toInt())
                         if (revealed > full.length) revealed = full.length
                     }
                     // 半标签防护: 截断点若落在协议标签的中间, 库里会短暂

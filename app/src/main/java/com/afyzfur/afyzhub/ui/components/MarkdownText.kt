@@ -61,13 +61,13 @@ fun MarkdownText(
     /** 链接点击回调。不传时链接仅渲染样式，不可点。 */
     onLinkClick: ((String) -> Unit)? = null
 ) {
-    // 流式时 text 每 60ms 变一次, 逐次全量解析会让长文频繁
-    // 重建整个块列表。以 300ms 粒度对齐解析: 文本在窗口内
-    // 连续变化时只解析一次, 停止后立即跟上最终内容。
-    // 聊天正文为纯文本流, 300ms 内的解析延迟不可感知。
+    // 流式时 text 高频变化, 逐次全量解析会让长文频繁重建
+    // 整个块列表。以 150ms 防抖窗口对齐解析: 连续变化时
+    // 只在稳定 150ms 后解析一次(结束即最终态), 期间渲染
+    // 旧的块结构, 视觉连续无闪烁。
     var parsedSource by remember { mutableStateOf(text) }
     LaunchedEffect(text) {
-        delay(280)
+        delay(150)
         if (parsedSource != text) parsedSource = text
     }
     val blocks = remember(parsedSource) { MarkdownParser.parse(parsedSource) }
