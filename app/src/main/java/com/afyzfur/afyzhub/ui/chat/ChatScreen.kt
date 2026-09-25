@@ -503,8 +503,11 @@ private fun ChatContent(
                         // 消息时, 流式增长的内容会把视口钉在消息开头, 新
                         // 增的文本在屏幕外。锚点垫在所有消息之后, 滚到它
                         // 才是真·列表底
+                        // 锚点垫高: 滚到底时最后一条消息与视口底之间留出
+                        // 与全局间距一致的呼吸空间, 视觉对齐在输入栏上方
+                        // 而不是贴死在视口最底。
                         item(key = "bottom-anchor") {
-                            Spacer(Modifier.height(1.dp))
+                            Spacer(Modifier.height(16.dp))
                         }
                     }
                 }

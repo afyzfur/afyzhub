@@ -445,18 +445,18 @@ class ChatRepositoryImpl(
         var revealed = initialContent.length
         val smoother = CoroutineScope(Dispatchers.IO).launch {
             while (true) {
-                delay(80)
+                delay(60)
                 val snapshot: String
                 val finished: Boolean
                 synchronized(revealLock) {
                     val full = builder.toString()
                     if (revealed < full.length) {
                         val backlog = full.length - revealed
-                        // 每个节拍揭示一定比例的积压。每 80ms 落库一次
-                        // (写库触发整个列表 Flow 重发, 频率直接决定重组
-                        // 开销); 单次按 55% 揭示, 视觉平滑的同时约 2-3 次
-                        // 即可追平积压, 出字节奏与阅读速度匹配
-                        revealed += maxOf(6, (backlog * 0.55).toInt())
+                        // DeepSeek 风格逐字渐显: 每 60ms 小步进固定字数,
+                        // 步长随积压自适应但幅度小(backlog/20), 视觉上是
+                        // 连续的小步进而非大段跳变; 积压大时按比例加速
+                        // 追平, 不会无限落后
+                        revealed += maxOf(2, (backlog / 20).coerceAtLeast(1))
                         if (revealed > full.length) revealed = full.length
                     }
                     // 半标签防护: 截断点若落在协议标签的中间, 库里会短暂
