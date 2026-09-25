@@ -523,10 +523,12 @@ private fun SearchBlock(
                 Column(modifier = Modifier.padding(bottom = 10.dp)) {
                     if (sources.isEmpty()) {
                         // streaming: sources not yet persisted
+                        // 与下方来源行同宽的内边距, 否则文字贴左边缘
                         Text(
                             text = "正在获取搜索结果…",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 14.dp),
                         )
                     }
                     sources.forEach { (title, url) ->
