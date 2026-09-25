@@ -41,7 +41,7 @@ class AnthropicChatClient(
         return CompletionResult(
             content = response.extractText(),
             usage = response.usage?.let {
-                TokenUsage(it.input, it.output)
+                TokenUsage(it.input, it.output, it.cacheReadTokens.takeIf { c -> c > 0 })
             }
         )
     }
@@ -55,6 +55,7 @@ class AnthropicChatClient(
         // Claude 把 usage 拆到两个事件里：message_start 给输入 token，
         // message_delta 给输出 token。需要跨事件累积后在结束时合并
         var inputTokens: Int? = null
+        var cacheReadTokens = 0
         var outputTokens: Int? = null
 
         // Claude 把思考和正文推在不同的 delta 类型里，需要折回内嵌标签
@@ -88,7 +89,10 @@ class AnthropicChatClient(
                 }
 
                 "message_start" ->
-                    event.message?.usage?.let { inputTokens = it.input }
+                    event.message?.usage?.let {
+                        inputTokens = it.input
+                        if (it.cacheReadTokens > 0) cacheReadTokens = it.cacheReadTokens
+                    }
 
                 "message_delta" ->
                     event.usage?.let { outputTokens = it.output }
@@ -122,7 +126,7 @@ class AnthropicChatClient(
             ?.let { emit(StreamEvent.TextDelta(it)) }
 
         val usage = if (inputTokens != null || outputTokens != null) {
-            TokenUsage(inputTokens ?: 0, outputTokens ?: 0)
+            TokenUsage(inputTokens ?: 0, outputTokens ?: 0, cacheReadTokens.takeIf { c -> c > 0 })
         } else {
             null
         }
@@ -325,7 +329,8 @@ class AnthropicChatClient(
         @SerialName("input_tokens") val inputTokens: Int = 0,
         @SerialName("output_tokens") val outputTokens: Int = 0,
         @SerialName("prompt_tokens") val promptTokens: Int = 0,
-        @SerialName("completion_tokens") val completionTokens: Int = 0
+        @SerialName("completion_tokens") val completionTokens: Int = 0,
+        @SerialName("cache_read_input_tokens") val cacheReadTokens: Int = 0
     ) {
         val input: Int get() = if (inputTokens > 0) inputTokens else promptTokens
         val output: Int get() = if (outputTokens > 0) outputTokens else completionTokens

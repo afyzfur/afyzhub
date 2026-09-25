@@ -12,7 +12,9 @@ data class ChatTurn(
 /** Token 用量，来自各提供商的 usage 字段。 */
 data class TokenUsage(
     val promptTokens: Int,
-    val completionTokens: Int
+    val completionTokens: Int,
+    /** 命中缓存的输入 token 数，提供商未返回时为 null */
+    val cachedTokens: Int? = null
 )
 
 /**

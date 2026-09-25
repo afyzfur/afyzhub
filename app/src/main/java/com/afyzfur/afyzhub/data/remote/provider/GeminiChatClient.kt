@@ -235,11 +235,13 @@ class GeminiChatClient(
     @Serializable
     private data class UsageMetadata(
         val promptTokenCount: Int = 0,
-        val candidatesTokenCount: Int = 0
+        val candidatesTokenCount: Int = 0,
+        @SerialName("cachedContentTokenCount") val cachedContentTokenCount: Int = 0
     ) {
         fun toTokenUsage() = TokenUsage(
             promptTokens = promptTokenCount,
-            completionTokens = candidatesTokenCount
+            completionTokens = candidatesTokenCount,
+            cachedTokens = cachedContentTokenCount.takeIf { c -> c > 0 }
         )
     }
 

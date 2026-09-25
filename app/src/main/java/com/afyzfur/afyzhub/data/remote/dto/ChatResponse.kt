@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub.data.remote.dto
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -52,5 +53,11 @@ data class ResponseMessage(
 data class Usage(
     val prompt_tokens: Int = 0,
     val completion_tokens: Int = 0,
-    val total_tokens: Int = 0
+    val total_tokens: Int = 0,
+    /** DeepSeek/OpenAI 缓存命中数, 提供商省略时为 null */
+    val prompt_tokens_details: PromptTokensDetails? = null
+)
+@Serializable
+data class PromptTokensDetails(
+    @SerialName("cached_tokens") val cached_tokens: Int = 0
 )

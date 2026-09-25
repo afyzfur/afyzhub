@@ -262,7 +262,8 @@ class ChatRepositoryImpl(
                     model = settings.model,
                     promptTokens = searchUsage?.promptTokens,
                     completionTokens = searchUsage?.completionTokens,
-                    latencyMs = latencyMs
+                    latencyMs = latencyMs,
+                    cachedTokens = searchUsage?.cachedTokens
                 )
             } ?: messageDao.insertMessage(
                 MessageEntity(
@@ -273,7 +274,8 @@ class ChatRepositoryImpl(
                     model = settings.model,
                     promptTokens = searchUsage?.promptTokens,
                     completionTokens = searchUsage?.completionTokens,
-                    latencyMs = latencyMs
+                    latencyMs = latencyMs,
+                    cachedTokens = searchUsage?.cachedTokens
                 )
             )
             touchConversation(conversationId)
@@ -287,7 +289,8 @@ class ChatRepositoryImpl(
                     model = settings.model,
                     promptTokens = searchUsage?.promptTokens,
                     completionTokens = searchUsage?.completionTokens,
-                    latencyMs = latencyMs
+                    latencyMs = latencyMs,
+                    cachedTokens = searchUsage?.cachedTokens
                 )
             )
         } catch (e: CancellationException) {
@@ -652,7 +655,8 @@ class ChatRepositoryImpl(
         model = model,
         promptTokens = promptTokens,
         completionTokens = completionTokens,
-        latencyMs = latencyMs
+        latencyMs = latencyMs,
+        cachedTokens = cachedTokens
     )
 
     private companion object {

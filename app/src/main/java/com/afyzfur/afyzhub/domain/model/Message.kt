@@ -15,7 +15,8 @@ data class Message(
     val model: String? = null,
     val promptTokens: Int? = null,
     val completionTokens: Int? = null,
-    val latencyMs: Long? = null
+    val latencyMs: Long? = null,
+    val cachedTokens: Int? = null
 ) {
     val isFromUser: Boolean get() = role == Constants.ROLE_USER
     val isFailed: Boolean get() = status == Constants.STATUS_FAILED

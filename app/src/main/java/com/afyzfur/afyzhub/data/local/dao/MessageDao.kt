@@ -47,7 +47,8 @@ interface MessageDao {
             model = :model,
             promptTokens = :promptTokens,
             completionTokens = :completionTokens,
-            latencyMs = :latencyMs
+            latencyMs = :latencyMs,
+            cachedTokens = :cachedTokens
         WHERE id = :id
         """
     )
@@ -58,7 +59,8 @@ interface MessageDao {
         model: String?,
         promptTokens: Int?,
         completionTokens: Int?,
-        latencyMs: Long?
+        latencyMs: Long?,
+        cachedTokens: Int?
     )
 
     /**

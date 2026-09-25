@@ -79,7 +79,7 @@ private val WHITESPACE = Regex("\\s+")
  * 覆盖 think / thinking / reasoning 三种命名的开闭标签：
  * 各家用词不一，而这里只是要把它清掉，不需要区分。
  */
-private val STRAY_TAG = Regex("</?(?:think|thinking|reasoning|search)>", RegexOption.IGNORE_CASE)
+private val STRAY_TAG = Regex("</?(?:think|thinking|reasoning|web_search|sources)>", RegexOption.IGNORE_CASE)
 
 /** 开头的列表序号，如 "1. " "2、" */
 private val LEADING_INDEX = Regex("^\\d+\\s*[.、）)]\\s*")

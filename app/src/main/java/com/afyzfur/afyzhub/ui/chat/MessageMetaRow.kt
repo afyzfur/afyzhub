@@ -89,6 +89,20 @@ internal fun buildMetaParts(
         }
     }
 
+    // 缓存命中: 显示命中数与占输入 token 的百分比。
+    // 两者都有才显示, 命中数为 0 或提供商未返回时不显示。
+    if (options.showTokenUsage && !message.isFromUser) {
+        val cached = message.cachedTokens
+        val input = message.promptTokens
+        if (cached != null && cached > 0) {
+            if (input != null && input > 0) {
+                val pct = (cached * 100 + input / 2) / input
+                parts += "cache: $cached (hit: $pct%)"
+            } else {
+                parts += "cache: $cached"
+            }
+        }
+    }
     if (options.showSpeed) {
         message.tokensPerSecond?.let {
             parts += "${"%.1f".format(it)} tok/s"

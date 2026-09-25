@@ -42,6 +42,11 @@ fun MessageInfoDialog(
                 message.promptTokens?.let { InfoRow("输入 token", "$it") }
                 message.completionTokens?.let { InfoRow("输出 token", "$it") }
                 message.latencyMs?.let { InfoRow("耗时", formatLatency(it)) }
+                message.cachedTokens?.takeIf { it > 0 }?.let {
+                    val pct = message.promptTokens?.takeIf { p -> p > 0 }
+                        ?.let { p -> (it * 100 + p / 2) / p }
+                    InfoRow("缓存命中", if (pct != null) "$it ($pct%)" else "$it")
+                }
             }
         }
     )
