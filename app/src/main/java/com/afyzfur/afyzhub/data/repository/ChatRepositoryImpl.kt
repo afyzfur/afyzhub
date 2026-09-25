@@ -184,7 +184,16 @@ class ChatRepositoryImpl(
                     results.joinToString("\n") { it.title.replace('\n', ' ') + " :: " + it.url } +
                     "\n" + SEARCH_SOURCES_CLOSE
                 val searchedTurns = turns + listOf(
-                    ChatTurn(role = "assistant", content = WebSearchService.stripSearchTagsOnly(reply) + sourcesBlock),
+                    // 第二轮请求的 assistant 历史: 保留第一轮原始内容(含搜索
+                    // 标签, 代表"我已发起这次搜索"), 并在末尾追加占位说明,
+                    // 让模型明确知道搜索已执行、现在该基于结果回答。
+                    // 不能剥标签: 剥掉后查询词裸露成正文, 模型会以为上次
+                    // 没搜成而在二轮再发一次搜索(重复搜索的根源)。
+                    ChatTurn(
+                        role = "assistant",
+                        content = reply + "\n[已执行搜索，等待结果…这是部分输出]" + sourcesBlock
+                    ),
+
                     ChatTurn(
                         role = "user",
                         content = "以下是「" + searchQuery + "」的搜索结果：\n\n" +

@@ -98,19 +98,24 @@ private fun MarkdownBlockView(
     onLinkClick: ((String) -> Unit)? = null
 ) {
     when (block) {
-        is MarkdownBlock.Paragraph -> if (onLinkClick != null) {
-            LinkAwareText(
-                text = block.spans.toAnnotatedString(),
-                color = color,
-                style = MaterialTheme.typography.bodyLarge,
-                onLinkClick = onLinkClick
-            )
-        } else {
-            Text(
-                text = block.spans.toAnnotatedString(),
-                color = color,
-                style = MaterialTheme.typography.bodyLarge
-            )
+        is MarkdownBlock.Paragraph -> {
+            // 流式时 text 每 33ms 变一次, toAnnotatedString 全量重建开销大,
+            // 缓存后同一段文本直接复用, 只在内容真正变化时重算。
+            val annotated = remember(block.spans) { block.spans.toAnnotatedString() }
+            if (onLinkClick != null) {
+                LinkAwareText(
+                    text = annotated,
+                    color = color,
+                    style = MaterialTheme.typography.bodyLarge,
+                    onLinkClick = onLinkClick
+                )
+            } else {
+                Text(
+                    text = annotated,
+                    color = color,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         }
 
         is MarkdownBlock.Heading -> if (onLinkClick != null) {
