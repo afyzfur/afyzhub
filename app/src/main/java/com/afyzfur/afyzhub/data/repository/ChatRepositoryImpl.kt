@@ -168,7 +168,7 @@ class ChatRepositoryImpl(
             // grounding, 不会输出搜索标签, 此块自然跳过
             var searchUsage = outcome.usage
             val searchQuery = WebSearchService.extractQuery(reply)
-            android.util.Log.d("AfyzSearch", "extractQuery=" + searchQuery + " replyLen=" + reply.length)
+            println("[AfyzSearch] " + "extractQuery=" + searchQuery + " replyLen=" + reply.length)
             if (searchQuery != null &&
                 settings.webSearchEnabled &&
                 settings.inAppBrowserEnabled &&
@@ -176,7 +176,7 @@ class ChatRepositoryImpl(
             ) {
                 onPhase(SendPhase.SEARCHING)
                 val results = webSearchService.search(searchQuery, engineId = settings.searchEngine)
-                android.util.Log.d("AfyzSearch", "searchDone size=" + results.size + " q=" + searchQuery)
+                println("[AfyzSearch] " + "searchDone size=" + results.size + " q=" + searchQuery)
                 // 结果已拿到，进入读取整理阶段；结果为空时直接跳过
                 // BROWSING，让模型按无结果路径兜底回答
                 if (results.isNotEmpty()) onPhase(SendPhase.BROWSING)
@@ -238,7 +238,7 @@ class ChatRepositoryImpl(
                 // 第一轮内容截到第一个搜索标签为止: 模型在标签后继续输出
                 // 的内容是搜索前草稿, 和第二轮回答重复(“回答两次”的真凶)。
                 reply = WebSearchService.truncateAfterFirstSearchTag(reply) + cleanedSecond + sourcesBlock
-                android.util.Log.d("AfyzSearch", "finalized replyLen=" + reply.length + " hasTag=" + reply.contains("<web_search>"))
+                println("[AfyzSearch] " + "finalized replyLen=" + reply.length + " hasTag=" + reply.contains("<web_search>"))
                 if (secondOutcome.content.isBlank()) {
                     throw IllegalStateException("模型返回内容为空")
                 }
