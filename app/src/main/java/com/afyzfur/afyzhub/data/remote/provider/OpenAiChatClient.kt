@@ -185,7 +185,7 @@ class OpenAiChatClient(
         val miss = num(u["prompt_cache_miss_tokens"])
         val cached = hit
             ?: num(details?.get("cached_tokens"))
-            ?: num(u["cache_read_input_tokens"))
+            ?: num(u["cache_read_input_tokens"])
             // 只回报 miss 字段的商用 prompt-miss 反推命中数
             ?: miss?.let { m -> prompt?.let { p -> (p - m).takeIf { v -> v > 0 } } }
         if (prompt == null && completion == null) null
