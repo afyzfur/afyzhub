@@ -129,7 +129,18 @@ class WebSearchService(
             query = mapOf("q" to query, "count" to maxResults.toString()),
             logContext = RequestLogContext(provider = "web-search", model = "bing-html")
         )
-        return parseBing(html, maxResults, query)
+        val htmlRes = parseBing(html, maxResults, query)
+        println("[AfyzSearch] bing-html parsed: count=" + htmlRes.size)
+        if (htmlRes.isEmpty()) {
+            // 两级都拿不到相关结果: 明确告知, 而不是把无关结果塞给用户
+            return listOf(Result(
+                title = "必应未返回相关结果",
+                snippet = "已尝试 RSS 与网页两路。可能被反爬或按地域重排。建议: ① 换百度引擎 ② 换个问法 ③ 复制请求日志发开发者。诊断码: BING_ALL_EMPTY",
+                url = "",
+                site = "诊断"
+            ))
+        }
+        return htmlRes
     }
     private suspend fun searchBaidu(query: String, maxResults: Int): List<Result> {
         println("[AfyzSearch] baidu start: query=$query max=$maxResults")
@@ -247,10 +258,13 @@ class WebSearchService(
             val url = m.groupValues[1]
             if (url.startsWith("http") || url.startsWith("/link")) {
                 val title = stripTags(m.groupValues[2])
-                val overlap = if (queryChars.isEmpty()) 1
-                    else title.count { it in queryChars }
-                // 全无重合的条目基本可断定与查询无关(如查询天气却抓到黄历卡)
-                if (queryChars.isNotEmpty() && overlap == 0) continue
+                // 覆盖率判据: 标题字符与查询实义字符的重合比例。
+                // 之前"命中 1 个字就留"太松——实测「泉州鲤城区天气」因含
+                // "天气"二字就能混进「重庆今日天气」的结果里。改为要求
+                // 覆盖查询词 50% 以上, 主体地名不符的结果会被剔除。
+                val cov = if (queryChars.isEmpty()) 1.0
+                    else queryChars.count { it in title.toSet() }.toDouble() / queryChars.size
+                if (cov < 0.5) continue
                 val full = if (url.startsWith("/")) "https://www.baidu.com" + url else url
                 out += Result(title, "", full, siteOf(full))
                 if (out.size >= maxResults) break
@@ -310,11 +324,13 @@ class WebSearchService(
                 .find(item)?.groupValues?.get(1) ?: ""
             val url = stripTags(link)
             val cleanTitle = stripTags(title)
-            // 标题或摘要里含查询词实义字符才算相关; 全无重合跳过
+            // 同 parseBaidu: 覆盖率不到 50% 视为不相关。
+            // 「重庆今日天气」的泛化结果(重庆百科/旅游)通常只覆盖
+            // "重庆"二字, 会被这里拦下, 进而触发下方的 HTML 兜底。
             if (queryChars.isNotEmpty()) {
-                val inTitle = cleanTitle.count { it in queryChars }
-                val inDesc = stripTags(desc).count { it in queryChars }
-                if (inTitle == 0 && inDesc == 0) continue
+                val chars = (cleanTitle + stripTags(desc)).toSet()
+                val cov = queryChars.count { it in chars }.toDouble() / queryChars.size
+                if (cov < 0.5) continue
             }
             out += Result(
                 title = cleanTitle,
@@ -347,12 +363,10 @@ class WebSearchService(
                 .find(b)?.groupValues?.get(1) ?: ""
                         val cleanTitle = stripTags(title)
             if (queryChars.isNotEmpty()) {
-                val inTitle = cleanTitle.count { it in queryChars }
-                val inSnip = stripTags(snippet).count { it in queryChars }
-                val coverage = (inTitle + inSnip).toDouble() / queryChars.size
-                // 放宽阈值: 覆盖 25% 即算相关(之前要求全字符重合)
-                if (coverage < 0.25) {
-                    println("[AfyzSearch] baidu skip: title=" + cleanTitle.take(30) + " coverage=" + (coverage * 100).toInt() + "%")
+                val chars = (cleanTitle + stripTags(snippet)).toSet()
+                val coverage = queryChars.count { it in chars }.toDouble() / queryChars.size
+                if (coverage < 0.5) {
+                    println("[AfyzSearch] move: title=" + cleanTitle.take(30) + " coverage=" + (coverage * 100).toInt() + "%")
                     continue
                 }
             }

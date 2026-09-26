@@ -95,10 +95,18 @@ internal fun buildMetaParts(
     // 能看到该功能在工作; 完全没有 usage 时才省略。
     if (options.showTokenUsage && !message.isFromUser) {
         val input = message.promptTokens
+        val cached = message.cachedTokens
         if (input != null && input > 0) {
-            val cached = message.cachedTokens ?: 0
-            val pct = (cached * 100 + input / 2) / input
-            parts += "cache: $cached (hit: $pct%)"
+            // cached 为 null = 提供商压根没在 usage 里返回缓存字段
+            // (实测 docode.cc 的 glm-5.3-flash 就是如此)。
+            // 此时显示 "n/a", 而不是硬凑成 "cache: 0"——后者会让人
+            // 以为缓存失效了, 其实是无从判断。
+            if (cached != null) {
+                val pct = (cached * 100 + input / 2) / input
+                parts += "cache: $cached (hit: $pct%)"
+            } else {
+                parts += "cache: n/a"
+            }
         }
     }
     if (options.showSpeed) {

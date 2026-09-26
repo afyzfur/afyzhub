@@ -236,12 +236,10 @@ private fun MessageBody(
     // 涟漪反馈由它提供。此前额外叠加的 pointerInput 长按兜底会把按下
     // 事件先行消费, 正是"点击特效消失"的元凶, 已移除。
     // 显式传 indication 确保涟漪始终可见(不受主题/Surface 影响)
-    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    // 手势与 backup_good 中用户确认可用的版本一致: 不显式指定
+    // interactionSource / indication, 全部交回 material3 默认值。
+    // 之前显式传 indication(bounded) 反而把涟漪画成了不贴合气泡的圈。
     val longPress = Modifier.combinedClickable(
-        interactionSource = interactionSource,
-        indication = androidx.compose.material3.ripple(bounded = true),
-        // clip 在 combinedClickable 之前, 涟漪才会贴合气泡圆角
-
         // 单击不做事，但必须提供——combinedClickable 要求有 onClick。
         // 传空 lambda 的副作用是正文会有涟漪反馈，
         // 这反而提示了"这里可以按"
@@ -296,11 +294,7 @@ private fun MessageBody(
             Box(
                 // 高度动画: 流式逐字写入时高度每帧跳变是闪烁的主要来源,
                 // 动画把跳变平滑为过渡(默认 spring 已足够快, 不拖沓)
-                // clip 必须放在 combinedClickable 之前: 涟漪按裁剪后的
-                // 圆角形状绘制, 否则会画成一圈方形/超出气泡
-                modifier = Modifier
-                    .clip(if (fromUser) AppShapeTokens.UserMessage else AppShapeTokens.AssistantMessage)
-                    .then(longPress)
+                modifier = longPress
                     .animateContentSize()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {

@@ -24,7 +24,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Checkbox
 import androidx.compose.ui.draw.clip
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
 import com.afyzfur.afyzhub.data.log.LogRetention
 import com.afyzfur.afyzhub.ui.components.IconHistory
@@ -168,7 +167,8 @@ fun RequestLogScreen(
             )
             if (allEntries.isNotEmpty()) {
                 // 复制全部日志: 手机端无法连 adb 时, 用这个把日志导出
-                IconButton(
+                // 用文字按钮而非图标: 核心图标集里没有"复制"图标, 借用的列表图标含义不清
+                TextButton(
                     onClick = {
                         val text = allEntries.joinToString("\n\n") { e ->
                             buildString {
@@ -183,11 +183,7 @@ fun RequestLogScreen(
                         android.widget.Toast.makeText(context, "已复制 ${allEntries.size} 条日志", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.List,
-                        contentDescription = "复制全部日志",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text("复制全部")
                 }
                 IconButton(
                     onClick = {
