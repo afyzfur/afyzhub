@@ -100,8 +100,19 @@ class WebSearchService(
             ""
         }
         val fromRss = if (xml.isBlank()) emptyList() else parseBingRss(xml, maxResults, query)
-        if (fromRss.isNotEmpty()) return fromRss
-        println("[AfyzSearch] bing-rss no relevant result, falling back to html")
+        if (fromRss.isNotEmpty()) {
+            // RSS 退化检测: RSS 对长查询会退化成只取前几个词的泛搜索
+            // (实测「重庆今日天气」返回「重庆」百科/旅游)。退化特征是
+            // 连最好的结果也覆盖不了查询词六成实义字符——「重庆旅游
+            // 攻略」只覆盖「重庆」二字, 拦不住零重合过滤, 必须看比例。
+            val qc = meaningfulChars(query)
+            val bestCoverage = if (qc.isEmpty()) 1.0 else fromRss.maxOf { r ->
+                val chars = (r.title + r.snippet).toSet()
+                qc.count { it in chars }.toDouble() / qc.size
+            }
+            if (bestCoverage >= 0.6) return fromRss
+            println("[AfyzSearch] bing-rss degraded coverage=" + (bestCoverage * 100).toInt() + "%, retry with html")
+        }
         // 二级: HTML 版 + 桌面 UA(移动 UA 的结果页结构不同且易触发自适应布局)
         val html = transport.getForText(
             baseUrl = "https://www.bing.com",
@@ -116,20 +127,40 @@ class WebSearchService(
         return parseBing(html, maxResults, query)
     }
     private suspend fun searchBaidu(query: String, maxResults: Int): List<Result> {
-        val html = transport.getForText(
-            baseUrl = "https://www.baidu.com",
-            path = "/s",
-            headers = mapOf(
-                // 实测: 移动 UA 返回 cosc-title 结构(链接在 JS 数据里, 正则抓不到),
-                // 桌面 UA 返回经典 h3+a 结构, 链接可直接提取。
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-                "Accept" to "text/html,application/xhtml+xml",
-                "Accept-Language" to "zh-CN,zh;q=0.9"
-            ),
-            query = mapOf("wd" to query, "rn" to maxResults.toString()),
-            logContext = RequestLogContext(provider = "web-search", model = "baidu")
+        // 多策略重试: 桌面 Chrome UA 在实测网络可用, 但部分网络环境
+        // (运营商代理/反爬差异)可能拦掉某个 UA。同引擎内依次换 UA,
+        // 全部失败才返回空——不跨引擎, 尊重用户的引擎选择。
+        // 实测依据: 移动 UA 返回 cosc-title 结构(链接在 JS 里抓不到),
+        // 桌面 UA 返回经典 h3+a 结构可解析, 所以只用桌面 UA 系列。
+        val strategies = listOf(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
         )
-        return parseBaidu(html, maxResults, query)
+        for ((index, ua) in strategies.withIndex()) {
+            val attempt = index + 1
+            val html = try {
+                transport.getForText(
+                    baseUrl = "https://www.baidu.com",
+                    path = "/s",
+                    headers = mapOf(
+                        "User-Agent" to ua,
+                        "Accept" to "text/html,application/xhtml+xml",
+                        "Accept-Language" to "zh-CN,zh;q=0.9"
+                    ),
+                    query = mapOf("wd" to query, "rn" to maxResults.toString(), "ie" to "utf-8"),
+                    logContext = RequestLogContext(provider = "web-search", model = "baidu-$attempt")
+                )
+            } catch (e: Exception) {
+                println("[AfyzSearch] baidu attempt $attempt failed=" + e.javaClass.simpleName)
+                continue
+            }
+            val parsed = parseBaidu(html, maxResults, query)
+            if (parsed.isNotEmpty()) return parsed
+            println("[AfyzSearch] baidu attempt $attempt no result")
+        }
+        println("[AfyzSearch] baidu all attempts failed")
+        return emptyList()
     }
     private suspend fun searchGoogle(query: String, maxResults: Int): List<Result> {
         val html = transport.getForText(

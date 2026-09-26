@@ -15,6 +15,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * OpenAI 及兼容其协议的服务（多数中转服务）。
@@ -171,14 +172,22 @@ class OpenAiChatClient(
     private fun extractUsageManually(payload: String): TokenUsage? = try {
         val obj = json.parseToJsonElement(payload).jsonObject
         val u = obj["usage"]?.jsonObject ?: return null
-        val prompt = u["prompt_tokens"]?.jsonPrimitive?.intOrNull ?: u["input_tokens"]?.jsonPrimitive?.intOrNull
-        val completion = u["completion_tokens"]?.jsonPrimitive?.intOrNull ?: u["output_tokens"]?.jsonPrimitive?.intOrNull
-        val details = u["prompt_tokens_details"]?.jsonObject
-        val cached = listOfNotNull(
-            u["prompt_cache_hit_tokens"]?.jsonPrimitive?.intOrNull,
-            details?.get("cached_tokens")?.jsonPrimitive?.intOrNull,
-            u["cache_read_input_tokens"]?.jsonPrimitive?.intOrNull
-        ).firstOrNull()
+        // 数值容错: 部分中转把数字序列化成字符串("123"), intOrNull 对
+        // 字符串原语返回 null, 补一路 content 转换
+        fun num(e: kotlinx.serialization.json.JsonElement?): Int? =
+            e?.jsonPrimitive?.intOrNull ?: e?.jsonPrimitive?.contentOrNull?.trim()?.toIntOrNull()
+        val prompt = num(u["prompt_tokens"]) ?: num(u["input_tokens"])
+        val completion = num(u["completion_tokens"]) ?: num(u["output_tokens"])
+        // 嵌套字段两套命名: OpenAI 的 prompt_tokens_details 与
+        // OpenRouter 的 details
+        val details = u["prompt_tokens_details"]?.jsonObject ?: u["details"]?.jsonObject
+        val hit = num(u["prompt_cache_hit_tokens"])
+        val miss = num(u["prompt_cache_miss_tokens"])
+        val cached = hit
+            ?: num(details?.get("cached_tokens"))
+            ?: num(u["cache_read_input_tokens"))
+            // 只回报 miss 字段的商用 prompt-miss 反推命中数
+            ?: miss?.let { m -> prompt?.let { p -> (p - m).takeIf { v -> v > 0 } } }
         if (prompt == null && completion == null) null
         else TokenUsage(prompt ?: 0, completion ?: 0, cached)
     } catch (e: Exception) {
