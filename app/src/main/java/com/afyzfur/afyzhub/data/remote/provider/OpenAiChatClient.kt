@@ -66,7 +66,7 @@ class OpenAiChatClient(
             val chunk = parseChunk(payload) ?: return@collect
             // 带 usage 的那个 chunk 通常 choices 为空，两者需分别处理
             chunk.usage?.let {
-                usage = TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
+                usage = mergeUsage(usage, TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens))
             }
             val delta = chunk.choices.firstOrNull()?.delta ?: return@collect
 
@@ -96,6 +96,12 @@ class OpenAiChatClient(
 
         emit(StreamEvent.Finished(usage))
     }
+
+    private fun mergeUsage(old: TokenUsage?, next: TokenUsage): TokenUsage = TokenUsage(
+        promptTokens = maxOf(old?.promptTokens ?: 0, next.promptTokens),
+        completionTokens = maxOf(old?.completionTokens ?: 0, next.completionTokens),
+        cachedTokens = listOfNotNull(old?.cachedTokens, next.cachedTokens).maxOrNull()
+    )
 
     override suspend fun listModels(settings: AppSettings): List<String> {
         val text = transport.getForText(

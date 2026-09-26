@@ -62,8 +62,7 @@ data class Usage(
 
 /** 缓存命中的统一取值: 优先 DeepSeek 顶层字段, 次选 OpenAI 嵌套字段 */
 val Usage.cachedTokens: Int?
-    get() = prompt_cache_hit_tokens?.takeIf { it > 0 }
-        ?: prompt_tokens_details?.cached_tokens?.takeIf { it > 0 }
+    get() = prompt_cache_hit_tokens ?: prompt_tokens_details?.cached_tokens
 @Serializable
 data class PromptTokensDetails(
     @SerialName("cached_tokens") val cached_tokens: Int = 0

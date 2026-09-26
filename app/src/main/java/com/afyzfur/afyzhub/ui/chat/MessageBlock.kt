@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import coil.compose.SubcomposeAsyncImage
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -228,7 +230,9 @@ private fun MessageBody(
 
     // 长按挂在正文容器上而非整行：整行包含头像与空白区域，
     // 在那些位置长按弹菜单会显得没有指向性
-    val longPress = Modifier.combinedClickable(
+    val longPress = Modifier.pointerInput(onLongPress) {
+        detectTapGestures(onLongPress = { onLongPress() })
+    }.combinedClickable(
         // 单击不做事，但必须提供——combinedClickable 要求有 onClick。
         // 传空 lambda 的副作用是正文会有涟漪反馈，
         // 这反而提示了"这里可以按"
@@ -470,6 +474,19 @@ private fun SiteIcon(url: String, size: Dp) {
             }
         }
     )
+}
+
+@Composable
+private fun EngineBadge(engine: String) {
+    val key = engine.trim().lowercase()
+    val (label, color) = when {
+        key == baidu || key == 百度 -> 度 to androidx.compose.ui.graphics.Color(0xFF2932E1)
+        key == google -> G to androidx.compose.ui.graphics.Color(0xFF4285F4)
+        else -> B to androidx.compose.ui.graphics.Color(0xFF00809D)
+    }
+    Box(Modifier.size(18.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = androidx.compose.ui.graphics.Color.White)
+    }
 }
 
 @Composable

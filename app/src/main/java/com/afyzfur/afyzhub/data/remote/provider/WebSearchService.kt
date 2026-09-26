@@ -29,8 +29,10 @@ enum class SearchEngine(val id: String, val label: String) {
     GOOGLE("google", "Google");
     companion object {
         val DEFAULT = BING
-        fun fromId(id: String?): SearchEngine =
-            entries.firstOrNull { it.id == id } ?: DEFAULT
+        fun fromId(id: String?): SearchEngine {
+            val key = id?.trim()?.lowercase()
+            return entries.firstOrNull { it.id == key || it.name.lowercase() == key || it.label == id?.trim() } ?: DEFAULT
+        }
     }
 }
 
