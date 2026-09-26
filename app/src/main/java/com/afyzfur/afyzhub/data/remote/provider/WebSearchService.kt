@@ -345,7 +345,8 @@ class WebSearchService(
                     println("[AfyzSearch] baidu skip: title=" + cleanTitle.take(30) + " coverage=" + (coverage * 100).toInt() + "%")
                     continue
                 }
-            }out += Result(cleanTitle, stripTags(snippet), url, siteOf(url))
+            }
+            out += Result(cleanTitle, stripTags(snippet), url, siteOf(url))
             if (out.size >= maxResults) break
         }
         return out
