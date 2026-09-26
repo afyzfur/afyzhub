@@ -230,17 +230,19 @@ private fun MessageBody(
 
     // 长按挂在正文容器上而非整行：整行包含头像与空白区域，
     // 在那些位置长按弹菜单会显得没有指向性
-    // 回调转 rememberUpdatedState, key 固定后重组不再取消进行中的手势
+    //
+    // 手势顺序很关键: combinedClickable 必须在 pointerInput 之前。
+    // 先前的写法是 pointerInput 在前——detectTapGestures 会消费按下
+    // 事件用于长按判定, combinedClickable 的涟漪(按下反馈)就被吞了,
+    // 这正是"点击特效消失"的原因。调换顺序后: 涟漪由 combinedClickable
+    // 正常显示, 长按兜底由 pointerInput 在外层收不到时生效。
     val currentOnLongPress by androidx.compose.runtime.rememberUpdatedState(onLongPress)
-    val longPress = Modifier.pointerInput(Unit) {
-        detectTapGestures(onLongPress = { currentOnLongPress() })
-    }.combinedClickable(
-        // 单击不做事，但必须提供——combinedClickable 要求有 onClick。
-        // 传空 lambda 的副作用是正文会有涟漪反馈，
-        // 这反而提示了"这里可以按"
+    val longPress = Modifier.combinedClickable(
         onClick = {},
-        onLongClick = onLongPress
-    )
+        onLongClick = { currentOnLongPress() }
+    ).pointerInput(Unit) {
+        detectTapGestures(onLongPress = { currentOnLongPress() })
+    }
 
     // 思考/搜索块按出现顺序独立成栏, 与正式回答是并列关系。
     // 两次思考+一次搜索 = 三个条, 段落先后与模型实际行为一致

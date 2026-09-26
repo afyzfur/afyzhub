@@ -79,19 +79,41 @@ class WebSearchService(
         }
     }
     private suspend fun searchBing(query: String, maxResults: Int): List<Result> {
-        // RSS 输出而非 HTML：结构稳定多年、无广告与 SEO 垃圾，
-        // 每条 item 固定为 title/link/description 三件套
-        val xml = transport.getForText(
+        // 一级: RSS 输出——结构稳定多年、无广告与 SEO 垃圾，
+        // 每条 item 固定为 title/link/description 三件套。
+        // 实测缺陷: 对含时间限定词的长查询(「重庆今日天气」)会退化成
+        // 只取前几个词的泛搜索, 所以 RSS 全空或全被相关性过滤剔除时,
+        // 降级走 HTML 版(其结果按完整查询词组织)。
+        val xml = try {
+            transport.getForText(
+                baseUrl = "https://www.bing.com",
+                path = "/search",
+                headers = mapOf(
+                    "User-Agent" to "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36",
+                    "Accept-Language" to "zh-CN,zh;q=0.9"
+                ),
+                query = mapOf("q" to query, "format" to "rss", "count" to maxResults.toString()),
+                logContext = RequestLogContext(provider = "web-search", model = "bing-rss")
+            )
+        } catch (e: Exception) {
+            println("[AfyzSearch] bing-rss failed=" + e.javaClass.simpleName)
+            ""
+        }
+        val fromRss = if (xml.isBlank()) emptyList() else parseBingRss(xml, maxResults, query)
+        if (fromRss.isNotEmpty()) return fromRss
+        println("[AfyzSearch] bing-rss no relevant result, falling back to html")
+        // 二级: HTML 版 + 桌面 UA(移动 UA 的结果页结构不同且易触发自适应布局)
+        val html = transport.getForText(
             baseUrl = "https://www.bing.com",
             path = "/search",
             headers = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36",
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
                 "Accept-Language" to "zh-CN,zh;q=0.9"
             ),
-            query = mapOf("q" to query, "format" to "rss", "count" to maxResults.toString()),
-            logContext = RequestLogContext(provider = "web-search", model = "bing-rss")
+            query = mapOf("q" to query, "count" to maxResults.toString()),
+            logContext = RequestLogContext(provider = "web-search", model = "bing-html")
         )
-        return parseBingRss(xml, maxResults)
+        return parseBing(html, maxResults, query)
     }
     private suspend fun searchBaidu(query: String, maxResults: Int): List<Result> {
         val html = transport.getForText(
@@ -176,7 +198,7 @@ class WebSearchService(
         )
         // 相关性过滤: 抓错区块(推荐卡片/广告)时标题与查询词往往零重合。
         // 查询词去掉常见虚词后的实义字符集, 与标题至少重合 1/4 才采纳。
-        val queryChars = query.filter { !it.isWhitespace() && "的地了吗呢吧呀啊".indexOf(it) < 0 }.toSet()
+        val queryChars = meaningfulChars(query)
         for (m in blockPattern.findAll(html)) {
             val url = m.groupValues[1]
             if (url.startsWith("http") || url.startsWith("/link")) {
@@ -228,9 +250,13 @@ class WebSearchService(
      * 每条结果是一个 `<item>` 块：title / link / description 各一，
      * 结构由 Bing 官方保证，不受页面改版或广告投放影响。
      */
-    private fun parseBingRss(xml: String, maxResults: Int): List<Result> {
+    private fun parseBingRss(xml: String, maxResults: Int, query: String): List<Result> {
         val items = xml.split("<item>").drop(1)
         val out = mutableListOf<Result>()
+        // 相关性过滤: RSS 对长查询词会退化成"取前几个词"的泛搜索,
+        // 实测「重庆今日天气」返回的是「重庆」百科/旅游结果。与
+        // parseBaidu 同判: 标题与查询实义字符零重合的条目剔除。
+        val queryChars = meaningfulChars(query)
         for (item in items) {
             val title = Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
                 .find(item)?.groupValues?.get(1) ?: continue
@@ -239,8 +265,15 @@ class WebSearchService(
             val desc = Regex("<description>(.*?)</description>", RegexOption.DOT_MATCHES_ALL)
                 .find(item)?.groupValues?.get(1) ?: ""
             val url = stripTags(link)
+            val cleanTitle = stripTags(title)
+            // 标题或摘要里含查询词实义字符才算相关; 全无重合跳过
+            if (queryChars.isNotEmpty()) {
+                val inTitle = cleanTitle.count { it in queryChars }
+                val inDesc = stripTags(desc).count { it in queryChars }
+                if (inTitle == 0 && inDesc == 0) continue
+            }
             out += Result(
-                title = stripTags(title),
+                title = cleanTitle,
                 snippet = stripTags(desc),
                 url = url,
                 site = siteOf(url)
@@ -249,14 +282,18 @@ class WebSearchService(
         }
         return out
     }
+    /** 查询词的实义字符集: 去空白与常见虚词, 供相关性过滤复用 */
+    private fun meaningfulChars(q: String): Set<Char> =
+        q.filter { !it.isWhitespace() && "的地了吗呢吧呀啊".indexOf(it) < 0 }.toSet()
 
     /** 从 url 提取站点域名（去 www.），favicon 与署名用 */
     private fun siteOf(url: String): String =
         Regex("https?://(?:www\\.)?([^/]+)").find(url)?.groupValues?.get(1) ?: ""
 
-    private fun parseBing(html: String, maxResults: Int): List<Result> {
+    private fun parseBing(html: String, maxResults: Int, query: String): List<Result> {
         val blocks = html.split("<li class=\"b_algo\"").drop(1)
         val out = mutableListOf<Result>()
+        val queryChars = meaningfulChars(query)
         for (b in blocks) {
             val url = Regex("href=\"([^\"]+)\"").find(b)?.groupValues?.get(1)
                 ?: continue
@@ -264,7 +301,13 @@ class WebSearchService(
                 .find(b)?.groupValues?.get(1) ?: continue
             val snippet = Regex("<p[^>]*>(.*?)</p>", RegexOption.DOT_MATCHES_ALL)
                 .find(b)?.groupValues?.get(1) ?: ""
-            out += Result(stripTags(title), stripTags(snippet), url, siteOf(url))
+            val cleanTitle = stripTags(title)
+            if (queryChars.isNotEmpty()) {
+                val inTitle = cleanTitle.count { it in queryChars }
+                val inSnip = stripTags(snippet).count { it in queryChars }
+                if (inTitle == 0 && inSnip == 0) continue
+            }
+            out += Result(cleanTitle, stripTags(snippet), url, siteOf(url))
             if (out.size >= maxResults) break
         }
         return out
