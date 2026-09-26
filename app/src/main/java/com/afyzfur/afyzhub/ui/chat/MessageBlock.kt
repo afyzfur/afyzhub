@@ -230,8 +230,10 @@ private fun MessageBody(
 
     // 长按挂在正文容器上而非整行：整行包含头像与空白区域，
     // 在那些位置长按弹菜单会显得没有指向性
-    val longPress = Modifier.pointerInput(onLongPress) {
-        detectTapGestures(onLongPress = { onLongPress() })
+    // 回调转 rememberUpdatedState, key 固定后重组不再取消进行中的手势
+    val currentOnLongPress by androidx.compose.runtime.rememberUpdatedState(onLongPress)
+    val longPress = Modifier.pointerInput(Unit) {
+        detectTapGestures(onLongPress = { currentOnLongPress() })
     }.combinedClickable(
         // 单击不做事，但必须提供——combinedClickable 要求有 onClick。
         // 传空 lambda 的副作用是正文会有涟漪反馈，

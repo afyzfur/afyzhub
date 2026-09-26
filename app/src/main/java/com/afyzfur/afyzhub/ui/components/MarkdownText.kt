@@ -120,7 +120,8 @@ private fun MarkdownBlockView(
                     text = annotated,
                     color = color,
                     style = MaterialTheme.typography.bodyLarge,
-                    onLinkClick = onLinkClick
+                    onLinkClick = onLinkClick,
+                    onLongPress = onLongPress
                 )
             } else {
                 Text(
@@ -150,8 +151,9 @@ private fun MarkdownBlockView(
                         else -> MaterialTheme.typography.titleMedium
                     }
                 },
-                onLinkClick = onLinkClick
-            )
+                onLinkClick = onLinkClick,
+                    onLongPress = onLongPress
+                )
         } else Text(
             text = block.spans.buildAnnotated(linkColor, codeBackground),
             color = color,
@@ -194,7 +196,8 @@ private fun MarkdownBlockView(
                     text = block.spans.buildAnnotated(linkColor, codeBackground),
                     color = color,
                     style = MaterialTheme.typography.bodyLarge,
-                    onLinkClick = onLinkClick
+                    onLinkClick = onLinkClick,
+                    onLongPress = onLongPress
                 )
             } else {
                 Text(
@@ -219,7 +222,8 @@ private fun MarkdownBlockView(
                     text = block.spans.buildAnnotated(linkColor, codeBackground),
                     color = color.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodyMedium,
-                    onLinkClick = onLinkClick
+                    onLinkClick = onLinkClick,
+                    onLongPress = onLongPress
                 )
             } else {
                 Text(
@@ -302,22 +306,27 @@ private fun LinkAwareText(
     onLongPress: (() -> Unit)? = null
 ) {
     var layout by remember { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
+    // 回调经 rememberUpdatedState 转发: 指针检测器的 key 固定为 text,
+    // 回调实例随重组变化也不会重启进行中的手势检测。
+    // 此前 onLongPress 作为 key, 流式输出每帧重组都会取消进行中的长按。
+    val currentLinkClick by androidx.compose.runtime.rememberUpdatedState(onLinkClick)
+    val currentLongPress by androidx.compose.runtime.rememberUpdatedState(onLongPress)
     Text(
         text = text,
         color = color,
         style = style,
         onTextLayout = { layout = it },
-        modifier = modifier.pointerInput(text, onLinkClick, onLongPress) {
+        modifier = modifier.pointerInput(text) {
             // 同时处理点击(链接)与长按(消息操作): pointerInput 消费了
             // 指针事件, 外层 combinedClickable 收不到长按, 必须自己处理。
             detectTapGestures(
-                onLongPress = { onLongPress?.invoke() }
+                onLongPress = { currentLongPress?.invoke() }
             ) { offset ->
                 val result = layout ?: return@detectTapGestures
                 val position = result.getOffsetForPosition(offset)
                 val hit = text.getStringAnnotations(position, position)
                     .firstOrNull { it.tag == URL_TAG }
-                hit?.let { onLinkClick(it.item) }
+                hit?.let { currentLinkClick(it.item) }
             }
         }
     )
