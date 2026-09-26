@@ -24,7 +24,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Checkbox
 import androidx.compose.ui.draw.clip
-import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
 import com.afyzfur.afyzhub.data.log.LogRetention
 import com.afyzfur.afyzhub.ui.components.IconHistory
@@ -172,10 +172,11 @@ fun RequestLogScreen(
                     onClick = {
                         val text = allEntries.joinToString("\n\n") { e ->
                             buildString {
-                                appendLine("Provider: " + e.provider)
-                                if (e.requestBody.isNotBlank()) appendLine("Request:\n" + e.requestBody)
-                                if (e.responseBody.isNotBlank()) appendLine("Response:\n" + e.responseBody)
-                                if (e.error != null) appendLine("Error: " + e.error)
+                                appendLine("Host: " + e.host + "  Provider: " + (e.provider ?: "-"))
+                                appendLine("Model: " + (e.model ?: "-") + "  Status: " + (e.statusCode?.toString() ?: "-"))
+                                e.requestBody?.takeIf { it.isNotBlank() }?.let { appendLine("Request:\n" + it) }
+                                e.responseBody?.takeIf { it.isNotBlank() }?.let { appendLine("Response:\n" + it) }
+                                e.error?.let { appendLine("Error: " + it) }
                             }
                         }
                         clipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
@@ -183,7 +184,7 @@ fun RequestLogScreen(
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ContentCopy,
+                        imageVector = Icons.AutoMirrored.Filled.List,
                         contentDescription = "复制全部日志",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
