@@ -65,21 +65,18 @@ class WebSearchService(
      */
     suspend fun search(query: String, maxResults: Int = 5, engineId: String? = null): List<Result> {
         if (query.isBlank()) return emptyList()
-        val preferred = SearchEngine.fromId(engineId)
-        val order = listOf(preferred) + SearchEngine.entries.filter { it != preferred }
-        for (engine in order) {
-            val results = try {
-                when (engine) {
-                    SearchEngine.BING -> searchBing(query, maxResults)
-                    SearchEngine.BAIDU -> searchBaidu(query, maxResults)
-                    SearchEngine.GOOGLE -> searchGoogle(query, maxResults)
-                }
-            } catch (_: Exception) {
-                emptyList()
+        val engine = SearchEngine.fromId(engineId)
+        println("[AfyzSearch] engine=" + engine.id + " query=" + query)
+        return try {
+            when (engine) {
+                SearchEngine.BING -> searchBing(query, maxResults)
+                SearchEngine.BAIDU -> searchBaidu(query, maxResults)
+                SearchEngine.GOOGLE -> searchGoogle(query, maxResults)
             }
-            if (results.isNotEmpty()) return results
+        } catch (e: Exception) {
+            println("[AfyzSearch] engine=" + engine.id + " failed=" + e.javaClass.simpleName)
+            emptyList()
         }
-        return emptyList()
     }
     private suspend fun searchBing(query: String, maxResults: Int): List<Result> {
         // RSS 输出而非 HTML：结构稳定多年、无广告与 SEO 垃圾，

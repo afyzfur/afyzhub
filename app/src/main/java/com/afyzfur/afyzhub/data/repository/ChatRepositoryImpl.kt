@@ -230,7 +230,7 @@ class ChatRepositoryImpl(
                 } else {
                     client.complete(searchedTurns, settings)
                 }
-                searchUsage = secondOutcome.usage ?: searchUsage
+                searchUsage = mergeTokenUsage(searchUsage, secondOutcome.usage)
                 // 模型有时复读上下文里的搜索/来源标签: 复读的闭合 sources 会把
                 // 整段正文当来源剥掉(表现为回答输出完突然消失)。这里在拼接
                 // 官方 sources 块之前先清掉模型自己输出的这类标签
@@ -436,6 +436,16 @@ class ChatRepositoryImpl(
      * usage 只出现在流末尾的 Finished 事件里，且部分提供商不返回，
      * 因此返回值与非流式共用 [CompletionResult]，usage 可空。
      */
+    private fun mergeTokenUsage(old: TokenUsage?, next: TokenUsage?): TokenUsage? {
+        if (old == null) return next
+        if (next == null) return old
+        return TokenUsage(
+            promptTokens = maxOf(old.promptTokens, next.promptTokens),
+            completionTokens = maxOf(old.completionTokens, next.completionTokens),
+            cachedTokens = listOfNotNull(old.cachedTokens, next.cachedTokens).maxOrNull()
+        )
+    }
+
     private suspend fun collectStream(
         client: ChatClient,
         turns: List<ChatTurn>,

@@ -251,7 +251,7 @@ fun ChatScreen(
             undoable = undoable,
             onUndoRemoval = { viewModel.undoRemoval() },
             onDismissUndo = { viewModel.dismissUndo() },
-            onLongPress = { message -> actionTarget = message },
+            onLongPress = { message -> infoTarget = message },
             onPromptClick = { prompt -> inputText = prompt },
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
