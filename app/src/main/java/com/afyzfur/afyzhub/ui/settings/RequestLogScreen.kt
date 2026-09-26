@@ -24,6 +24,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Checkbox
 import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import com.afyzfur.afyzhub.data.log.LogRetention
 import com.afyzfur.afyzhub.ui.components.IconHistory
@@ -45,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,6 +81,8 @@ fun RequestLogScreen(
     val selected by viewModel.selected.collectAsState()
     val inSelection = selected.isNotEmpty()
 
+    val context = LocalContext.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     var confirmClearAll by remember { mutableStateOf(false) }
     var confirmDeleteFiltered by remember { mutableStateOf(false) }
     var confirmDeleteSelected by remember { mutableStateOf(false) }
@@ -163,11 +167,29 @@ fun RequestLogScreen(
                 modifier = Modifier.weight(1f)
             )
             if (allEntries.isNotEmpty()) {
+                // 复制全部日志: 手机端无法连 adb 时, 用这个把日志导出
                 IconButton(
                     onClick = {
-                        // 有筛选时删的是筛选结果，没筛选时删全部。
-                        // 两种情况用同一个按钮但确认文案不同——单独放两个
-                        // 图标按钮，未筛选时其中一个没有意义
+                        val text = allEntries.joinToString("\n\n") { e ->
+                            buildString {
+                                appendLine("Provider: " + e.provider)
+                                if (e.requestBody.isNotBlank()) appendLine("Request:\n" + e.requestBody)
+                                if (e.responseBody.isNotBlank()) appendLine("Response:\n" + e.responseBody)
+                                if (e.error != null) appendLine("Error: " + e.error)
+                            }
+                        }
+                        clipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
+                        android.widget.Toast.makeText(context, "已复制 ${allEntries.size} 条日志", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "复制全部日志",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = {
                         if (filter.isEmpty) confirmClearAll = true
                         else confirmDeleteFiltered = true
                     }
