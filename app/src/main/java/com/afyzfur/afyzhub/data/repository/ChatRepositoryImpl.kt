@@ -167,8 +167,19 @@ class ChatRepositoryImpl(
             // 补充上下文再次请求, 用新回复替换。Gemini 走原生
             // grounding, 不会输出搜索标签, 此块自然跳过
             var searchUsage = outcome.usage
-            val searchQuery = WebSearchService.extractQuery(reply)
+            var searchQuery = WebSearchService.extractQuery(reply)
             println("[AfyzSearch] " + "extractQuery=" + searchQuery + " replyLen=" + reply.length)
+            // 查询词补全: 模型常把问题缩写(「重庆的天气」→「重庆市」)。
+            // 若查询词是用户问题的子串且明显更短, 直接用用户问题搜索,
+            // 一次搜索覆盖完整需求。
+            if (searchQuery != null) {
+                val userQ = turns.lastOrNull { it.role == "user" }?.content?.trim()
+                if (userQ != null && userQ.length > searchQuery.length &&
+                    userQ.contains(searchQuery)) {
+                    println("[AfyzSearch] query expanded: " + searchQuery + " -> " + userQ)
+                    searchQuery = userQ
+                }
+            }
             if (searchQuery != null &&
                 settings.webSearchEnabled &&
                 settings.inAppBrowserEnabled &&

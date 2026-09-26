@@ -250,7 +250,8 @@ fun ChatScreen(
             undoable = undoable,
             onUndoRemoval = { viewModel.undoRemoval() },
             onDismissUndo = { viewModel.dismissUndo() },
-            onLongPress = { message -> actionTarget = message },
+            // 长按直接打开消息信息(含缓存命中), 不再经过操作表
+            onLongPress = { message -> infoTarget = message },
             onPromptClick = { prompt -> inputText = prompt },
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }

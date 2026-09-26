@@ -160,7 +160,8 @@ data class MessageDisplayOptions(
     val showTimestamp: Boolean = true,
     val showActions: Boolean = true,
     val showModelName: Boolean = false,
-    val showTokenUsage: Boolean = false,
+    // 默认开: 用户需要常驻看到 token 用量与缓存命中
+    val showTokenUsage: Boolean = true,
     val showSpeed: Boolean = false,
     val showLatency: Boolean = false
 ) {

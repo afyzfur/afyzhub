@@ -307,7 +307,7 @@ class SettingsRepository(
                 showTimestamp = prefs[showTimestampKey] ?: true,
                 showActions = prefs[showActionsKey] ?: true,
                 showModelName = prefs[showModelNameKey] ?: false,
-                showTokenUsage = prefs[showTokenUsageKey] ?: false,
+                showTokenUsage = prefs[showTokenUsageKey] ?: true,
                 showSpeed = prefs[showSpeedKey] ?: false,
                 showLatency = prefs[showLatencyKey] ?: false
             ),
