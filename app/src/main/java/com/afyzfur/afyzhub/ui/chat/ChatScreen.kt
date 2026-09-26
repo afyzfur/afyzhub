@@ -493,6 +493,7 @@ private fun ChatContent(
                                 displayOptions = displayOptions,
                                 appearance = appearance,
                                 providerLabel = providerLabel,
+                                searchEngine = settings.searchEngine,
                                 onRetry = { onRetry(message.id) },
                                 onLongPress = { onLongPress(message) },
                                 onLinkClick = onOpenBrowser

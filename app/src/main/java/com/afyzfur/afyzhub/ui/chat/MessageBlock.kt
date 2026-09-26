@@ -76,6 +76,7 @@ fun MessageBlock(
     displayOptions: MessageDisplayOptions,
     appearance: ChatAppearance,
     providerLabel: String,
+    searchEngine: String = "bing",
     onRetry: () -> Unit = {},
     onLongPress: () -> Unit = {},
     /** 链接点击: 导航到应用内浏览器 */
@@ -246,6 +247,7 @@ private fun MessageBody(
             is ContentBlock.Search -> SearchBlock(
                 query = block.query,
                 sources = searchSources,
+                searchEngine = searchEngine,
                 onLinkClick = onLinkClick,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
@@ -472,6 +474,7 @@ private fun SiteIcon(url: String, size: Dp) {
 private fun SearchBlock(
     query: String,
     sources: List<Pair<String, String>>,
+    searchEngine: String = "bing",
     modifier: Modifier = Modifier,
     onLinkClick: ((String) -> Unit)? = null
 ) {
@@ -492,13 +495,14 @@ private fun SearchBlock(
                     .clickable { expanded = !expanded }
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-                // 搜索块图标: 用通用搜索图标。此前硬编码 Bing 图标,
-                // 用户切换引擎后图标仍显示 Bing, 造成"换引擎没生效"的误解。
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
+                // 图标跟随当前实际选择的搜索引擎。
+                SiteIcon(
+                    url = when (searchEngine.lowercase()) {
+                        "baidu" -> "https://www.baidu.com"
+                        "google" -> "https://www.google.com"
+                        else -> "https://www.bing.com"
+                    },
+                    size = 16.dp
                 )
                 Spacer(Modifier.size(10.dp))
                 Text(
