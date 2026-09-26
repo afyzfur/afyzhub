@@ -2,6 +2,7 @@ package com.afyzfur.afyzhub.data.remote.provider
 
 import com.afyzfur.afyzhub.data.remote.dto.ChatRequest
 import com.afyzfur.afyzhub.data.remote.dto.ChatResponse
+import com.afyzfur.afyzhub.data.remote.dto.cachedTokens
 import com.afyzfur.afyzhub.data.remote.dto.ChatStreamChunk
 import com.afyzfur.afyzhub.data.remote.dto.RequestMessage
 import com.afyzfur.afyzhub.data.remote.dto.StreamOptions
@@ -41,7 +42,7 @@ class OpenAiChatClient(
             // 需要拼成 think 标签，否则思考过程会丢失
             content = response.choices.firstOrNull()?.message?.contentWithThinking.orEmpty(),
             usage = response.usage?.let {
-                TokenUsage(it.prompt_tokens, it.completion_tokens, it.prompt_tokens_details?.cached_tokens)
+                TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
             }
         )
     }
@@ -65,7 +66,7 @@ class OpenAiChatClient(
             val chunk = parseChunk(payload) ?: return@collect
             // 带 usage 的那个 chunk 通常 choices 为空，两者需分别处理
             chunk.usage?.let {
-                usage = TokenUsage(it.prompt_tokens, it.completion_tokens, it.prompt_tokens_details?.cached_tokens)
+                usage = TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
             }
             val delta = chunk.choices.firstOrNull()?.delta ?: return@collect
 

@@ -19,7 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import com.afyzfur.afyzhub.ui.components.IconClock
-import com.afyzfur.afyzhub.ui.components.IconActions
 import com.afyzfur.afyzhub.ui.components.IconTag
 import com.afyzfur.afyzhub.ui.components.IconBarChart
 import com.afyzfur.afyzhub.ui.components.IconSpeed
@@ -71,15 +70,6 @@ fun MessageDisplaySettingsScreen(
                         checked = display.showTimestamp,
                         onCheckedChange = {
                             viewModel.setMessageDisplay(display.copy(showTimestamp = it))
-                        }
-                    )
-                    SettingsSwitchItem(
-                        icon = IconActions,
-                        title = "操作按钮",
-                        subtitle = "复制、重新生成等",
-                        checked = display.showActions,
-                        onCheckedChange = {
-                            viewModel.setMessageDisplay(display.copy(showActions = it))
                         }
                     )
                     SettingsSwitchItem(

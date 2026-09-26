@@ -489,8 +489,14 @@ private fun SearchBlock(
                     .clickable { expanded = !expanded }
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-                // 搜索块图标: 固定用 Bing 图标(当前默认引擎)
-                SiteIcon(url = "https://www.bing.com", size = 16.dp)
+                // 搜索块图标: 用通用搜索图标。此前硬编码 Bing 图标,
+                // 用户切换引擎后图标仍显示 Bing, 造成"换引擎没生效"的误解。
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
                 Spacer(Modifier.size(10.dp))
                 Text(
                     text = "已联网搜索",
