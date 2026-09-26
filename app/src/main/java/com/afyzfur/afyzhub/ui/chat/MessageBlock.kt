@@ -215,7 +215,10 @@ private fun MessageBody(
                 } else {
                     MaterialTheme.colorScheme.onSurface
                 },
-                onLinkClick = onLinkClick
+                onLinkClick = onLinkClick,
+                // 链接文本内部的 pointerInput 会消费指针事件,
+                // 外层 combinedClickable 收不到长按, 故在这里一并传递
+                onLongPress = onLongPress
             )
         }
     }

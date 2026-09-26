@@ -276,6 +276,7 @@ class ChatRepositoryImpl(
                     latencyMs = latencyMs,
                     cachedTokens = searchUsage?.cachedTokens
                 )
+                println("[AfyzUsage] prompt=" + searchUsage?.promptTokens + " completion=" + searchUsage?.completionTokens + " cached=" + searchUsage?.cachedTokens)
             } ?: messageDao.insertMessage(
                 MessageEntity(
                     conversationId = conversationId,

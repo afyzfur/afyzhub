@@ -58,7 +58,10 @@ fun MarkdownText(
      */
     documentMode: Boolean = false,
     /** 链接点击回调。不传时链接仅渲染样式，不可点。 */
-    onLinkClick: ((String) -> Unit)? = null
+    onLinkClick: ((String) -> Unit)? = null,
+    /** 长按回调。链接文本会用 pointerInput 消费指针事件,
+     *  外层 combinedClickable 收不到长按, 故需在这里一并处理。 */
+    onLongPress: (() -> Unit)? = null
 ) {
     // 直接以当前文本解析。写库节奏已是 120ms 一次, parse 频率与之
     // 一致; 此前的防抖方案因文本变化重启 delay 而永远无法完成,
@@ -89,7 +92,7 @@ fun MarkdownText(
                 )
                 Spacer(Modifier.height(8.dp))
             }
-            MarkdownBlockView(block, color, documentMode, onLinkClick)
+            MarkdownBlockView(block, color, documentMode, onLinkClick, onLongPress)
         }
     }
 }
@@ -99,7 +102,8 @@ private fun MarkdownBlockView(
     block: MarkdownBlock,
     color: Color,
     documentMode: Boolean = false,
-    onLinkClick: ((String) -> Unit)? = null
+    onLinkClick: ((String) -> Unit)? = null,
+    onLongPress: (() -> Unit)? = null
 ) {
     // 所有块共用的主题色: 一次取用, 各分支直接传参。
     val linkColor = MaterialTheme.colorScheme.primary
@@ -294,7 +298,8 @@ private fun LinkAwareText(
     color: Color,
     style: androidx.compose.ui.text.TextStyle,
     onLinkClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLongPress: (() -> Unit)? = null
 ) {
     var layout by remember { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
     Text(
@@ -302,8 +307,12 @@ private fun LinkAwareText(
         color = color,
         style = style,
         onTextLayout = { layout = it },
-        modifier = modifier.pointerInput(text, onLinkClick) {
-            detectTapGestures { offset ->
+        modifier = modifier.pointerInput(text, onLinkClick, onLongPress) {
+            // 同时处理点击(链接)与长按(消息操作): pointerInput 消费了
+            // 指针事件, 外层 combinedClickable 收不到长按, 必须自己处理。
+            detectTapGestures(
+                onLongPress = { onLongPress?.invoke() }
+            ) { offset ->
                 val result = layout ?: return@detectTapGestures
                 val position = result.getOffsetForPosition(offset)
                 val hit = text.getStringAnnotations(position, position)
