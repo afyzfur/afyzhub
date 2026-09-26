@@ -113,15 +113,11 @@ class WebSearchService(
             println("[AfyzSearch] tavily key missing, fallback bing")
             return searchBing(query, maxResults)
         }
-        val body = buildString {
-            append("{"api_key":"")
-            append(apiKey.replace("\", "").replace(""", ""))
-            append("","query":"")
-            append(query.replace("\", "").replace(""", ""))
-            append("","max_results":")
-            append(maxResults)
-            append(","search_depth":"basic","include_answer":false,"include_raw_content":false}")
-        }
+        val safeKey = apiKey.replace("\\", "").replace("\"", "")
+        val safeQuery = query.replace("\\", "").replace("\"", "")
+        val body = "{\"api_key\":\"" + safeKey + "\",\"query\":\"" + safeQuery +
+            "\",\"max_results\":" + maxResults +
+            ",\"search_depth\":\"basic\",\"include_answer\":false,\"include_raw_content\":false}"
         val resp = transport.postForText(
             baseUrl = "https://api.tavily.com",
             path = "/search",
