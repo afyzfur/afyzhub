@@ -57,12 +57,18 @@ data class Usage(
     /** DeepSeek 缓存命中数(字段名 prompt_cache_hit_tokens), 省略时为 null */
     val prompt_cache_hit_tokens: Int? = null,
     /** OpenAI 缓存命中数(嵌套 prompt_tokens_details.cached_tokens) */
-    val prompt_tokens_details: PromptTokensDetails? = null
+    val prompt_tokens_details: PromptTokensDetails? = null,
+    /** Anthropic 风格(经 OpenAI 兼容中转时偶见): cache_read_input_tokens */
+    val cache_read_input_tokens: Int? = null
 )
 
 /** 缓存命中的统一取值: 优先 DeepSeek 顶层字段, 次选 OpenAI 嵌套字段 */
 val Usage.cachedTokens: Int?
-    get() = prompt_cache_hit_tokens ?: prompt_tokens_details?.cached_tokens
+    get() = listOfNotNull(
+        prompt_cache_hit_tokens,
+        prompt_tokens_details?.cached_tokens?.takeIf { it > 0 },
+        cache_read_input_tokens
+    ).firstOrNull()
 @Serializable
 data class PromptTokensDetails(
     @SerialName("cached_tokens") val cached_tokens: Int = 0

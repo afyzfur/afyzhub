@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
 
 /**
  * OpenAI 及兼容其协议的服务（多数中转服务）。
@@ -37,19 +40,26 @@ class OpenAiChatClient(
             )
         )
         val response = json.decodeFromString(ChatResponse.serializer(), text)
+        val dtoUsage = response.usage?.let {
+            TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
+        }
+        // 与流式同源的双保险: DTO 缺字段时从原始响应体提取
+        val finalUsage = dtoUsage ?: extractUsageManually(text)
+        if (finalUsage != null) {
+            println("[AfyzUsage] non-stream usage=" + finalUsage)
+        }
         return CompletionResult(
             // 用 contentWithThinking 而非 content：思考走独立字段的模型
             // 需要拼成 think 标签，否则思考过程会丢失
             content = response.choices.firstOrNull()?.message?.contentWithThinking.orEmpty(),
-            usage = response.usage?.let {
-                TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
-            }
+            usage = finalUsage
         )
     }
 
     override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> = flow {
         val body = json.encodeToString(ChatRequest.serializer(), buildRequest(turns, settings, true))
         var usage: TokenUsage? = null
+        var rawUsageLogged = false
         // 思考是否已开始/已结束，用于把独立字段拼成 think 标签
         var thinkingOpen = false
 
@@ -63,11 +73,23 @@ class OpenAiChatClient(
                 model = settings.model
             )
         ).collect { payload ->
-            val chunk = parseChunk(payload) ?: return@collect
-            // 带 usage 的那个 chunk 通常 choices 为空，两者需分别处理
-            chunk.usage?.let {
-                usage = mergeUsage(usage, TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens))
+            // DTO 解析失败/字段缺失时, 手动从原始 JSON 提取 usage 兜底。
+            // 双路径: DTO 能解就用 DTO, 解不出再从 JsonElement 里按多套
+            // 字段名(DepthSeek/OpenAI/Anthropic)找, 提高对中转服务的兼容性
+            val chunk = parseChunk(payload)
+            val dtoUsage = chunk?.usage?.let {
+                TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
             }
+            val extracted = dtoUsage ?: extractUsageManually(payload)
+            if (extracted != null) {
+                if (!rawUsageLogged) {
+                    // 打印首个 usage 原文, 之后缓存为 0 时可据此定位真实字段名
+                    println("[AfyzUsage] raw chunk usage json=" + payload.take(600))
+                    rawUsageLogged = true
+                }
+                usage = mergeUsage(usage, extracted)
+            }
+            if (chunk == null) return@collect
             val delta = chunk.choices.firstOrNull()?.delta ?: return@collect
 
             // 思考走独立字段的模型（DeepSeek 系等）：包成 think 标签发出，
@@ -138,6 +160,30 @@ class OpenAiChatClient(
         "Content-Type" to "application/json",
         "Authorization" to "Bearer ${settings.apiKey}"
     )
+
+    /**
+     * 手动从 chunk 原始 JSON 里提取 usage。
+     *
+     * DTO 之外的第二道防线: 不同服务商把缓存命中放在不同字段
+     * (DeepSeek 顶层 / OpenAI 嵌套 / Anthropic 风格), DTO 漏掉哪个
+     * 字段名时这里仍能取到。
+     */
+    private fun extractUsageManually(payload: String): TokenUsage? = try {
+        val obj = json.parseToJsonElement(payload).jsonObject
+        val u = obj["usage"]?.jsonObject ?: return null
+        val prompt = u["prompt_tokens"]?.jsonPrimitive?.intOrNull ?: u["input_tokens"]?.jsonPrimitive?.intOrNull
+        val completion = u["completion_tokens"]?.jsonPrimitive?.intOrNull ?: u["output_tokens"]?.jsonPrimitive?.intOrNull
+        val details = u["prompt_tokens_details"]?.jsonObject
+        val cached = listOfNotNull(
+            u["prompt_cache_hit_tokens"]?.jsonPrimitive?.intOrNull,
+            details?.get("cached_tokens")?.jsonPrimitive?.intOrNull,
+            u["cache_read_input_tokens"]?.jsonPrimitive?.intOrNull
+        ).firstOrNull()
+        if (prompt == null && completion == null) null
+        else TokenUsage(prompt ?: 0, completion ?: 0, cached)
+    } catch (e: Exception) {
+        null
+    }
 
     /** 单个数据块解析失败不应中断整段回复，返回 null 表示跳过。 */
     private fun parseChunk(payload: String): ChatStreamChunk? = try {

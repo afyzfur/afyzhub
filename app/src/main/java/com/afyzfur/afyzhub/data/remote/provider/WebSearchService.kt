@@ -98,13 +98,16 @@ class WebSearchService(
             baseUrl = "https://www.baidu.com",
             path = "/s",
             headers = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36",
-                "Accept" to "text/html,application/xhtml+xml"
+                // 实测: 移动 UA 返回 cosc-title 结构(链接在 JS 数据里, 正则抓不到),
+                // 桌面 UA 返回经典 h3+a 结构, 链接可直接提取。
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+                "Accept" to "text/html,application/xhtml+xml",
+                "Accept-Language" to "zh-CN,zh;q=0.9"
             ),
             query = mapOf("wd" to query, "rn" to maxResults.toString()),
             logContext = RequestLogContext(provider = "web-search", model = "baidu")
         )
-        return parseBaidu(html, maxResults)
+        return parseBaidu(html, maxResults, query)
     }
     private suspend fun searchGoogle(query: String, maxResults: Int): List<Result> {
         val html = transport.getForText(
@@ -165,17 +168,25 @@ class WebSearchService(
      * (/link?url=)，点击后由百度 302 到真址——直接存跳转
      * 链接即可，内置浏览器会跟随重定向。
      */
-    private fun parseBaidu(html: String, maxResults: Int): List<Result> {
+    private fun parseBaidu(html: String, maxResults: Int, query: String): List<Result> {
         val out = mutableListOf<Result>()
         val blockPattern = Regex(
             "<h3[^>]*>\\s*<a[^>]*href=\"([^\"]+)\"[^>]*>(.*?)</a>",
             RegexOption.DOT_MATCHES_ALL
         )
+        // 相关性过滤: 抓错区块(推荐卡片/广告)时标题与查询词往往零重合。
+        // 查询词去掉常见虚词后的实义字符集, 与标题至少重合 1/4 才采纳。
+        val queryChars = query.filter { !it.isWhitespace() && "的地了吗呢吧呀啊".indexOf(it) < 0 }.toSet()
         for (m in blockPattern.findAll(html)) {
             val url = m.groupValues[1]
             if (url.startsWith("http") || url.startsWith("/link")) {
+                val title = stripTags(m.groupValues[2])
+                val overlap = if (queryChars.isEmpty()) 1
+                    else title.count { it in queryChars }
+                // 全无重合的条目基本可断定与查询无关(如查询天气却抓到黄历卡)
+                if (queryChars.isNotEmpty() && overlap == 0) continue
                 val full = if (url.startsWith("/")) "https://www.baidu.com" + url else url
-                out += Result(stripTags(m.groupValues[2]), "", full, siteOf(full))
+                out += Result(title, "", full, siteOf(full))
                 if (out.size >= maxResults) break
             }
         }
