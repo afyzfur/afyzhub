@@ -79,6 +79,7 @@ class WebSearchService(
         }
     }
     private suspend fun searchBing(query: String, maxResults: Int): List<Result> {
+        println("[AfyzSearch] bing start: query=$query max=$maxResults")
         // 一级: RSS 输出——结构稳定多年、无广告与 SEO 垃圾，
         // 每条 item 固定为 title/link/description 三件套。
         // 实测缺陷: 对含时间限定词的长查询(「重庆今日天气」)会退化成
@@ -100,6 +101,7 @@ class WebSearchService(
             ""
         }
         val fromRss = if (xml.isBlank()) emptyList() else parseBingRss(xml, maxResults, query)
+        println("[AfyzSearch] bing-rss parsed: count=" + fromRss.size)
         if (fromRss.isNotEmpty()) {
             // RSS 退化检测: RSS 对长查询会退化成只取前几个词的泛搜索
             // (实测「重庆今日天气」返回「重庆」百科/旅游)。退化特征是
@@ -130,6 +132,7 @@ class WebSearchService(
         return parseBing(html, maxResults, query)
     }
     private suspend fun searchBaidu(query: String, maxResults: Int): List<Result> {
+        println("[AfyzSearch] baidu start: query=$query max=$maxResults")
         // 多策略重试: 桌面 Chrome UA 在实测网络可用, 但部分网络环境
         // (运营商代理/反爬差异)可能拦掉某个 UA。同引擎内依次换 UA,
         // 全部失败才返回空——不跨引擎, 尊重用户的引擎选择。

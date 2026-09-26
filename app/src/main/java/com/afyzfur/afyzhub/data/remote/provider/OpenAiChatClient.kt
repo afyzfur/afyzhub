@@ -191,11 +191,22 @@ class OpenAiChatClient(
             ?: u["native_tokens_prompt"]?.jsonObject
         val hit = num(u["prompt_cache_hit_tokens"])
         val miss = num(u["prompt_cache_miss_tokens"])
+        // 暴力通配: 各家中转命名五花八门, 逐一尝试所有可能的 cache 字段
         val cached = hit
             ?: num(details?.get("cached_tokens"))
             ?: num(u["cache_read_input_tokens"])
-            // 只回报 miss 字段的商用 prompt-miss 反推命中数
+            ?: num(u["cached_tokens"])  // 有的放顶层
+            ?: num(u["cache_tokens"])
+            ?: num(u["cache_hit_tokens"])
+            ?: num(u["prompt_cache_tokens"])
+            ?: num(details?.get("cache_read_tokens"))
+            ?: num(details?.get("cached_input_tokens"))
+            // 只回报 miss 的: 反推命中数
             ?: miss?.let { m -> prompt?.let { p -> (p - m).takeIf { v -> v > 0 } } }
+            // 最后尝试从 details 里找任何带 cache 的数字字段
+            ?: details?.entries?.firstOrNull { 
+                it.key.contains("cache", ignoreCase = true) && num(it.value) != null 
+            }?.let { num(it.value) }
         if (prompt == null && completion == null) null
         else TokenUsage(prompt ?: 0, completion ?: 0, cached)
     } catch (e: Exception) {
