@@ -85,8 +85,10 @@ class OpenAiChatClient(
             if (extracted != null) {
                 if (!rawUsageLogged) {
                     // 打印首个 usage 原文与解析结果, 缓存为 0 时可直接定位字段名
-                    println("[AfyzUsage] raw chunk=" + payload.take(600))
+                    println("[AfyzUsage] ========== USAGE DEBUG START ==========")
+                    println("[AfyzUsage] raw chunk=" + payload.take(800))
                     println("[AfyzUsage] extracted: prompt=" + extracted.promptTokens + " completion=" + extracted.completionTokens + " cached=" + extracted.cachedTokens)
+                    println("[AfyzUsage] ========== USAGE DEBUG END ==========")
                     rawUsageLogged = true
                 }
                 usage = mergeUsage(usage, extracted)

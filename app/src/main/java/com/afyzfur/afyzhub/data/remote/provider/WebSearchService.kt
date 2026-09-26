@@ -165,8 +165,15 @@ class WebSearchService(
             if (parsed.isNotEmpty()) return parsed
             println("[AfyzSearch] baidu attempt $attempt no result")
         }
-        println("[AfyzSearch] baidu all attempts failed")
-        return emptyList()
+        val diag = "[AfyzSearch] BAIDU_ALL_FAILED query=$query attempts=${strategies.size}"
+        println(diag)
+        // 返回特殊诊断条目: 标题就是错误信息, snippet 是建议
+        return listOf(Result(
+            title = "百度搜索失败（已尝试 ${strategies.size} 个 UA）",
+            snippet = "网络问题或被反爬拦截。建议: ① 换必应引擎 ② 检查网络 ③ 复制请求日志发开发者。诊断码: $diag",
+            url = "",
+            site = "诊断"
+        ))
     }
     private suspend fun searchGoogle(query: String, maxResults: Int): List<Result> {
         val html = transport.getForText(
