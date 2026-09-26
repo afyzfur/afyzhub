@@ -239,7 +239,7 @@ private fun MessageBody(
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val longPress = Modifier.combinedClickable(
         interactionSource = interactionSource,
-        indication = androidx.compose.material3.ripple,
+        indication = androidx.compose.material3.ripple(),
         // 单击不做事，但必须提供——combinedClickable 要求有 onClick。
         // 传空 lambda 的副作用是正文会有涟漪反馈，
         // 这反而提示了"这里可以按"
