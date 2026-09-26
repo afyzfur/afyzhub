@@ -46,6 +46,5 @@ data class MessageEntity(
     /** 从发出请求到回复结束的毫秒数 */
     val latencyMs: Long? = null,
     /** 命中缓存的输入 token 数，提供商未返回时为 null */
-    @ColumnInfo(defaultValue = "0")
     val cachedTokens: Int? = null
 )
