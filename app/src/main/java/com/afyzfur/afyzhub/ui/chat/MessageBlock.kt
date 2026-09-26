@@ -235,7 +235,11 @@ private fun MessageBody(
     // 本层收到事件, 且实测可用), 因此这里只保留 combinedClickable——
     // 涟漪反馈由它提供。此前额外叠加的 pointerInput 长按兜底会把按下
     // 事件先行消费, 正是"点击特效消失"的元凶, 已移除。
+    // 显式传 indication 确保涟漪始终可见(不受主题/Surface 影响)
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val longPress = Modifier.combinedClickable(
+        interactionSource = interactionSource,
+        indication = androidx.compose.material.ripple.rememberRipple(),
         // 单击不做事，但必须提供——combinedClickable 要求有 onClick。
         // 传空 lambda 的副作用是正文会有涟漪反馈，
         // 这反而提示了"这里可以按"

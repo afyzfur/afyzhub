@@ -110,7 +110,10 @@ class WebSearchService(
                 val chars = (r.title + r.snippet).toSet()
                 qc.count { it in chars }.toDouble() / qc.size
             }
-            if (bestCoverage >= 0.6) return fromRss
+            if (bestCoverage >= 0.5) {
+                println("[AfyzSearch] bing-rss coverage=" + (bestCoverage * 100).toInt() + "%, using rss results")
+                return fromRss
+            }
             println("[AfyzSearch] bing-rss degraded coverage=" + (bestCoverage * 100).toInt() + "%, retry with html")
         }
         // 二级: HTML 版 + 桌面 UA(移动 UA 的结果页结构不同且易触发自适应布局)
@@ -332,13 +335,17 @@ class WebSearchService(
                 .find(b)?.groupValues?.get(1) ?: continue
             val snippet = Regex("<p[^>]*>(.*?)</p>", RegexOption.DOT_MATCHES_ALL)
                 .find(b)?.groupValues?.get(1) ?: ""
-            val cleanTitle = stripTags(title)
+                        val cleanTitle = stripTags(title)
             if (queryChars.isNotEmpty()) {
                 val inTitle = cleanTitle.count { it in queryChars }
                 val inSnip = stripTags(snippet).count { it in queryChars }
-                if (inTitle == 0 && inSnip == 0) continue
-            }
-            out += Result(cleanTitle, stripTags(snippet), url, siteOf(url))
+                val coverage = (inTitle + inSnip).toDouble() / queryChars.size
+                // 放宽阈值: 覆盖 25% 即算相关(之前要求全字符重合)
+                if (coverage < 0.25) {
+                    println("[AfyzSearch] baidu skip: title=" + cleanTitle.take(30) + " coverage=" + (coverage * 100).toInt() + "%")
+                    continue
+                }
+            }out += Result(cleanTitle, stripTags(snippet), url, siteOf(url))
             if (out.size >= maxResults) break
         }
         return out

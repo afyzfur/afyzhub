@@ -84,11 +84,16 @@ class OpenAiChatClient(
             val extracted = dtoUsage ?: extractUsageManually(payload)
             if (extracted != null) {
                 if (!rawUsageLogged) {
-                    // 打印首个 usage 原文, 之后缓存为 0 时可据此定位真实字段名
-                    println("[AfyzUsage] raw chunk usage json=" + payload.take(600))
+                    // 打印首个 usage 原文与解析结果, 缓存为 0 时可直接定位字段名
+                    println("[AfyzUsage] raw chunk=" + payload.take(600))
+                    println("[AfyzUsage] extracted: prompt=" + extracted.promptTokens + " completion=" + extracted.completionTokens + " cached=" + extracted.cachedTokens)
                     rawUsageLogged = true
                 }
                 usage = mergeUsage(usage, extracted)
+            } else if ("usage" in payload && !rawUsageLogged) {
+                // usage 存在但解析失败: 记录原文供诊断
+                println("[AfyzUsage] parse failed, raw=" + payload.take(600))
+                rawUsageLogged = true
             }
             if (chunk == null) return@collect
             val delta = chunk.choices.firstOrNull()?.delta ?: return@collect
@@ -180,7 +185,10 @@ class OpenAiChatClient(
         val completion = num(u["completion_tokens"]) ?: num(u["output_tokens"])
         // 嵌套字段两套命名: OpenAI 的 prompt_tokens_details 与
         // OpenRouter 的 details
-        val details = u["prompt_tokens_details"]?.jsonObject ?: u["details"]?.jsonObject
+        // OpenRouter 的 native_tokens_* 格式也认
+        val details = u["prompt_tokens_details"]?.jsonObject 
+            ?: u["details"]?.jsonObject
+            ?: u["native_tokens_prompt"]?.jsonObject
         val hit = num(u["prompt_cache_hit_tokens"])
         val miss = num(u["prompt_cache_miss_tokens"])
         val cached = hit
