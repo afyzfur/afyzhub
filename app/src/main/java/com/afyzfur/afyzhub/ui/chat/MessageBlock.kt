@@ -480,9 +480,9 @@ private fun SiteIcon(url: String, size: Dp) {
 private fun EngineBadge(engine: String) {
     val key = engine.trim().lowercase()
     val (label, color) = when {
-        key == baidu || key == 百度 -> 度 to androidx.compose.ui.graphics.Color(0xFF2932E1)
-        key == google -> G to androidx.compose.ui.graphics.Color(0xFF4285F4)
-        else -> B to androidx.compose.ui.graphics.Color(0xFF00809D)
+        key == "baidu" || key == "百度" -> "度" to androidx.compose.ui.graphics.Color(0xFF2932E1)
+        key == "google" -> "G" to androidx.compose.ui.graphics.Color(0xFF4285F4)
+        else -> "B" to androidx.compose.ui.graphics.Color(0xFF00809D)
     }
     Box(Modifier.size(18.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = androidx.compose.ui.graphics.Color.White)
