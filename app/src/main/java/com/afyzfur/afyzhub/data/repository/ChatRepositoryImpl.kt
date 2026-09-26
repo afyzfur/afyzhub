@@ -186,7 +186,7 @@ class ChatRepositoryImpl(
                 settings.provider != AiProvider.GEMINI
             ) {
                 onPhase(SendPhase.SEARCHING)
-                val results = webSearchService.search(searchQuery, engineId = settings.searchEngine)
+                val results = webSearchService.search(searchQuery, engineId = settings.searchEngine, tavilyApiKey = settings.tavilyApiKey)
                 println("[AfyzSearch] " + "searchDone size=" + results.size + " q=" + searchQuery)
                 // 结果已拿到，进入读取整理阶段；结果为空时直接跳过
                 // BROWSING，让模型按无结果路径兜底回答

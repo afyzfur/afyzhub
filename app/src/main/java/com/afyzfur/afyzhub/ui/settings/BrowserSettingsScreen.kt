@@ -37,6 +37,8 @@ class BrowserSettingsViewModel(
     val searchEngine: StateFlow<SearchEngine> = _searchEngine.asStateFlow()
     private val _aiWebSearch = MutableStateFlow(false)
     val aiWebSearch: StateFlow<Boolean> = _aiWebSearch.asStateFlow()
+    private val _tavilyKey = MutableStateFlow("")
+    val tavilyKey: StateFlow<String> = _tavilyKey.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -44,6 +46,7 @@ class BrowserSettingsViewModel(
             _browserEnabled.value = settings.inAppBrowserEnabled
             _searchEngine.value = SearchEngine.fromId(settings.searchEngine)
             _aiWebSearch.value = settings.webSearchEnabled
+            _tavilyKey.value = settings.tavilyApiKey
         }
     }
 
@@ -61,6 +64,10 @@ class BrowserSettingsViewModel(
         _aiWebSearch.value = value
         viewModelScope.launch { settingsRepository.setWebSearchEnabled(value) }
     }
+    fun setTavilyKey(value: String) {
+        _tavilyKey.value = value
+        viewModelScope.launch { settingsRepository.setTavilyApiKey(value) }
+    }
 }
 
 /**
@@ -77,6 +84,7 @@ fun BrowserSettingsScreen(
     val browserEnabled by viewModel.browserEnabled.collectAsState()
     val engine by viewModel.searchEngine.collectAsState()
     val aiWebSearch by viewModel.aiWebSearch.collectAsState()
+    val tavilyKey by viewModel.tavilyKey.collectAsState()
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxSize()
@@ -121,6 +129,18 @@ fun BrowserSettingsScreen(
                         label = { it.label },
                         onSelect = viewModel::setSearchEngine
                     )
+                    // Tavily 需要 API Key: 只在选中它时显示输入框,
+                    // 避免其余引擎下多一个用不上的空框
+                    if (engine.needsApiKey) {
+                        SettingsItemDivider()
+                        SettingsTextFieldItem(
+                            title = "Tavily API Key",
+                            value = tavilyKey,
+                            onValueChange = viewModel::setTavilyKey,
+                            placeholder = "tvly-xxxxxxxx",
+                            subtitle = "在 tavily.com 注册获取; 免费额度足够日常使用"
+                        )
+                    }
                 }
                 Spacer(Modifier.height(32.dp))
             }

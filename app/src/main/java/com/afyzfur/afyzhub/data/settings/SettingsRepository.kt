@@ -57,6 +57,8 @@ data class AppSettings(
     val inAppBrowserEnabled: Boolean = true,
     /** 联网搜索用的搜索引擎 id，取值见 [SearchEngine] */
     val searchEngine: String = SearchEngine.BING.id,
+    /** Tavily 专业搜索的 API Key（选 Tavily 引擎时必填，其余引擎忽略） */
+    val tavilyApiKey: String = "",
     /**
      * Gemini 原生联网搜索（服务端 grounding）。
      *
@@ -141,6 +143,7 @@ class SettingsRepository(
     private val webSearchEnabledKey = booleanPreferencesKey(Constants.KEY_WEB_SEARCH_ENABLED)
     private val inAppBrowserKey = booleanPreferencesKey(Constants.KEY_IN_APP_BROWSER)
     private val searchEngineKey = stringPreferencesKey(Constants.KEY_SEARCH_ENGINE)
+    private val tavilyApiKeyKey = stringPreferencesKey(Constants.KEY_TAVILY_API_KEY)
     private val geminiSearchKey = booleanPreferencesKey(Constants.KEY_GEMINI_SEARCH)
     private val systemPromptKey = stringPreferencesKey(Constants.KEY_SYSTEM_PROMPT)
     private val logRetentionKey = stringPreferencesKey(Constants.KEY_LOG_RETENTION)
@@ -270,6 +273,7 @@ class SettingsRepository(
                 geminiSearchEnabled = prefs[geminiSearchKey] ?: false,
                 inAppBrowserEnabled = prefs[inAppBrowserKey] ?: true,
                 searchEngine = prefs[searchEngineKey] ?: SearchEngine.BING.id,
+                tavilyApiKey = prefs[tavilyApiKeyKey].orEmpty(),
                 systemPrompt = active.systemPrompt
             )
         } else {
@@ -287,6 +291,7 @@ class SettingsRepository(
                 geminiSearchEnabled = prefs[geminiSearchKey] ?: false,
                 inAppBrowserEnabled = prefs[inAppBrowserKey] ?: true,
                 searchEngine = prefs[searchEngineKey] ?: SearchEngine.BING.id,
+                tavilyApiKey = prefs[tavilyApiKeyKey].orEmpty(),
                 systemPrompt = prefs[systemPromptKey].orEmpty()
             )
         }
@@ -510,6 +515,9 @@ class SettingsRepository(
     }
     suspend fun setSearchEngine(id: String) {
         dataStore.edit { it[searchEngineKey] = id }
+    }
+    suspend fun setTavilyApiKey(key: String) {
+        dataStore.edit { it[tavilyApiKeyKey] = key.trim() }
     }
     suspend fun setGeminiSearchEnabled(enabled: Boolean) {
         dataStore.edit { it[geminiSearchKey] = enabled }

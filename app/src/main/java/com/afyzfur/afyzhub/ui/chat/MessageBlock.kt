@@ -240,6 +240,12 @@ private fun MessageBody(
     // interactionSource / indication, 全部交回 material3 默认值。
     // 之前显式传 indication(bounded) 反而把涟漪画成了不贴合气泡的圈。
     val longPress = Modifier.combinedClickable(
+        // 显式 bounded 涟漪: 与上方 clip 配合, 让反馈严格限制在气泡圆角内。
+        // 不依赖主题默认值——默认在部分版本会退化成无边界圆形。
+        indication = androidx.compose.material3.ripple(bounded = true),
+        interactionSource = remember {
+            androidx.compose.foundation.interaction.MutableInteractionSource()
+        },
         // 单击不做事，但必须提供——combinedClickable 要求有 onClick。
         // 传空 lambda 的副作用是正文会有涟漪反馈，
         // 这反而提示了"这里可以按"
@@ -294,7 +300,16 @@ private fun MessageBody(
             Box(
                 // 高度动画: 流式逐字写入时高度每帧跳变是闪烁的主要来源,
                 // 动画把跳变平滑为过渡(默认 spring 已足够快, 不拖沓)
-                modifier = longPress
+                //
+                // clip 必须在 combinedClickable 之前: 涟漪指示器按裁剪后的
+                // 形状绘制。否则它从点击点扩散成一个圆, 盖不住气泡圆角,
+                // 看起来就是"一圈圆形"而不是贴合气泡的反馈。
+                modifier = Modifier
+                    .clip(
+                        if (fromUser) AppShapeTokens.UserMessage
+                        else AppShapeTokens.AssistantMessage
+                    )
+                    .then(longPress)
                     .animateContentSize()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {

@@ -1,6 +1,11 @@
 package com.afyzfur.afyzhub.data.remote.provider
 
 import com.afyzfur.afyzhub.data.log.RequestLogContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import com.afyzfur.afyzhub.data.settings.AppSettings
 
 /**
@@ -23,10 +28,21 @@ import com.afyzfur.afyzhub.data.settings.AppSettings
  * 环境的可靠备选，Google 需要设备本身可达。选择存于设置，
  * 搜索时若所选引擎失败会自动按 BING → BAIDU → GOOGLE 降级。
  */
-enum class SearchEngine(val id: String, val label: String) {
+enum class SearchEngine(val id: String, val label: String, val needsApiKey: Boolean = false) {
     BING("bing", "Bing"),
     BAIDU("baidu", "百度"),
-    GOOGLE("google", "Google");
+    GOOGLE("google", "Google"),
+
+    /**
+     * Tavily 专业搜索 API。
+     *
+     * 与上面三家不同: 它们靠抓网页 HTML, 对含时间/地点的长查询
+     * 会退化成泛搜索; Tavily 是给 AI 用的搜索接口, 直接返回
+     * 结构化 JSON(标题/摘要/链接/相关度), 由搜索引擎按完整查询
+     * 语义返回, 不会出现"搜重庆天气返回日历"的问题。
+     * 需要在设置里填 API Key(https://tavily.com 免费额度)。
+     */
+    TAVILY("tavily", "Tavily(专业搜索)", needsApiKey = true);
     companion object {
         val DEFAULT = BING
         fun fromId(id: String?): SearchEngine {
@@ -63,7 +79,12 @@ class WebSearchService(
      * 全部失败才返回空列表：搜索是增强能力，失败不该让整条
      * 消息发送失败，模型会按无结果路径兜底回答。
      */
-    suspend fun search(query: String, maxResults: Int = 5, engineId: String? = null): List<Result> {
+    suspend fun search(
+        query: String,
+        maxResults: Int = 5,
+        engineId: String? = null,
+        tavilyApiKey: String? = null
+    ): List<Result> {
         if (query.isBlank()) return emptyList()
         val engine = SearchEngine.fromId(engineId)
         println("[AfyzSearch] engine=" + engine.id + " query=" + query)
@@ -72,9 +93,64 @@ class WebSearchService(
                 SearchEngine.BING -> searchBing(query, maxResults)
                 SearchEngine.BAIDU -> searchBaidu(query, maxResults)
                 SearchEngine.GOOGLE -> searchGoogle(query, maxResults)
+                SearchEngine.TAVILY -> searchTavily(query, maxResults, tavilyApiKey)
             }
         } catch (e: Exception) {
             println("[AfyzSearch] engine=" + engine.id + " failed=" + e.javaClass.simpleName)
+            emptyList()
+        }
+    }
+
+    /**
+     * Tavily 搜索。
+     *
+     * 走官方 JSON 接口 POST /search, 直接拿结构化结果。
+     * 没填 Key 时说明用户还没配置, 自动回退到 Bing 保证"至少能搜",
+     * 而不是直接报错——搜索是增强能力, 不该让整条消息失败。
+     */
+    private suspend fun searchTavily(query: String, maxResults: Int, apiKey: String?): List<Result> {
+        if (apiKey.isNullOrBlank()) {
+            println("[AfyzSearch] tavily key missing, fallback bing")
+            return searchBing(query, maxResults)
+        }
+        val body = buildString {
+            append("{"api_key":"")
+            append(apiKey.replace("\", "").replace(""", ""))
+            append("","query":"")
+            append(query.replace("\", "").replace(""", ""))
+            append("","max_results":")
+            append(maxResults)
+            append(","search_depth":"basic","include_answer":false,"include_raw_content":false}")
+        }
+        val resp = transport.postForText(
+            baseUrl = "https://api.tavily.com",
+            path = "/search",
+            headers = mapOf("Content-Type" to "application/json"),
+            body = body,
+            logContext = RequestLogContext(provider = "web-search", model = "tavily")
+        )
+        val parsed = parseTavily(resp, maxResults)
+        println("[AfyzSearch] tavily parsed: count=" + parsed.size)
+        if (parsed.isNotEmpty()) return parsed
+        // Tavily 也空(额度用尽/网络问题): 回退 Bing, 不让搜索彻底失败
+        println("[AfyzSearch] tavily empty, fallback bing")
+        return searchBing(query, maxResults)
+    }
+
+    /** 解析 Tavily 返回的 JSON: results[].title/url/content */
+    private fun parseTavily(json: String, maxResults: Int): List<Result> {
+        return try {
+            val root = Json.parseToJsonElement(json).jsonObject
+            val arr = root["results"]?.jsonArray ?: return emptyList()
+            arr.mapNotNull { e ->
+                val o = e.jsonObject
+                val url = o["url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                val title = o["title"]?.jsonPrimitive?.contentOrNull ?: url
+                val content = o["content"]?.jsonPrimitive?.contentOrNull ?: ""
+                Result(title, content, url, siteOf(url))
+            }.take(maxResults)
+        } catch (e: Exception) {
+            println("[AfyzSearch] tavily parse failed=" + e.javaClass.simpleName)
             emptyList()
         }
     }

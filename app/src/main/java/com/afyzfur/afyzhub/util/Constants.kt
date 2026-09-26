@@ -63,6 +63,7 @@ object Constants {
     const val KEY_WEB_SEARCH_ENABLED = "web_search_enabled"
     const val KEY_IN_APP_BROWSER = "in_app_browser_enabled"
     const val KEY_SEARCH_ENGINE = "search_engine"
+const val KEY_TAVILY_API_KEY = "tavily_api_key"
     const val KEY_GEMINI_SEARCH = "gemini_search_enabled"
 
     /** 系统提示词。全局项，每次发送时注入对话头部 */
