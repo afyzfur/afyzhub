@@ -131,6 +131,7 @@ fun MessageBlock(
                     message = message,
                     style = style,
                     fromUser = fromUser,
+                    searchEngine = searchEngine,
                     onLongPress = onLongPress,
                     onLinkClick = onLinkClick
                 )
@@ -171,6 +172,7 @@ private fun MessageBody(
     message: Message,
     style: BubbleStyle,
     fromUser: Boolean,
+    searchEngine: String,
     onLongPress: () -> Unit,
     onLinkClick: ((String) -> Unit)? = null
 ) {
