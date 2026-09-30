@@ -157,10 +157,16 @@ object MarkdownParser {
 
         // 无序列表：- * +
         if (trimmed.length >= 2 && trimmed[0] in "-*+" && trimmed[1] == ' ') {
+            val body = trimmed.drop(2).trim()
+            val task = when {
+                body.startsWith("[ ] ") -> "☐ " to body.drop(4)
+                body.startsWith("[x] ", ignoreCase = true) -> "☑ " to body.drop(4)
+                else -> "• " to body
+            }
             return MarkdownBlock.ListItem(
-                spans = parseInline(trimmed.drop(2).trim()),
+                spans = parseInline(task.second),
                 ordered = false,
-                marker = "•",
+                marker = task.first.trim(),
                 indentLevel = indent / 2
             )
         }
@@ -225,6 +231,20 @@ object MarkdownParser {
                 }
             }
 
+            // 自动链接: https://... / http://...，与 [文本](地址) 使用同一渲染路径
+            if (text.startsWith("https://", i) || text.startsWith("http://", i)) {
+                val end = text.indexOfFirstFrom(i) { it.isWhitespace() || it in ")]>" }
+                val actualEnd = if (end < 0) text.length else end
+                val rawUrl = text.substring(i, actualEnd)
+                val url = rawUrl.trimEnd('.', ',', '。', '，')
+                if (url.length > 8) {
+                    flushPlain()
+                    spans += InlineSpan(url, setOf(InlineStyle.LINK), url)
+                    i += url.length
+                    continue
+                }
+            }
+
             val marker = matchEmphasisMarker(text, i)
             if (marker != null) {
                 val end = text.indexOf(marker.token, i + marker.token.length)
@@ -248,6 +268,11 @@ object MarkdownParser {
 
         flushPlain()
         return spans
+    }
+
+    private fun String.indexOfFirstFrom(start: Int, predicate: (Char) -> Boolean): Int {
+        for (i in start until length) if (predicate(this[i])) return i
+        return -1
     }
 
     private data class EmphasisMarker(val token: String, val style: InlineStyle)

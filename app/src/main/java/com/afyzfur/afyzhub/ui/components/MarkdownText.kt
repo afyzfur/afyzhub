@@ -395,18 +395,15 @@ private fun LinkAwareText(
         color = color,
         style = style,
         onTextLayout = { layout = it },
-        modifier = modifier.pointerInput(text) {
-            // 只处理"点击链接", 且只在 up 确实落在链接上时才消费事件。
-            // 不用 detectTapGestures: 它会消费整段指针事件, 导致外层气泡的
-            // combinedClickable 收不到事件——表现为文字区域点击没有涟漪、
-            // 长按也失效(正是"涟漪是一圈、只有空白区有反馈"的成因)。
-            // 这里除链接外一律放行, 涟漪与长按统一交给外层处理。
-            awaitPointerEventScope {
-                while (true) {
-                    awaitFirstDown(requireUnconsumed = false)
-                    val up = waitForUpOrCancellation() ?: continue
-                    val result = layout
-                    if (result != null) {
+        modifier = modifier
+            // 链接点击单独处理，但不消费普通按下/抬起；消息外层负责
+            // 统一的点击涟漪和长按，保证 AI 正文与用户消息节奏一致。
+            .pointerInput(text) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitFirstDown(requireUnconsumed = false)
+                        val up = waitForUpOrCancellation() ?: continue
+                        val result = layout ?: continue
                         val position = result.getOffsetForPosition(up.position)
                         val hit = text.getStringAnnotations(position, position)
                             .firstOrNull { it.tag == URL_TAG }
@@ -417,7 +414,6 @@ private fun LinkAwareText(
                     }
                 }
             }
-        }
     )
 }
 

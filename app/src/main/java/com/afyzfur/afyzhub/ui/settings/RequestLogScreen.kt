@@ -336,7 +336,11 @@ private fun LogCard(
                 onLongClick = onLongPress
             )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (inSelection) {
                     Checkbox(
