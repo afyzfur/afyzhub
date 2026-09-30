@@ -29,6 +29,11 @@ object MarkdownParser {
                 index = readCodeBlock(lines, index, blocks)
                 continue
             }
+            if (isTableHeader(lines, index)) {
+                flushParagraph(paragraph, blocks)
+                index = readTable(lines, index, blocks)
+                continue
+            }
 
             when {
                 trimmed.isEmpty() -> flushParagraph(paragraph, blocks)
@@ -67,6 +72,32 @@ object MarkdownParser {
 
         flushParagraph(paragraph, blocks)
         return blocks
+    }
+
+    private fun isTableHeader(lines: List<String>, index: Int): Boolean {
+        if (index + 1 >= lines.size) return false
+        val header = lines[index].trim()
+        val separator = lines[index + 1].trim()
+        return header.count { it == '|' } >= 1 &&
+            separator.contains('|') &&
+            separator.split('|').filter { it.isNotBlank() }.all { it.trim().matches(Regex(":?-{3,}:?")) }
+    }
+
+    private fun splitTableRow(line: String): List<String> =
+        line.trim().removePrefix("|").removeSuffix("|").split('|').map { it.trim() }
+
+    private fun readTable(lines: List<String>, start: Int, blocks: MutableList<MarkdownBlock>): Int {
+        val headers = splitTableRow(lines[start]).map(::parseInline)
+        var index = start + 2
+        val rows = mutableListOf<List<List<InlineSpan>>>()
+        while (index < lines.size) {
+            val line = lines[index].trim()
+            if (!line.contains('|') || line.isBlank()) break
+            rows += splitTableRow(line).map(::parseInline)
+            index++
+        }
+        blocks += MarkdownBlock.Table(headers, rows)
+        return index
     }
 
     /** 读取围栏代码块，返回下一行的下标。 */

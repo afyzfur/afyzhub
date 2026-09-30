@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -210,6 +211,14 @@ private fun MarkdownBlockView(
             }
         }
 
+        is MarkdownBlock.Table -> MarkdownTableView(
+            block = block,
+            color = color,
+            linkColor = linkColor,
+            codeBackground = codeBackground,
+            onLinkClick = onLinkClick,
+            onLongPress = onLongPress
+        )
         is MarkdownBlock.Quote -> Row {
             // 用一条竖线表示引用层级。
             Surface(
@@ -243,6 +252,74 @@ private fun MarkdownBlockView(
             modifier = Modifier.padding(vertical = 12.dp),
             color = MaterialTheme.colorScheme.outlineVariant
         )
+    }
+}
+
+@Composable
+private fun MarkdownTableView(
+    block: MarkdownBlock.Table,
+    color: Color,
+    linkColor: Color,
+    codeBackground: Color,
+    onLinkClick: ((String) -> Unit)?,
+    onLongPress: (() -> Unit)?
+) {
+    val columns = maxOf(block.headers.size, block.rows.maxOfOrNull { it.size } ?: 0)
+    if (columns == 0) return
+    val rows = listOf(block.headers) + block.rows
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+    ) {
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            tonalElevation = 1.dp
+        ) {
+            Column {
+                rows.forEachIndexed { rowIndex, row ->
+                    Row {
+                        repeat(columns) { columnIndex ->
+                            val spans = row.getOrNull(columnIndex).orEmpty()
+                            Surface(
+                                color = if (rowIndex == 0) {
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                } else {
+                                    Color.Transparent
+                                },
+                                modifier = Modifier.widthIn(min = 96.dp, max = 240.dp)
+                            ) {
+                                val annotated = spans.buildAnnotated(linkColor, codeBackground)
+                                if (onLinkClick != null) {
+                                    LinkAwareText(
+                                        text = annotated,
+                                        color = color,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        onLinkClick = onLinkClick,
+                                        onLongPress = onLongPress,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        text = annotated,
+                                        color = color,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                    )
+                                }
+                            }
+                            if (columnIndex < columns - 1) {
+                                VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            }
+                        }
+                    }
+                    if (rowIndex < rows.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+            }
+        }
     }
 }
 

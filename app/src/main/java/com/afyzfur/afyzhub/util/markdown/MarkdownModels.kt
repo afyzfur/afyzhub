@@ -53,6 +53,11 @@ sealed interface MarkdownBlock {
     /** 引用块。 */
     data class Quote(val spans: List<InlineSpan>) : MarkdownBlock
 
+    /** Markdown 管道表格。每行已拆成行内 spans。 */
+    data class Table(
+        val headers: List<List<InlineSpan>>,
+        val rows: List<List<List<InlineSpan>>>
+    ) : MarkdownBlock
     /** 分割线。 */
     data object Divider : MarkdownBlock
 }
