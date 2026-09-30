@@ -326,6 +326,13 @@ private fun LogCard(
             // 涟漪跟随圆角靠外层的 clip
             .clip(AppShapeTokens.SettingsGroup)
             .combinedClickable(
+                // 显式 bounded 涟漪: 不指定时默认指示器可能是无边界圆形,
+                // 在卡片圆角外画一个圆(用户截图的"一圈")。bounded 让
+                // 涟漪严格裁剪在卡片形状内
+                indication = androidx.compose.material3.ripple(bounded = true),
+                interactionSource = remember {
+                    androidx.compose.foundation.interaction.MutableInteractionSource()
+                },
                 onClick = {
                     // 多选态下点击是改选择，不是展开——展开需要看详情，
                     // 而此刻用户在挑要删的条目

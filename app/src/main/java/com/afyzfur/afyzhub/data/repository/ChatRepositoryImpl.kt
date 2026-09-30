@@ -256,7 +256,18 @@ class ChatRepositoryImpl(
                 )
                 // 第一轮内容截到第一个搜索标签为止: 模型在标签后继续输出
                 // 的内容是搜索前草稿, 和第二轮回答重复(“回答两次”的真凶)。
-                reply = WebSearchService.truncateAfterFirstSearchTag(reply) + cleanedSecond + sourcesBlock
+                reply = run {
+                    // 结构修复: 二轮回复若全程走独立推理字段(reasoning_content),
+                    // cleanedSecond 是"未闭合 think 包着整段输出"的形态。
+                    // 补一个闭合标签让解析层正确切分: 思考/搜索/正文独立成栏
+                    var t = cleanedSecond
+                    val opens = Regex("<(?:think|thinking|reasoning)>", RegexOption.IGNORE_CASE).findAll(t).count()
+                    val closes = Regex("</(?:think|thinking|reasoning)>", RegexOption.IGNORE_CASE).findAll(t).count()
+                    if (opens > closes) t = t + "</think>"
+                    t
+                }.let { fixed ->
+                    WebSearchService.truncateAfterFirstSearchTag(reply) + fixed + sourcesBlock
+                }
                 println("[AfyzSearch] " + "finalized replyLen=" + reply.length + " hasTag=" + reply.contains("<web_search>"))
                 if (secondOutcome.content.isBlank()) {
                     throw IllegalStateException("模型返回内容为空")

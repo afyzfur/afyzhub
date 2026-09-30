@@ -217,6 +217,33 @@ fun parseContentBlocks(content: String): List<ContentBlock> {
             markers.add(Marker(m.range.first, m.range.last + 1, ContentBlock.Search(q)))
         }
     }
+    // 未闭合 think 区域内的搜索/来源块也要拆出: 搜索触发的二轮回复
+    // 若全程以独立推理字段(reasoning_content)输出, 拼装的 think 标签
+    // 不闭合, 下面的全局扫描虽然能找到搜索标签, 但它整体仍被包含在
+    // "思考中"块范围内渲染。这里把区域内的标签标记为独立块, 排序后
+    // 渲染时把思考栏从标签处截断成"思考1+搜索+思考2"三段
+    val ot = OPEN_THINK.find(content)
+    if (ot != null && markers.none { it.block is ContentBlock.Search }) {
+        val openRegion = content.substring(ot.range.first)
+        for (m in SEARCH_TAG.findAll(openRegion)) {
+            val q = m.groupValues[1].trim()
+            if (q.isNotEmpty() && !seenQueries.contains(q)) {
+                seenQueries.add(q)
+                markers.add(Marker(
+                    ot.range.first + m.range.first,
+                    ot.range.first + m.range.last + 1,
+                    ContentBlock.Search(q)
+                ))
+            }
+        }
+        for (m in SOURCES_TAG.findAll(openRegion)) {
+            markers.add(Marker(
+                ot.range.first + m.range.first,
+                ot.range.first + m.range.last + 1,
+                null
+            ))
+        }
+    }
     // 搜索标签被截断的流式中间态: 只有开标签
     val openSearch = OPEN_SEARCH_ANY
     if (openSearch.findAll(content).count() > SEARCH_TAG.findAll(content).count()) {
@@ -236,9 +263,41 @@ fun parseContentBlocks(content: String): List<ContentBlock> {
     }
 
     markers.sortBy { it.start }
+    // 去重叠: 若未闭合 think(范围=开标签到末尾)与其他 marker 重叠,
+    // 把它截断成到第一个重叠 marker 为止, 再在最后一个重叠 marker
+    // 之后补一个"剩余思考"块, 保证正文/搜索/思考各自独立成栏
+    val trimmed = mutableListOf<Marker>()
+    var ongoingEnd = content.length
+    for (mk in markers.sortedBy { it.start }) {
+        if (mk.block is ContentBlock.Think && mk.block.ongoing) {
+            ongoingEnd = mk.start
+            break
+        }
+    }
+    val adjusted = mutableListOf<Marker>()
+    for (mk in markers) {
+        if (mk.block is ContentBlock.Think && mk.block.ongoing) {
+            // 未闭合思考块被切成两段: 标签/来源之前 + 之后
+            val inside = markers.filter { it !== mk && it.start >= mk.start && it.end <= mk.end }
+            val firstInside = inside.minByOrNull { it.start }
+            if (firstInside != null) {
+                adjusted.add(Marker(mk.start, firstInside.start, ContentBlock.Think(
+                    content.substring(mk.start + 7, firstInside.start).trim(), true)))
+                val lastInside = inside.maxByOrNull { it.end }
+                if (lastInside != null && lastInside.end < mk.end) {
+                    adjusted.add(Marker(lastInside.end, mk.end, ContentBlock.Think(
+                        content.substring(lastInside.end).trim(), true)))
+                }
+            } else {
+                adjusted.add(mk)
+            }
+        } else {
+            adjusted.add(mk)
+        }
+    }
     val out = mutableListOf<ContentBlock>()
     var cursor = 0
-    for (mk in markers) {
+    for (mk in adjusted.sortedBy { it.start }) {
         if (mk.start > cursor) {
             val between = content.substring(cursor, mk.start).trim()
             if (between.isNotEmpty()) out.add(ContentBlock.Answer(between))
