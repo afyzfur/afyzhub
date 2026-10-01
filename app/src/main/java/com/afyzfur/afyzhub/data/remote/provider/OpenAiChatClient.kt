@@ -47,7 +47,6 @@ class OpenAiChatClient(
         // 与流式同源的双保险: DTO 缺字段时从原始响应体提取
         val finalUsage = dtoUsage ?: extractUsageManually(text)
         if (finalUsage != null) {
-            println("[AfyzUsage] non-stream usage=" + finalUsage)
         }
         return CompletionResult(
             // 用 contentWithThinking 而非 content：思考走独立字段的模型
@@ -85,16 +84,11 @@ class OpenAiChatClient(
             if (extracted != null) {
                 if (!rawUsageLogged) {
                     // 打印首个 usage 原文与解析结果, 缓存为 0 时可直接定位字段名
-                    println("[AfyzUsage] ========== USAGE DEBUG START ==========")
-                    println("[AfyzUsage] raw chunk=" + payload.take(800))
-                    println("[AfyzUsage] extracted: prompt=" + extracted.promptTokens + " completion=" + extracted.completionTokens + " cached=" + extracted.cachedTokens)
-                    println("[AfyzUsage] ========== USAGE DEBUG END ==========")
                     rawUsageLogged = true
                 }
                 usage = mergeUsage(usage, extracted)
             } else if ("usage" in payload && !rawUsageLogged) {
                 // usage 存在但解析失败: 记录原文供诊断
-                println("[AfyzUsage] parse failed, raw=" + payload.take(600))
                 rawUsageLogged = true
             }
             if (chunk == null) return@collect

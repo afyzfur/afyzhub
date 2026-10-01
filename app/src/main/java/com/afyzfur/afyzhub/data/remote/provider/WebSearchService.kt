@@ -87,7 +87,6 @@ class WebSearchService(
     ): List<Result> {
         if (query.isBlank()) return emptyList()
         val engine = SearchEngine.fromId(engineId)
-        println("[AfyzSearch] engine=" + engine.id + " query=" + query)
         return try {
             when (engine) {
                 SearchEngine.BING -> searchBing(query, maxResults)
@@ -96,7 +95,6 @@ class WebSearchService(
                 SearchEngine.TAVILY -> searchTavily(query, maxResults, tavilyApiKey)
             }
         } catch (e: Exception) {
-            println("[AfyzSearch] engine=" + engine.id + " failed=" + e.javaClass.simpleName)
             emptyList()
         }
     }
@@ -110,7 +108,6 @@ class WebSearchService(
      */
     private suspend fun searchTavily(query: String, maxResults: Int, apiKey: String?): List<Result> {
         if (apiKey.isNullOrBlank()) {
-            println("[AfyzSearch] tavily key missing, fallback bing")
             return searchBing(query, maxResults)
         }
         val safeKey = apiKey.replace("\\", "").replace("\"", "")
@@ -126,10 +123,8 @@ class WebSearchService(
             logContext = RequestLogContext(provider = "web-search", model = "tavily")
         )
         val parsed = parseTavily(resp, maxResults)
-        println("[AfyzSearch] tavily parsed: count=" + parsed.size)
         if (parsed.isNotEmpty()) return parsed
         // Tavily 也空(额度用尽/网络问题): 回退 Bing, 不让搜索彻底失败
-        println("[AfyzSearch] tavily empty, fallback bing")
         return searchBing(query, maxResults)
     }
 
@@ -146,12 +141,10 @@ class WebSearchService(
                 Result(title, content, url, siteOf(url))
             }.take(maxResults)
         } catch (e: Exception) {
-            println("[AfyzSearch] tavily parse failed=" + e.javaClass.simpleName)
             emptyList()
         }
     }
     private suspend fun searchBing(query: String, maxResults: Int): List<Result> {
-        println("[AfyzSearch] bing start: query=$query max=$maxResults")
         // 一级: RSS 输出——结构稳定多年、无广告与 SEO 垃圾，
         // 每条 item 固定为 title/link/description 三件套。
         // 实测缺陷: 对含时间限定词的长查询(「重庆今日天气」)会退化成
@@ -169,11 +162,9 @@ class WebSearchService(
                 logContext = RequestLogContext(provider = "web-search", model = "bing-rss")
             )
         } catch (e: Exception) {
-            println("[AfyzSearch] bing-rss failed=" + e.javaClass.simpleName)
             ""
         }
         val fromRss = if (xml.isBlank()) emptyList() else parseBingRss(xml, maxResults, query)
-        println("[AfyzSearch] bing-rss parsed: count=" + fromRss.size)
         if (fromRss.isNotEmpty()) {
             // RSS 退化检测: RSS 对长查询会退化成只取前几个词的泛搜索
             // (实测「重庆今日天气」返回「重庆」百科/旅游)。退化特征是
@@ -185,10 +176,8 @@ class WebSearchService(
                 qc.count { it in chars }.toDouble() / qc.size
             }
             if (bestCoverage >= 0.5) {
-                println("[AfyzSearch] bing-rss coverage=" + (bestCoverage * 100).toInt() + "%, using rss results")
                 return fromRss
             }
-            println("[AfyzSearch] bing-rss degraded coverage=" + (bestCoverage * 100).toInt() + "%, retry with html")
         }
         // 二级: HTML 版 + 桌面 UA(移动 UA 的结果页结构不同且易触发自适应布局)
         val html = transport.getForText(
@@ -202,7 +191,6 @@ class WebSearchService(
             logContext = RequestLogContext(provider = "web-search", model = "bing-html")
         )
         val htmlRes = parseBing(html, maxResults, query)
-        println("[AfyzSearch] bing-html parsed: count=" + htmlRes.size)
         if (htmlRes.isEmpty()) {
             // 两级都拿不到相关结果: 明确告知, 而不是把无关结果塞给用户
             return listOf(Result(
@@ -215,7 +203,6 @@ class WebSearchService(
         return htmlRes
     }
     private suspend fun searchBaidu(query: String, maxResults: Int): List<Result> {
-        println("[AfyzSearch] baidu start: query=$query max=$maxResults")
         // 多策略重试: 桌面 Chrome UA 在实测网络可用, 但部分网络环境
         // (运营商代理/反爬差异)可能拦掉某个 UA。同引擎内依次换 UA,
         // 全部失败才返回空——不跨引擎, 尊重用户的引擎选择。
@@ -241,15 +228,12 @@ class WebSearchService(
                     logContext = RequestLogContext(provider = "web-search", model = "baidu-$attempt")
                 )
             } catch (e: Exception) {
-                println("[AfyzSearch] baidu attempt $attempt failed=" + e.javaClass.simpleName)
                 continue
             }
             val parsed = parseBaidu(html, maxResults, query)
             if (parsed.isNotEmpty()) return parsed
-            println("[AfyzSearch] baidu attempt $attempt no result")
         }
         val diag = "[AfyzSearch] BAIDU_ALL_FAILED query=$query attempts=${strategies.size}"
-        println(diag)
         // 返回特殊诊断条目: 标题就是错误信息, snippet 是建议
         return listOf(Result(
             title = "百度搜索失败（已尝试 ${strategies.size} 个 UA）",
@@ -438,7 +422,6 @@ class WebSearchService(
                 val chars = (cleanTitle + stripTags(snippet)).toSet()
                 val coverage = queryChars.count { it in chars }.toDouble() / queryChars.size
                 if (coverage < 0.5) {
-                    println("[AfyzSearch] move: title=" + cleanTitle.take(30) + " coverage=" + (coverage * 100).toInt() + "%")
                     continue
                 }
             }

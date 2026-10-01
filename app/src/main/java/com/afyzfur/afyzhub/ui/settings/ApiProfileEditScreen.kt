@@ -177,7 +177,7 @@ fun ApiProfileEditScreen(
                 }
                 SettingsCategoryTitle("接口配置")
                 SettingsGroup {
-                    // 明文显示：便于核对与修改，Key 只存在本机
+                    // API Key 默认隐藏，点击右侧图标可临时显示。
                     SettingsTextFieldItem(
                         // 切换配置组时重建输入框，否则会留着上一组的值
                         identityKey = profileId,
@@ -189,7 +189,8 @@ fun ApiProfileEditScreen(
                             modelsViewModel.clearTestResult()
                             viewModel.updateProfile(profile.copy(apiKey = it))
                         },
-                        placeholder = apiKeyHint(profile.provider)
+                        placeholder = apiKeyHint(profile.provider),
+                        passwordVisibleToggle = true
                     )
                     SettingsItemDivider()
                     SettingsTextFieldItem(

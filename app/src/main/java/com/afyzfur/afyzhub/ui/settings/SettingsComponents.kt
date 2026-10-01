@@ -26,6 +26,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
@@ -38,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
@@ -137,8 +141,10 @@ fun SettingsTextFieldItem(
      * "同一个输入框换了编辑对象"的场景必须传，否则会继续显示上一组的值。
      */
     identityKey: Any? = Unit,
-    trailing: (@Composable () -> Unit)? = null
+    trailing: (@Composable () -> Unit)? = null,
+    passwordVisibleToggle: Boolean = false
 ) {
+    var passwordVisible by remember(identityKey) { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -171,6 +177,7 @@ fun SettingsTextFieldItem(
             mutableStateOf(TextFieldValue(value, TextRange(value.length)))
         }
 
+        Row(verticalAlignment = Alignment.CenterVertically) {
         BasicTextField(
             value = field,
             onValueChange = {
@@ -181,8 +188,11 @@ fun SettingsTextFieldItem(
             textStyle = MaterialTheme.typography.bodyLarge.copy(
                 color = MaterialTheme.colorScheme.onSurface
             ),
+            visualTransformation = if (passwordVisibleToggle && !passwordVisible) {
+                PasswordVisualTransformation()
+            } else VisualTransformation.None,
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.weight(1f),
             decorationBox = { inner ->
                 if (value.isEmpty() && placeholder.isNotEmpty()) {
                     Text(
@@ -194,6 +204,15 @@ fun SettingsTextFieldItem(
                 inner()
             }
         )
+        if (passwordVisibleToggle) {
+            Icon(
+                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                contentDescription = if (passwordVisible) "隐藏 API Key" else "显示 API Key",
+                modifier = Modifier.size(40.dp).clickable { passwordVisible = !passwordVisible },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        }
 
         subtitle?.let {
             Spacer(Modifier.height(4.dp))
