@@ -1,6 +1,7 @@
 package com.afyzfur.afyzhub.ui.settings
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -309,22 +310,27 @@ private fun LogCard(
     var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
 
     Surface(
-        // Surface 同时承载卡片背景、点击和长按交互，使 bounded ripple
-        // 使用同一个 shape 绘制并严格贴合卡片边缘。
-        onClick = {
-            if (inSelection) onToggleSelect() else expanded = !expanded
-        },
-        onLongClick = onLongPress,
-        interactionSource = remember {
-            androidx.compose.foundation.interaction.MutableInteractionSource()
-        },
+        // 卡片外形由 Surface 绘制，点击交互则由同形状的 clipped modifier
+        // 承载，确保 ripple 不会退化成独立的圆形溢出卡片边缘。
         color = if (selected) {
             MaterialTheme.colorScheme.secondaryContainer
         } else {
             MaterialTheme.colorScheme.surfaceContainerLow
         },
         shape = AppShapeTokens.SettingsGroup,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(AppShapeTokens.SettingsGroup)
+            .combinedClickable(
+                interactionSource = remember {
+                    androidx.compose.foundation.interaction.MutableInteractionSource()
+                },
+                indication = androidx.compose.material3.ripple(bounded = true),
+                onClick = {
+                    if (inSelection) onToggleSelect() else expanded = !expanded
+                },
+                onLongClick = onLongPress
+            )
     ) {
         Column(
             modifier = Modifier
