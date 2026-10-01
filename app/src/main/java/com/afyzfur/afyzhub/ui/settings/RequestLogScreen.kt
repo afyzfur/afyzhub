@@ -298,6 +298,7 @@ fun RequestLogScreen(
 // 且 API 形状多年未变。替代方案是自己用 pointerInput 判定长按时长，
 // 那等于重实现一遍且更容易出错
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun LogCard(
     entry: RequestLogEntry,
     onDelete: () -> Unit,
