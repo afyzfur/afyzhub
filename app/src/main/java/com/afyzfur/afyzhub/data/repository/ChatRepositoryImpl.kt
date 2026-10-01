@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -483,7 +484,7 @@ class ChatRepositoryImpl(
         val revealLock = Any()
         var networkDone = false
         var revealed = initialContent.length
-        val smoother = launch(Dispatchers.IO) {
+        val smoother = CoroutineScope(currentCoroutineContext()).launch(Dispatchers.IO) {
             while (true) {
                 delay(60)
                 val snapshot: String
