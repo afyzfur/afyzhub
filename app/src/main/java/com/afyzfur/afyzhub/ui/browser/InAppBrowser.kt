@@ -4,6 +4,15 @@ import android.annotation.SuppressLint
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.SslErrorHandler
+import android.net.http.SslError
+import android.content.Intent
+import android.net.Uri
+import android.graphics.Bitmap
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,28 +66,27 @@ fun InAppBrowserScreen(
 ) {
     val context = LocalContext.current
 
-    // WebView 提前建好并配置：AndroidView 工厂每次重组都跑,
-    // remember 防止重复创建与状态丢失
-    val webView = remember {
+    var currentUrl by rememberSaveable(initialUrl) { mutableStateOf(initialUrl) }
+    var inputText by rememberSaveable(initialUrl) { mutableStateOf(initialUrl) }
+    var canGoBack by remember { mutableStateOf(false) }
+    var canGoForward by remember { mutableStateOf(false) }
+    var pageTitle by rememberSaveable { mutableStateOf("") }
+    var progress by remember { mutableStateOf(0) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+
+    // 保留同一页面中的 WebView 实例；工厂里不再无条件重载 URL，
+    // 避免 AndroidView 重建时把页面重置到初始地址。
+    val webView = remember(context) {
         WebView(context).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
-            // 站内跳转（a 标签、重定向）留在本 WebView，不弹系统选择器
-            webViewClient = WebViewClient()
-            // 标题与进度由 Chrome 客户端汇报
-            webChromeClient = WebChromeClient()
+            settings.cacheMode = WebSettings.LOAD_DEFAULT
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         }
     }
-
-    var currentUrl by rememberSaveable { mutableStateOf(initialUrl) }
-    var inputText by rememberSaveable { mutableStateOf(initialUrl) }
-    var canGoBack by remember { mutableStateOf(false) }
-    var canGoForward by remember { mutableStateOf(false) }
-    var pageTitle by rememberSaveable { mutableStateOf("") }
-    var progress by remember { mutableStateOf(100) }
 
     // WebView 的状态同步回调：URL 变化/导航能力变化时更新 Compose 状态
     fun syncState(view: WebView) {
@@ -89,13 +97,36 @@ fun InAppBrowserScreen(
     }
 
     fun load(url: String) {
-        val target = if (url.startsWith("http://") || url.startsWith("https://")) {
-            url
-        } else {
-            "https://$url"  // 裸域名默认 https
+        val raw = url.trim()
+        if (raw.isEmpty()) return
+        val target = when {
+            raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true) -> raw
+            raw.contains(' ') || !raw.contains('.') -> "https://www.google.com/search?q=${Uri.encode(raw)}"
+            else -> "https://$raw" // 裸域名默认 https
         }
+        loadError = null
+        progress = 0
         inputText = target
         webView.loadUrl(target)
+    }
+
+    LaunchedEffect(webView, initialUrl) {
+        val normalizedInitial = initialUrl.trim().let {
+            if (it.startsWith("http://", true) || it.startsWith("https://", true)) it else "https://$it"
+        }
+        if (webView.url == null && webView.originalUrl == null) {
+            webView.loadUrl(normalizedInitial)
+        }
+    }
+
+    DisposableEffect(webView) {
+        onDispose {
+            // 页面退出时释放 WebView，避免 Activity/Context 被长期持有。
+            webView.stopLoading()
+            webView.webChromeClient = null
+            webView.webViewClient = WebViewClient()
+            webView.destroy()
+        }
     }
 
     fun goBackInPage() {
@@ -144,9 +175,9 @@ fun InAppBrowserScreen(
                 )
                 IconButton(
                     onClick = {
-                        android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(currentUrl)).let {
-                            context.startActivity(it)
-                        }
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(currentUrl)))
+                        }.onFailure { loadError = it.message ?: "无法打开外部浏览器" }
                     }
                 ) {
                     Text(
@@ -193,28 +224,68 @@ fun InAppBrowserScreen(
                 )
             }
 
+            loadError?.let { message ->
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+            }
             AndroidView(
                 factory = {
                     webView.apply {
-                        // 进度与标题经由回调更新状态
                         webChromeClient = object : WebChromeClient() {
                             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                                 progress = newProgress
                             }
-
                             override fun onReceivedTitle(view: WebView?, title: String?) {
                                 title?.let { pageTitle = it }
                             }
                         }
                         webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                                val uri = request.url
+                                val scheme = uri.scheme?.lowercase()
+                                if (scheme == "http" || scheme == "https") return false
+                                return try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                                    true
+                                } catch (_: Exception) {
+                                    loadError = "无法打开此链接"
+                                    true
+                                }
+                            }
+                            override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+                                super.onPageStarted(view, url, favicon)
+                                loadError = null
+                                progress = 0
+                                syncState(view)
+                            }
                             override fun onPageFinished(view: WebView, url: String?) {
                                 super.onPageFinished(view, url)
                                 syncState(view)
                                 progress = 100
                             }
+                            override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                                super.onReceivedError(view, request, error)
+                                if (request.isForMainFrame) {
+                                    loadError = error.description?.toString() ?: "网页加载失败，请检查网络或地址"
+                                    progress = 100
+                                }
+                            }
+                            override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
+                                // 不绕过证书错误，安全失败并提示用户。
+                                handler.cancel()
+                                loadError = "HTTPS 证书验证失败，已阻止加载"
+                                progress = 100
+                            }
                         }
-                        loadUrl(initialUrl)
                     }
+                },
+                update = { view ->
+                    // Navigation callbacks are authoritative; never reload from Compose state here.
+                    if (view.url != null && view.url != currentUrl) syncState(view)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
