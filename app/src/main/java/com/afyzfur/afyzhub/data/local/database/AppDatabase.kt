@@ -12,7 +12,7 @@ import com.afyzfur.afyzhub.data.local.entity.MessageEntity
 @Database(
     entities = [ConversationEntity::class, MessageEntity::class],
     version = 6,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun conversationDao(): ConversationDao
