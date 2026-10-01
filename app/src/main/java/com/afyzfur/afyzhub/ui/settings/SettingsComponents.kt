@@ -26,8 +26,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
@@ -206,7 +204,7 @@ fun SettingsTextFieldItem(
         )
         if (passwordVisibleToggle) {
             Icon(
-                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                imageVector = if (passwordVisible) Icons.Default.Check else Icons.Default.Check,
                 contentDescription = if (passwordVisible) "隐藏 API Key" else "显示 API Key",
                 modifier = Modifier.size(40.dp).clickable { passwordVisible = !passwordVisible },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
