@@ -77,7 +77,7 @@ class OpenAiChatClient(
             // 双路径: DTO 能解就用 DTO, 解不出再从 JsonElement 里按多套
             // 字段名(DepthSeek/OpenAI/Anthropic)找, 提高对中转服务的兼容性
             val chunk = parseChunk(payload)
-            val dtoUsage = chunk?.usage?.let {
+            val dtoUsage = (chunk?.usage ?: chunk?.usageMetadata)?.let {
                 TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
             }
             val extracted = dtoUsage ?: extractUsageManually(payload)
@@ -172,7 +172,7 @@ class OpenAiChatClient(
      */
     private fun extractUsageManually(payload: String): TokenUsage? = try {
         val obj = json.parseToJsonElement(payload).jsonObject
-        val u = obj["usage"]?.jsonObject ?: return null
+        val u = (obj["usage"] ?: obj["usage_metadata"] ?: obj["usageMetadata"])?.jsonObject ?: return null
         // 数值容错: 部分中转把数字序列化成字符串("123"), intOrNull 对
         // 字符串原语返回 null, 补一路 content 转换
         fun num(e: kotlinx.serialization.json.JsonElement?): Int? =

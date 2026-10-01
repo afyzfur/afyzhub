@@ -1,6 +1,7 @@
 package com.afyzfur.afyzhub.data.remote.dto
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 
 /**
  * SSE 流式返回的单个数据块。
@@ -16,7 +17,9 @@ data class ChatStreamChunk(
      * 仅当请求带 `stream_options.include_usage` 时，OpenAI 会在最后一个
      * chunk（choices 为空）中返回 usage。中转服务可能不支持，故可空。
      */
-    val usage: Usage? = null
+    val usage: Usage? = null,
+    /** 有些兼容服务把 usage 放在最后一块 delta 内，提供兜底读取。 */
+    @SerialName("usage_metadata") val usageMetadata: Usage? = null
 )
 
 @Serializable
