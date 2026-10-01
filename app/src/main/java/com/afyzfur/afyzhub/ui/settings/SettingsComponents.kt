@@ -177,7 +177,10 @@ fun SettingsTextFieldItem(
             mutableStateOf(TextFieldValue(value, TextRange(value.length)))
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         BasicTextField(
             value = field,
             onValueChange = {
@@ -209,7 +212,7 @@ fun SettingsTextFieldItem(
                 imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                 contentDescription = if (passwordVisible) "隐藏 API Key" else "显示 API Key",
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(24.dp)
                     .clip(AppShapeTokens.CircleButton)
                     .clickable { passwordVisible = !passwordVisible },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant

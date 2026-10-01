@@ -19,8 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Checkbox
 import androidx.compose.ui.draw.clip
@@ -298,7 +296,6 @@ fun RequestLogScreen(
 // combinedClickable 仍标记为实验性，但它是 Compose 里做长按的标准做法，
 // 且 API 形状多年未变。替代方案是自己用 pointerInput 判定长按时长，
 // 那等于重实现一遍且更容易出错
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LogCard(
     entry: RequestLogEntry,
@@ -312,29 +309,22 @@ private fun LogCard(
     var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
 
     Surface(
-        // 选中的卡片换底色而非只加个勾：一眼能看出选了哪几条，
-        // 不必逐行找勾选框
+        // Surface 同时承载卡片背景、点击和长按交互，使 bounded ripple
+        // 使用同一个 shape 绘制并严格贴合卡片边缘。
+        onClick = {
+            if (inSelection) onToggleSelect() else expanded = !expanded
+        },
+        onLongClick = onLongPress,
+        interactionSource = remember {
+            androidx.compose.foundation.interaction.MutableInteractionSource()
+        },
         color = if (selected) {
             MaterialTheme.colorScheme.secondaryContainer
         } else {
             MaterialTheme.colorScheme.surfaceContainerLow
         },
         shape = AppShapeTokens.SettingsGroup,
-        modifier = Modifier
-            .fillMaxWidth()
-            // 用 combinedClickable 而非 Surface 的 onClick：需要长按。
-            // 涟漪跟随圆角靠外层的 clip
-            .clip(AppShapeTokens.SettingsGroup)
-            .combinedClickable(
-                interactionSource = remember {
-                    androidx.compose.foundation.interaction.MutableInteractionSource()
-                },
-                indication = androidx.compose.material3.ripple(bounded = true),
-                onClick = {
-                    if (inSelection) onToggleSelect() else expanded = !expanded
-                },
-                onLongClick = onLongPress
-            )
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
