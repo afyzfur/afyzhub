@@ -483,7 +483,7 @@ class ChatRepositoryImpl(
         val revealLock = Any()
         var networkDone = false
         var revealed = initialContent.length
-        val smoother = CoroutineScope(Dispatchers.IO).launch {
+        val smoother = launch(Dispatchers.IO) {
             while (true) {
                 delay(60)
                 val snapshot: String

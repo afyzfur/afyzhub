@@ -11,6 +11,7 @@ import com.afyzfur.afyzhub.data.settings.SettingsRepository
 import com.afyzfur.afyzhub.di.appModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.afyzfur.afyzhub.di.databaseModule
@@ -27,6 +28,8 @@ import org.koin.core.logger.Level
  * 这些图标会静默加载失败、显示为空白，界面上没有任何报错线索。
  */
 class AfyzHubApplication : Application(), ImageLoaderFactory {
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
 
@@ -45,14 +48,13 @@ class AfyzHubApplication : Application(), ImageLoaderFactory {
         // 过期与否只在打开列表时才有意义，而启动必然早于查看。
         val logStore = koin.get<RequestLogStore>()
         val settings = koin.get<SettingsRepository>()
-        val scope = CoroutineScope(Dispatchers.IO)
-        scope.launch {
+        applicationScope.launch {
             logStore.restore()
             logStore.purgeExpired(settings.logRetention.first())
         }
         // 记录开关持续跟随设置。用 collect 而非启动时读一次：
         // 用户在设置页关掉后应当立刻停止记录，不必重启应用
-        scope.launch {
+        applicationScope.launch {
             settings.logEnabled.collect { logStore.enabled = it }
         }
     }
