@@ -20,7 +20,6 @@ import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.domain.model.SendPhase
 import com.afyzfur.afyzhub.domain.model.sanitizeHistory
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
