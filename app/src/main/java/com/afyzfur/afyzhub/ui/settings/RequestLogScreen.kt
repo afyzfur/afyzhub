@@ -1,6 +1,20 @@
 package com.afyzfur.afyzhub.ui.settings
+import androidx.compose.foundation.IndicationNodeFactory
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.node.DrawModifierNode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -293,8 +307,46 @@ fun RequestLogScreen(
     }
 }
 
-// 卡片背景、圆角、点击涟漪统一由 Surface 绘制；长按另用 pointerInput 识别，
-// 这样 ripple 完全贴合圆角，不会再溢出成独立的矩形反馈。
+// 卡片点击反馈用“整卡按压高亮”而非涟漪：这张卡展开后面积很大，
+// 任何从触点扩散的 ripple 都会呈现为一个巨大的圆，与“贴合边框”
+// 的预期不符。按压时整卡统一叠加一层半透明色，轮廓天然跟随圆角。
+private object CardPressIndication : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): Modifier.Node {
+        return PressHighlightNode(interactionSource)
+    }
+    override fun equals(other: Any?) = other === this
+    override fun hashCode() = javaClass.hashCode()
+}
+
+private class PressHighlightNode(
+    private val interactionSource: InteractionSource
+) : Modifier.Node(), DrawModifierNode {
+    private var pressJob: Job? = null
+    // 用状态保存按压态，变化时自动触发重绘
+    private var pressed by mutableStateOf(false)
+
+    override fun onAttach() {
+        pressJob = CoroutineScope(Dispatchers.Main.immediate).launch {
+            interactionSource.interactions.collect { interaction ->
+                pressed = interaction is PressInteraction.Press
+            }
+        }
+    }
+
+    override fun onDetach() {
+        pressJob?.cancel()
+        pressJob = null
+    }
+
+    override fun ContentDrawScope.draw() {
+        drawContent()
+        if (pressed) {
+            // Surface 已按卡片圆角裁剪，这里画满整卡即贴合边框
+            drawRect(color = Color.Black.copy(alpha = 0.08f))
+        }
+    }
+}
+
 @Composable
 private fun LogCard(
     entry: RequestLogEntry,
@@ -306,23 +358,29 @@ private fun LogCard(
 ) {
     // 每条独立记住展开状态，列表滚动后不丢失
     var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
+    val cardInteractionSource = remember { MutableInteractionSource() }
 
     Surface(
-        // 卡片背景、圆角与点击涟漪由同一个 Surface 绘制，
-        // ripple 天然贴合圆角，不会溢出成独立的矩形/圆形反馈。
         color = if (selected) {
             MaterialTheme.colorScheme.secondaryContainer
         } else {
             MaterialTheme.colorScheme.surfaceContainerLow
         },
         shape = AppShapeTokens.SettingsGroup,
-        onClick = {
-            if (inSelection) onToggleSelect() else expanded = !expanded
-        },
         modifier = Modifier
             .fillMaxWidth()
-            // 长按单独识别：detectTapGestures 只在长按成立时消费事件，
-            // 普通点击仍然交给 Surface 自己的交互层。
+            // clip 必须先于 clickable：按压高亮按卡片圆角裁剪
+            .clip(AppShapeTokens.SettingsGroup)
+            .clickable(
+                interactionSource = cardInteractionSource,
+                // 整卡按压高亮，不用 ripple：涟漪从触点扩散成圆，
+                // 在展开后的大卡片上就是一个巨大的圆形
+                indication = CardPressIndication,
+                onClick = {
+                    if (inSelection) onToggleSelect() else expanded = !expanded
+                }
+            )
+            // 长按单独识别：只在长按成立时消费事件，普通点击仍走上面的 clickable
             .pointerInput(inSelection) {
                 detectTapGestures(
                     onLongPress = { onLongPress() }
