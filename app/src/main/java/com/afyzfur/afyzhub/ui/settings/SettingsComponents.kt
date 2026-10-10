@@ -1,6 +1,8 @@
 package com.afyzfur.afyzhub.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.horizontalScroll
@@ -66,6 +68,24 @@ fun SettingsCategoryTitle(
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier.padding(start = 28.dp, top = 20.dp, bottom = 8.dp)
+    )
+}
+
+/**
+ * 设置行的统一点击修饰符。
+ *
+ * 不能用裸 Modifier.clickable：它用无边界的涟漪，按下时从触点扩散成
+ * 一个圆，在整行宽的条目上看起来就是一个脱离条目的圆形反馈。
+ * 这里显式指定 bounded ripple，让涟漪填满行的矩形区域，
+ * 与 [SettingsGroup] 的圆角裁剪配合后贴合卡片边框。
+ */
+@Composable
+fun Modifier.settingsRowClickable(onClick: () -> Unit): Modifier {
+    val interactionSource = remember { MutableInteractionSource() }
+    return this.clickable(
+        interactionSource = interactionSource,
+        indication = ripple(bounded = true),
+        onClick = onClick
     )
 }
 
@@ -251,7 +271,7 @@ fun SettingsNavItem(
         icon = icon,
         title = title,
         subtitle = subtitle,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.settingsRowClickable(onClick = onClick)
     ) {
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -284,7 +304,7 @@ fun SettingsActionItem(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .settingsRowClickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 14.dp)
     ) {
         Icon(
@@ -328,7 +348,7 @@ fun SettingsSwitchItem(
         title = title,
         subtitle = subtitle,
         modifier = if (enabled) {
-            Modifier.clickable { onCheckedChange(!checked) }
+            Modifier.settingsRowClickable { onCheckedChange(!checked) }
         } else {
             Modifier
         }
@@ -357,7 +377,7 @@ fun SettingsValueItem(
         icon = icon,
         title = title,
         subtitle = subtitle,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.settingsRowClickable(onClick = onClick)
     ) {
         Text(
             text = value,
@@ -469,7 +489,7 @@ fun SettingsRadioItem(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .settingsRowClickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         RadioButton(
