@@ -319,21 +319,27 @@ private fun LogCard(
         MaterialTheme.colorScheme.surfaceContainerLow
     }
     var feedbackSequence by remember { mutableStateOf(0) }
-    var clickHighlight by remember { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(feedbackSequence) {
-        if (feedbackSequence > 0) {
-            clickHighlight = true
-            kotlinx.coroutines.delay(140)
-            clickHighlight = false
+    val feedbackAlpha = remember { androidx.compose.animation.core.Animatable(0f) }
+    androidx.compose.runtime.LaunchedEffect(pressed, feedbackSequence) {
+        if (pressed || feedbackSequence > 0 || feedbackAlpha.value > 0f) {
+            feedbackAlpha.animateTo(
+                0.10f,
+                androidx.compose.animation.core.tween(
+                    150, easing = androidx.compose.animation.core.FastOutSlowInEasing
+                )
+            )
+            if (!pressed) {
+                kotlinx.coroutines.delay(60)
+                feedbackAlpha.animateTo(
+                    0f,
+                    androidx.compose.animation.core.tween(
+                        320, easing = androidx.compose.animation.core.FastOutSlowInEasing
+                    )
+                )
+            }
         }
     }
-    val highlightAlpha by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (pressed || clickHighlight) 0.14f else 0f,
-        animationSpec = androidx.compose.animation.core.tween(
-            durationMillis = if (pressed || clickHighlight) 45 else 220
-        ),
-        label = "requestLogPressHighlight"
-    )
+    val highlightAlpha = feedbackAlpha.value
     val cardColor = androidx.compose.ui.graphics.lerp(
         restColor, MaterialTheme.colorScheme.onSurface, highlightAlpha
     )
