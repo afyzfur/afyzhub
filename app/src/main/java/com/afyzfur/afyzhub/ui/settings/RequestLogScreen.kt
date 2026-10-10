@@ -308,6 +308,14 @@ private fun LogCard(
     // 每条独立记住展开状态，列表滚动后不丢失
     var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
     val cardInteractionSource = remember { MutableInteractionSource() }
+    var expansionRequest by remember { mutableStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(expansionRequest) {
+        if (expansionRequest > 0) {
+            // 先让触点波纹在当前卡片边界内完成扩散，再改变布局尺寸。
+            kotlinx.coroutines.delay(240)
+            expanded = !expanded
+        }
+    }
     Surface(
         color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         shape = AppShapeTokens.SettingsGroup,
@@ -322,7 +330,7 @@ private fun LogCard(
                 interactionSource = cardInteractionSource,
                 indication = androidx.compose.material3.ripple(bounded = true),
                 onClick = {
-                    if (inSelection) onToggleSelect() else expanded = !expanded
+                    if (inSelection) onToggleSelect() else expansionRequest++
                 },
                 onLongClick = onLongPress
             )
