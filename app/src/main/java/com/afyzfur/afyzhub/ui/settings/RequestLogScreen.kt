@@ -1,6 +1,6 @@
 package com.afyzfur.afyzhub.ui.settings
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Checkbox
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.Delete
 import com.afyzfur.afyzhub.data.log.LogRetention
 import com.afyzfur.afyzhub.ui.components.IconHistory
@@ -294,11 +293,9 @@ fun RequestLogScreen(
     }
 }
 
-// combinedClickable 仍标记为实验性，但它是 Compose 里做长按的标准做法，
-// 且 API 形状多年未变。替代方案是自己用 pointerInput 判定长按时长，
-// 那等于重实现一遍且更容易出错
+// 卡片背景、圆角、点击涟漪统一由 Surface 绘制；长按另用 pointerInput 识别，
+// 这样 ripple 完全贴合圆角，不会再溢出成独立的矩形反馈。
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun LogCard(
     entry: RequestLogEntry,
     onDelete: () -> Unit,
@@ -311,27 +308,26 @@ private fun LogCard(
     var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
 
     Surface(
-        // 卡片外形由 Surface 绘制，点击交互则由同形状的 clipped modifier
-        // 承载，确保 ripple 不会退化成独立的圆形溢出卡片边缘。
+        // 卡片背景、圆角与点击涟漪由同一个 Surface 绘制，
+        // ripple 天然贴合圆角，不会溢出成独立的矩形/圆形反馈。
         color = if (selected) {
             MaterialTheme.colorScheme.secondaryContainer
         } else {
             MaterialTheme.colorScheme.surfaceContainerLow
         },
         shape = AppShapeTokens.SettingsGroup,
+        onClick = {
+            if (inSelection) onToggleSelect() else expanded = !expanded
+        },
         modifier = Modifier
             .fillMaxWidth()
-            .clip(AppShapeTokens.SettingsGroup)
-            .combinedClickable(
-                interactionSource = remember {
-                    androidx.compose.foundation.interaction.MutableInteractionSource()
-                },
-                indication = androidx.compose.material3.ripple(bounded = true),
-                onClick = {
-                    if (inSelection) onToggleSelect() else expanded = !expanded
-                },
-                onLongClick = onLongPress
-            )
+            // 长按单独识别：detectTapGestures 只在长按成立时消费事件，
+            // 普通点击仍然交给 Surface 自己的交互层。
+            .pointerInput(inSelection) {
+                detectTapGestures(
+                    onLongPress = { onLongPress() }
+                )
+            }
     ) {
         Column(
             modifier = Modifier
