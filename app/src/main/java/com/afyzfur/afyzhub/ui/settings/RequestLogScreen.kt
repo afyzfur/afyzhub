@@ -1,14 +1,13 @@
 package com.afyzfur.afyzhub.ui.settings
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.IndicationNodeFactory
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.node.DrawModifierNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -348,6 +347,7 @@ private class PressHighlightNode(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun LogCard(
     entry: RequestLogEntry,
     onDelete: () -> Unit,
@@ -369,23 +369,21 @@ private fun LogCard(
         shape = AppShapeTokens.SettingsGroup,
         modifier = Modifier
             .fillMaxWidth()
-            // clip 必须先于 clickable：按压高亮按卡片圆角裁剪
+            // clip 必须先于 combinedClickable：按压高亮按卡片圆角裁剪
             .clip(AppShapeTokens.SettingsGroup)
-            .clickable(
+            // 点击与长按必须在同一个手势检测器里。此前把长按单独放
+            // pointerInput(detectTapGestures) 上，它会消费整段指针事件，
+            // clickable 收不到事件，卡片表现为完全点不开。
+            .combinedClickable(
                 interactionSource = cardInteractionSource,
                 // 整卡按压高亮，不用 ripple：涟漪从触点扩散成圆，
                 // 在展开后的大卡片上就是一个巨大的圆形
                 indication = CardPressIndication,
                 onClick = {
                     if (inSelection) onToggleSelect() else expanded = !expanded
-                }
+                },
+                onLongClick = onLongPress
             )
-            // 长按单独识别：只在长按成立时消费事件，普通点击仍走上面的 clickable
-            .pointerInput(inSelection) {
-                detectTapGestures(
-                    onLongPress = { onLongPress() }
-                )
-            }
     ) {
         Column(
             modifier = Modifier
