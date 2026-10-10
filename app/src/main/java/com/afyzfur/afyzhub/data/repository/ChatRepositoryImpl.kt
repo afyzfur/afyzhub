@@ -541,7 +541,7 @@ class ChatRepositoryImpl(
                         synchronized(revealLock) { builder.append(event.delta) }
                     }
                     is StreamEvent.Finished -> {
-                        usage = event.usage
+                        usage = mergeTokenUsage(usage, event.usage)
                     }
                 }
             }
