@@ -2,7 +2,6 @@ package com.afyzfur.afyzhub.ui.settings
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.clip
 
 import androidx.compose.foundation.horizontalScroll
@@ -309,43 +308,8 @@ private fun LogCard(
     // 每条独立记住展开状态，列表滚动后不丢失
     var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
     val cardInteractionSource = remember { MutableInteractionSource() }
-    // 按压态直接驱动卡片底色，不用 ripple：涟漪从触点扩散成圆，
-    // 在展开后的大卡片上就是一个巨大的圆形，与“贴合边框”不符。
-    val pressed by cardInteractionSource.collectIsPressedAsState()
-
-    val restColor = if (selected) {
-        MaterialTheme.colorScheme.secondaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
-    }
-    var feedbackSequence by remember { mutableStateOf(0) }
-    val feedbackAlpha = remember { androidx.compose.animation.core.Animatable(0f) }
-    androidx.compose.runtime.LaunchedEffect(pressed, feedbackSequence) {
-        if (pressed || feedbackSequence > 0 || feedbackAlpha.value > 0f) {
-            feedbackAlpha.animateTo(
-                0.10f,
-                androidx.compose.animation.core.tween(
-                    150, easing = androidx.compose.animation.core.FastOutSlowInEasing
-                )
-            )
-            if (!pressed) {
-                kotlinx.coroutines.delay(60)
-                feedbackAlpha.animateTo(
-                    0f,
-                    androidx.compose.animation.core.tween(
-                        320, easing = androidx.compose.animation.core.FastOutSlowInEasing
-                    )
-                )
-            }
-        }
-    }
-    val highlightAlpha = feedbackAlpha.value
-    val cardColor = androidx.compose.ui.graphics.lerp(
-        restColor, MaterialTheme.colorScheme.onSurface, highlightAlpha
-    )
-
     Surface(
-        color = cardColor,
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         shape = AppShapeTokens.SettingsGroup,
         modifier = Modifier
             .fillMaxWidth()
@@ -356,9 +320,8 @@ private fun LogCard(
             // clickable 收不到事件，卡片表现为完全点不开。
             .combinedClickable(
                 interactionSource = cardInteractionSource,
-                indication = null,
+                indication = androidx.compose.material3.ripple(bounded = true),
                 onClick = {
-                    feedbackSequence++
                     if (inSelection) onToggleSelect() else expanded = !expanded
                 },
                 onLongClick = onLongPress
