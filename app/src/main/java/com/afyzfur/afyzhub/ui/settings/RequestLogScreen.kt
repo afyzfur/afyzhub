@@ -312,7 +312,7 @@ private fun LogCard(
     androidx.compose.runtime.LaunchedEffect(expansionRequest) {
         if (expansionRequest > 0) {
             // 先让触点波纹在当前卡片边界内完成扩散，再改变布局尺寸。
-            kotlinx.coroutines.delay(650)
+            kotlinx.coroutines.delay(350)
             expanded = !expanded
         }
     }
