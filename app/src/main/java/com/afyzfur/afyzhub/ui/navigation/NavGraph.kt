@@ -132,6 +132,8 @@ fun NavGraph() {
         }
 
         composable(Screen.ApiProfiles.route) {
+            // 配置列表页面
+
             ApiProfilesScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onEditProfile = { id ->

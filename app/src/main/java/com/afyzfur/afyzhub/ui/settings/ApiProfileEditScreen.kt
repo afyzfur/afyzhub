@@ -54,7 +54,7 @@ fun ApiProfileEditScreen(
     profileId: String,
     onNavigateBack: () -> Unit,
     onNavigateToModels: () -> Unit,
-    onDeleteProfile: () -> Unit,
+    // 删除在页面内部确认后执行
     viewModel: ApiProfilesViewModel = koinViewModel(),
     modelsViewModel: ProfileModelsViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel()
@@ -263,7 +263,7 @@ fun ApiProfileEditScreen(
             title = { Text("删除配置") },
             text = { Text("将删除「${profile.displayName}」及其中保存的 API Key，无法恢复。") },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; onDeleteProfile() }) {
+                TextButton(onClick = { confirmDelete = false; viewModel.deleteProfile(profile.id); onNavigateBack() }) {
                     Text("删除", color = MaterialTheme.colorScheme.error)
                 }
             },
