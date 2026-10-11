@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -87,6 +88,7 @@ fun ApiProfileEditScreen(
 
     val testing by modelsViewModel.testing.collectAsState()
     val testResult by modelsViewModel.testResult.collectAsState()
+    var confirmDelete by remember { mutableStateOf(false) }
 
     // 换到另一组配置时清掉上一组的测试结果，否则会被误读成当前组的
     LaunchedEffect(profileId) { modelsViewModel.clearTestResult() }
@@ -258,6 +260,19 @@ fun ApiProfileEditScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("删除配置") },
+            text = { Text("将删除「${profile.displayName}」及其中保存的 API Key，无法恢复。") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; viewModel.deleteProfile(profile.id); onNavigateBack() }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } }
+        )
     }
 }
 
