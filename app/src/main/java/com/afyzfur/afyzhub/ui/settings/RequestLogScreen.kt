@@ -328,25 +328,25 @@ private fun LogCard(
         shape = AppShapeTokens.SettingsGroup,
         modifier = Modifier
             .fillMaxWidth()
-            // clip 必须先于 combinedClickable：按压反馈被裁成卡片圆角
             .clip(AppShapeTokens.SettingsGroup)
-            // 点击与长按必须在同一个手势检测器里。此前把长按单独放
-            // pointerInput(detectTapGestures) 上，它会消费整段指针事件，
-            // clickable 收不到事件，卡片表现为完全点不开。
-            .combinedClickable(
-                interactionSource = cardInteractionSource,
-                indication = androidx.compose.material3.ripple(bounded = true),
-                onClick = {
-                    if (inSelection) onToggleSelect() else expanded = !expanded
-                },
-                onLongClick = onLongPress
-            )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            // 交互层只包住摘要区域。展开详情不改变 ripple 的绘制尺寸，
+            // 因此点击展开时波纹不会随着卡片变高重新计算成大圆。
+            Column(
+                modifier = Modifier.combinedClickable(
+                    interactionSource = cardInteractionSource,
+                    indication = androidx.compose.material3.ripple(bounded = true),
+                    onClick = {
+                        if (inSelection) onToggleSelect() else expanded = !expanded
+                    },
+                    onLongClick = onLongPress
+                )
+            ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (inSelection) {
                     Checkbox(
@@ -395,6 +395,7 @@ private fun LogCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
+            }
             }
 
             if (expanded) {
