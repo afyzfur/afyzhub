@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -54,7 +53,6 @@ fun ApiProfileEditScreen(
     profileId: String,
     onNavigateBack: () -> Unit,
     onNavigateToModels: () -> Unit,
-    // 删除在页面内部确认后执行
     viewModel: ApiProfilesViewModel = koinViewModel(),
     modelsViewModel: ProfileModelsViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel()
@@ -89,7 +87,6 @@ fun ApiProfileEditScreen(
 
     val testing by modelsViewModel.testing.collectAsState()
     val testResult by modelsViewModel.testResult.collectAsState()
-    var confirmDelete by remember { mutableStateOf(false) }
 
     // 换到另一组配置时清掉上一组的测试结果，否则会被误读成当前组的
     LaunchedEffect(profileId) { modelsViewModel.clearTestResult() }
@@ -163,6 +160,21 @@ fun ApiProfileEditScreen(
                     }
                 }
 
+                SettingsCategoryTitle("系统提示词")
+                SettingsGroup {
+                    SettingsTextFieldItem(
+                        identityKey = profileId,
+                        title = "该组的系统提示词",
+                        value = profile.systemPrompt,
+                        onValueChange = {
+                            viewModel.updateProfile(
+                                profile.copy(systemPrompt = it)
+                            )
+                        },
+                        placeholder = "留空则不注入。切换配置组即切换人设",
+                        singleLine = false
+                    )
+                }
                 SettingsCategoryTitle("接口配置")
                 SettingsGroup {
                     // 地址放在 Key 前面，配置时先确认请求发往哪里。
@@ -192,21 +204,6 @@ fun ApiProfileEditScreen(
                     )
                 }
 
-                SettingsCategoryTitle("系统提示词")
-                SettingsGroup {
-                    SettingsTextFieldItem(
-                        identityKey = profileId,
-                        title = "该组的系统提示词",
-                        value = profile.systemPrompt,
-                        onValueChange = {
-                            viewModel.updateProfile(
-                                profile.copy(systemPrompt = it)
-                            )
-                        },
-                        placeholder = "留空则不注入。切换配置组即切换人设",
-                        singleLine = false
-                    )
-                }
                 SettingsCategoryTitle("连接测试")
                 SettingsGroup {
                     SettingsActionItem(
@@ -235,16 +232,6 @@ fun ApiProfileEditScreen(
                     )
                 }
 
-                SettingsCategoryTitle("危险操作")
-                SettingsGroup {
-                    SettingsActionItem(
-                        icon = Icons.Default.Close,
-                        title = "删除此配置",
-                        subtitle = "同时删除其中保存的 API Key",
-                        onClick = { confirmDelete = true }
-                    )
-                }
-
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = "改动会自动保存。API Key 仅存在本机，不会上传到第三方。",
@@ -255,20 +242,6 @@ fun ApiProfileEditScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
-    }
-
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("删除配置") },
-            text = { Text("将删除「${profile.displayName}」及其中保存的 API Key，无法恢复。") },
-            confirmButton = {
-                TextButton(onClick = { confirmDelete = false; viewModel.deleteProfile(profile.id); onNavigateBack() }) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } }
-        )
     }
 }
 
@@ -283,8 +256,8 @@ private fun TestResultRow(result: TestResult) {
     val (color, title, detail) = when (result) {
         is TestResult.Success -> Triple(
             MaterialTheme.colorScheme.primary,
-            "连接成功",
-            "配置可用 · ${result.elapsedMs} ms"
+            "连接正常",
+            "${result.model} · 响应 ${result.elapsedMs} ms · 回复「${result.preview.take(20)}」"
         )
         is TestResult.Failure -> Triple(
             MaterialTheme.colorScheme.error,
