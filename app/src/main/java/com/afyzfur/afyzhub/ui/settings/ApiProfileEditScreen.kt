@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -53,6 +54,7 @@ fun ApiProfileEditScreen(
     profileId: String,
     onNavigateBack: () -> Unit,
     onNavigateToModels: () -> Unit,
+    onDeleteProfile: () -> Unit,
     viewModel: ApiProfilesViewModel = koinViewModel(),
     modelsViewModel: ProfileModelsViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel()
@@ -87,6 +89,7 @@ fun ApiProfileEditScreen(
 
     val testing by modelsViewModel.testing.collectAsState()
     val testResult by modelsViewModel.testResult.collectAsState()
+    var confirmDelete by remember { mutableStateOf(false) }
 
     // 换到另一组配置时清掉上一组的测试结果，否则会被误读成当前组的
     LaunchedEffect(profileId) { modelsViewModel.clearTestResult() }
@@ -160,6 +163,35 @@ fun ApiProfileEditScreen(
                     }
                 }
 
+                SettingsCategoryTitle("接口配置")
+                SettingsGroup {
+                    // 地址放在 Key 前面，配置时先确认请求发往哪里。
+                    SettingsTextFieldItem(
+                        identityKey = profileId,
+                        title = "API 地址",
+                        value = profile.baseUrl,
+                        onValueChange = {
+                            modelsViewModel.clearTestResult()
+                            viewModel.updateProfile(profile.copy(baseUrl = it))
+                        },
+                        placeholder = profile.provider.defaultBaseUrl,
+                        subtitle = "留空则用官方地址；中转服务填对应地址"
+                    )
+                    SettingsItemDivider()
+                    // 明文显示：便于核对与修改，Key 只存在本机
+                    SettingsTextFieldItem(
+                        identityKey = profileId,
+                        title = "API Key",
+                        value = profile.apiKey,
+                        onValueChange = {
+                            modelsViewModel.clearTestResult()
+                            viewModel.updateProfile(profile.copy(apiKey = it))
+                        },
+                        placeholder = apiKeyHint(profile.provider),
+                        passwordVisibleToggle = true
+                    )
+                }
+
                 SettingsCategoryTitle("系统提示词")
                 SettingsGroup {
                     SettingsTextFieldItem(
@@ -175,41 +207,6 @@ fun ApiProfileEditScreen(
                         singleLine = false
                     )
                 }
-                SettingsCategoryTitle("接口配置")
-                SettingsGroup {
-                    // API Key 默认隐藏，点击右侧图标可临时显示。
-                    SettingsTextFieldItem(
-                        // 切换配置组时重建输入框，否则会留着上一组的值
-                        identityKey = profileId,
-                        title = "API Key",
-                        value = profile.apiKey,
-                        // 改动后清掉上次的测试结果：否则那条「连接正常」会
-                        // 留在界面上，让人以为改完的配置也已经验证过
-                        onValueChange = {
-                            modelsViewModel.clearTestResult()
-                            viewModel.updateProfile(profile.copy(apiKey = it))
-                        },
-                        placeholder = apiKeyHint(profile.provider),
-                        passwordVisibleToggle = true
-                    )
-                    SettingsItemDivider()
-                    SettingsTextFieldItem(
-                        // 切换配置组时重建输入框，否则会留着上一组的值
-                        identityKey = profileId,
-                        title = "API 地址",
-                        value = profile.baseUrl,
-                        onValueChange = {
-                            modelsViewModel.clearTestResult()
-                            viewModel.updateProfile(profile.copy(baseUrl = it))
-                        },
-                        placeholder = profile.provider.defaultBaseUrl,
-                        // 不放「恢复默认」按钮：实际多数是填中转地址，
-                        // 那个按钮几乎不会用到，还占掉一行的右半边。
-                        // 想回官方地址清空即可，占位符已提示默认值
-                        subtitle = "留空则用官方地址，中转服务填对应地址"
-                    )
-                }
-
                 SettingsCategoryTitle("连接测试")
                 SettingsGroup {
                     SettingsActionItem(
@@ -238,6 +235,16 @@ fun ApiProfileEditScreen(
                     )
                 }
 
+                SettingsCategoryTitle("危险操作")
+                SettingsGroup {
+                    SettingsActionItem(
+                        icon = Icons.Default.Close,
+                        title = "删除此配置",
+                        subtitle = "同时删除其中保存的 API Key",
+                        onClick = { confirmDelete = true }
+                    )
+                }
+
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = "改动会自动保存。API Key 仅存在本机，不会上传到第三方。",
@@ -248,6 +255,20 @@ fun ApiProfileEditScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("删除配置") },
+            text = { Text("将删除「${profile.displayName}」及其中保存的 API Key，无法恢复。") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; onDeleteProfile() }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } }
+        )
     }
 }
 
@@ -262,8 +283,8 @@ private fun TestResultRow(result: TestResult) {
     val (color, title, detail) = when (result) {
         is TestResult.Success -> Triple(
             MaterialTheme.colorScheme.primary,
-            "连接正常",
-            "${result.model} · 响应 ${result.elapsedMs} ms · 回复「${result.preview.take(20)}」"
+            "连接成功",
+            "配置可用 · ${result.elapsedMs} ms"
         )
         is TestResult.Failure -> Triple(
             MaterialTheme.colorScheme.error,

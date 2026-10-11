@@ -79,6 +79,7 @@ fun RequestLogScreen(
     // 前者在筛选后是主要用法，后者才是真的清干净
     val selected by viewModel.selected.collectAsState()
     val inSelection = selected.isNotEmpty()
+    val selectedEntries = allEntries.filter { it.id in selected }
 
     val context = LocalContext.current
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
@@ -102,6 +103,19 @@ fun RequestLogScreen(
                 count = selected.size,
                 onExit = viewModel::clearSelection,
                 onSelectAll = viewModel::selectAllVisible,
+                onCopy = {
+                    val text = selectedEntries.joinToString("\n\n") { e ->
+                        buildString {
+                            appendLine("Host: " + e.host + "  Provider: " + (e.provider ?: "-"))
+                            appendLine("Model: " + (e.model ?: "-") + "  Status: " + (e.statusCode?.toString() ?: "-"))
+                            e.requestBody?.takeIf { it.isNotBlank() }?.let { appendLine("Request:\n" + it) }
+                            e.responseBody?.takeIf { it.isNotBlank() }?.let { appendLine("Response:\n" + it) }
+                            e.error?.let { appendLine("Error: " + it) }
+                        }
+                    }
+                    clipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
+                    android.widget.Toast.makeText(context, "已复制 ${selectedEntries.size} 条日志", android.widget.Toast.LENGTH_SHORT).show()
+                },
                 onDelete = { confirmDeleteSelected = true }
             )
         } else {
@@ -170,7 +184,8 @@ fun RequestLogScreen(
                 // 用文字按钮而非图标: 核心图标集里没有"复制"图标, 借用的列表图标含义不清
                 TextButton(
                     onClick = {
-                        val text = allEntries.joinToString("\n\n") { e ->
+                        val sourceEntries = if (inSelection) selectedEntries else allEntries
+                        val text = sourceEntries.joinToString("\n\n") { e ->
                             buildString {
                                 appendLine("Host: " + e.host + "  Provider: " + (e.provider ?: "-"))
                                 appendLine("Model: " + (e.model ?: "-") + "  Status: " + (e.statusCode?.toString() ?: "-"))
@@ -180,10 +195,10 @@ fun RequestLogScreen(
                             }
                         }
                         clipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
-                        android.widget.Toast.makeText(context, "已复制 ${allEntries.size} 条日志", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "已复制 ${sourceEntries.size} 条日志", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 ) {
-                    Text("复制全部")
+                    Text(if (inSelection) "复制" else "复制全部")
                 }
                 IconButton(
                     onClick = {
@@ -492,6 +507,7 @@ private fun SelectionHeader(
     count: Int,
     onExit: () -> Unit,
     onSelectAll: () -> Unit,
+    onCopy: () -> Unit,
     onDelete: () -> Unit
 ) {
     Row(
@@ -514,6 +530,7 @@ private fun SelectionHeader(
                 .padding(start = 4.dp)
         )
         TextButton(onClick = onSelectAll) { Text("全选") }
+        TextButton(onClick = onCopy) { Text("复制") }
         IconButton(onClick = onDelete) {
             Icon(
                 imageVector = Icons.Default.Delete,
