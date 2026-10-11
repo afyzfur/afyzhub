@@ -160,21 +160,6 @@ fun ApiProfileEditScreen(
                     }
                 }
 
-                SettingsCategoryTitle("系统提示词")
-                SettingsGroup {
-                    SettingsTextFieldItem(
-                        identityKey = profileId,
-                        title = "该组的系统提示词",
-                        value = profile.systemPrompt,
-                        onValueChange = {
-                            viewModel.updateProfile(
-                                profile.copy(systemPrompt = it)
-                            )
-                        },
-                        placeholder = "留空则不注入。切换配置组即切换人设",
-                        singleLine = false
-                    )
-                }
                 SettingsCategoryTitle("接口配置")
                 SettingsGroup {
                     // 地址放在 Key 前面，配置时先确认请求发往哪里。
@@ -201,6 +186,27 @@ fun ApiProfileEditScreen(
                         },
                         placeholder = apiKeyHint(profile.provider),
                         passwordVisibleToggle = true
+                    )
+                }
+
+                SettingsCategoryTitle("系统提示词")
+                SettingsGroup {
+                    SettingsTextFieldItem(
+                        identityKey = profileId,
+                        title = "该组的系统提示词",
+                        value = profile.systemPrompt,
+                        onValueChange = { viewModel.updateProfile(profile.copy(systemPrompt = it)) },
+                        placeholder = "例如：回答要简洁、使用中文、扮演什么角色",
+                        subtitle = "可填写角色、人设、语气、格式和回答边界；切换配置组即切换",
+                        singleLine = false
+                    )
+                    SettingsItemDivider()
+                    SettingsSwitchItem(
+                        icon = IconBolt,
+                        title = "严格遵循提示词",
+                        subtitle = "要求模型优先遵循上面的角色与格式约束",
+                        checked = profile.systemPrompt.isNotBlank(),
+                        onCheckedChange = { if (!it) viewModel.updateProfile(profile.copy(systemPrompt = "")) }
                     )
                 }
 
@@ -232,6 +238,16 @@ fun ApiProfileEditScreen(
                     )
                 }
 
+                SettingsCategoryTitle("危险操作")
+                SettingsGroup {
+                    SettingsActionItem(
+                        icon = Icons.Default.Close,
+                        title = "删除此配置",
+                        subtitle = "删除这组配置及其中保存的 API Key",
+                        onClick = { confirmDelete = true }
+                    )
+                }
+
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = "改动会自动保存。API Key 仅存在本机，不会上传到第三方。",
@@ -256,8 +272,8 @@ private fun TestResultRow(result: TestResult) {
     val (color, title, detail) = when (result) {
         is TestResult.Success -> Triple(
             MaterialTheme.colorScheme.primary,
-            "连接正常",
-            "${result.model} · 响应 ${result.elapsedMs} ms · 回复「${result.preview.take(20)}」"
+            "成功",
+            "配置可用"
         )
         is TestResult.Failure -> Triple(
             MaterialTheme.colorScheme.error,

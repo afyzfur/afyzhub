@@ -30,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -174,6 +176,9 @@ fun InAppBrowserScreen(
                         .weight(1f)
                         .height(56.dp)
                 )
+                IconButton(onClick = { webView.reload() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                }
                 IconButton(
                     onClick = {
                         runCatching {
