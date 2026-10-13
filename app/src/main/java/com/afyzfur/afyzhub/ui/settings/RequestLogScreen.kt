@@ -338,7 +338,9 @@ private fun LogCard(
             // 交互层只包住摘要区域。展开详情不改变 ripple 的绘制尺寸，
             // 因此点击展开时波纹不会随着卡片变高重新计算成大圆。
             Column(
-                modifier = Modifier.combinedClickable(
+                modifier = Modifier
+                    .clip(AppShapeTokens.SettingsGroup)
+                    .combinedClickable(
                     interactionSource = cardInteractionSource,
                     indication = androidx.compose.material3.ripple(bounded = true),
                     onClick = {

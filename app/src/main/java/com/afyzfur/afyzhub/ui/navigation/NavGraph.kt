@@ -41,6 +41,9 @@ sealed class Screen(val route: String) {
     }
 
     /** 配置组的模型管理页，从编辑页进入 */
+    object PromptAdvanced : Screen("settings/api_profiles/{profileId}/prompt_advanced") {
+        fun routeFor(profileId: String) = "settings/api_profiles/$profileId/prompt_advanced"
+    }
     object ApiProfileModels : Screen("settings/api_profiles/{profileId}/models") {
         fun routeFor(profileId: String) = "settings/api_profiles/$profileId/models"
     }
@@ -150,8 +153,27 @@ fun NavGraph() {
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToModels = {
                     navController.navigate(Screen.ApiProfileModels.routeFor(id))
+                },
+                onNavigateToAdvancedPrompt = {
+                    navController.navigate(Screen.PromptAdvanced.routeFor(id))
                 }
             )
+        }
+
+        composable(Screen.PromptAdvanced.route) { entry ->
+            val id = entry.arguments?.getString("profileId").orEmpty()
+            val profilesVm: com.afyzfur.afyzhub.ui.settings.ApiProfilesViewModel = org.koin.androidx.compose.koinViewModel()
+            val store by profilesVm.store.collectAsState()
+            val profile = store.profiles.firstOrNull { it.id == id }
+            if (profile != null) {
+                PromptAdvancedScreen(
+                    openingPrompt = profile.openingPrompt,
+                    chatSettingsPrompt = profile.chatSettingsPrompt,
+                    onOpeningPromptChange = { profilesVm.updateProfile(profile.copy(openingPrompt = it)) },
+                    onChatSettingsPromptChange = { profilesVm.updateProfile(profile.copy(chatSettingsPrompt = it)) },
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
         }
 
         composable(Screen.ApiProfileModels.route) { entry ->

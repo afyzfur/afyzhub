@@ -31,6 +31,9 @@ data class ApiProfile(
      * 空串表示该组不注入。
      */
     val systemPrompt: String = "",
+    /** 高级提示词分区：开场白与聊天设定。 */
+    val openingPrompt: String = "",
+    val chatSettingsPrompt: String = "",
     /** 该组上次拉取到的模型列表，避免每次重进都要重新获取 */
     val cachedModels: List<String> = emptyList(),
     /** 用户筛选的模型，空表示未筛选（显示全部）*/

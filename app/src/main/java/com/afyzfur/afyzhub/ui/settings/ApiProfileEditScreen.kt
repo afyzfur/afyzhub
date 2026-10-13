@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.clickable
@@ -55,6 +56,7 @@ fun ApiProfileEditScreen(
     profileId: String,
     onNavigateBack: () -> Unit,
     onNavigateToModels: () -> Unit,
+    onNavigateToAdvancedPrompt: () -> Unit,
     viewModel: ApiProfilesViewModel = koinViewModel(),
     modelsViewModel: ProfileModelsViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel()
@@ -196,12 +198,19 @@ fun ApiProfileEditScreen(
                 SettingsGroup {
                     SettingsTextFieldItem(
                         identityKey = profileId,
-                        title = "该组的系统提示词",
+                        title = "角色设定",
                         value = profile.systemPrompt,
                         onValueChange = { viewModel.updateProfile(profile.copy(systemPrompt = it)) },
-                        placeholder = "例如：回答要简洁、使用中文、扮演什么角色",
-                        subtitle = "可填写角色、人设、语气、格式和回答边界；切换配置组即切换",
+                        placeholder = "例如：助手身份、性格、语气和行为边界",
+                        subtitle = "外层只保留角色设定；更多提示词选项请进入高级设置",
                         singleLine = false
+                    )
+                    SettingsItemDivider()
+                    SettingsNavItem(
+                        icon = Icons.Default.PlayArrow,
+                        title = "高级设置",
+                        subtitle = "开场白、聊天设定和其他提示词分区",
+                        onClick = onNavigateToAdvancedPrompt
                     )
                     SettingsItemDivider()
                     SettingsSwitchItem(
@@ -244,9 +253,10 @@ fun ApiProfileEditScreen(
                 SettingsCategoryTitle("危险操作")
                 SettingsGroup {
                     SettingsActionItem(
-                        icon = Icons.Default.Close,
+                        icon = Icons.Default.Delete,
                         title = "删除此配置",
                         subtitle = "删除这组配置及其中保存的 API Key",
+                        destructive = true,
                         onClick = { confirmDelete = true }
                     )
                 }

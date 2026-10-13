@@ -232,8 +232,9 @@ fun SettingsTextFieldItem(
                 imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                 contentDescription = if (passwordVisible) "隐藏 API Key" else "显示 API Key",
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(28.dp)
                     .clip(AppShapeTokens.CircleButton)
+                    .padding(end = 2.dp)
                     .clickable { passwordVisible = !passwordVisible },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
