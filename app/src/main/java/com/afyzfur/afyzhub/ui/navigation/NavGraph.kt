@@ -15,6 +15,7 @@ import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfileEditScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfilesScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfileModelsScreen
+import com.afyzfur.afyzhub.ui.settings.PromptAdvancedScreen
 import com.afyzfur.afyzhub.ui.browser.InAppBrowserScreen
 import com.afyzfur.afyzhub.ui.settings.QuickPromptsSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.RequestLogScreen
