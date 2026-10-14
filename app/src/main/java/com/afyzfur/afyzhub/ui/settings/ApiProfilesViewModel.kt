@@ -72,6 +72,16 @@ class ApiProfilesViewModel(
         }
     }
 
+    private val promptMutex = kotlinx.coroutines.sync.Mutex()
+    fun changePrompts(id: String, edit: (ApiProfile) -> ApiProfile) {
+        viewModelScope.launch {
+            promptMutex.lock()
+            try {
+                val current = settingsRepository.currentProfiles()
+                settingsRepository.saveProfiles(current.copy(profiles = current.profiles.map { if (it.id == id) edit(it) else it }))
+            } finally { promptMutex.unlock() }
+        }
+    }
     /** 整组替换，按 id 定位。找不到 id 时什么都不做 */
     fun updateProfile(profile: ApiProfile) {
         viewModelScope.launch {

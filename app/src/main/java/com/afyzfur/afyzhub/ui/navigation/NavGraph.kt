@@ -163,20 +163,8 @@ fun NavGraph() {
 
         composable(Screen.PromptAdvanced.route) { entry ->
             val id = entry.arguments?.getString("profileId").orEmpty()
-            val profilesVm: com.afyzfur.afyzhub.ui.settings.ApiProfilesViewModel = org.koin.androidx.compose.koinViewModel()
-            val store by profilesVm.store.collectAsState()
-            val profile = store.profiles.firstOrNull { it.id == id }
-            if (profile != null) {
-                PromptAdvancedScreen(
-                    openingPrompt = profile.openingPrompt,
-                    chatSettingsPrompt = profile.chatSettingsPrompt,
-                    onOpeningPromptChange = { profilesVm.updateProfile(profile.copy(openingPrompt = it)) },
-                    onChatSettingsPromptChange = { profilesVm.updateProfile(profile.copy(chatSettingsPrompt = it)) },
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
+            PromptAdvancedScreen(profileId = id, onNavigateBack = { navController.popBackStack() })
         }
-
         composable(Screen.ApiProfileModels.route) { entry ->
             val id = entry.arguments?.getString("profileId").orEmpty()
             ApiProfileModelsScreen(

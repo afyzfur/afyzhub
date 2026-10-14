@@ -31,6 +31,9 @@ data class ApiProfile(
      * 空串表示该组不注入。
      */
     val systemPrompt: String = "",
+    val promptsEnabled: Boolean = true,
+    val promptGroups: List<PromptGroup> = emptyList(),
+    val activePromptId: String = "",
     /** 高级提示词分区：开场白与聊天设定。 */
     val openingPrompt: String = "",
     val chatSettingsPrompt: String = "",
@@ -39,6 +42,18 @@ data class ApiProfile(
     /** 用户筛选的模型，空表示未筛选（显示全部）*/
     val selectedModels: List<String> = emptyList()
 ) {
+    val availablePrompts: List<PromptGroup>
+        get() = promptGroups.ifEmpty { listOf(PromptGroup(id = "default", name = "默认提示词", role = systemPrompt, opening = openingPrompt, chat = chatSettingsPrompt)) }
+    val activePrompt: PromptGroup
+        get() = availablePrompts.firstOrNull { it.id == activePromptId } ?: availablePrompts.first()
+    val effectiveSystemPrompt: String
+        get() = if (!promptsEnabled) "" else listOf(activePrompt.role, activePrompt.chat).filter { it.isNotBlank() }.joinToString("\n\n")
+    val effectiveOpening: String
+        get() = if (promptsEnabled) activePrompt.opening else ""
+    fun editActivePrompt(edit: (PromptGroup) -> PromptGroup): ApiProfile {
+        val selected = activePrompt
+        return copy(promptGroups = availablePrompts.map { if (it.id == selected.id) edit(it) else it }, activePromptId = selected.id)
+    }
     /** 获取应该显示的模型列表 */
     val effectiveSelectedModels: List<String>
         get() = if (selectedModels.isEmpty()) cachedModels else selectedModels.filter { it in cachedModels }
@@ -83,3 +98,13 @@ data class ApiProfileStore(
         return if (ungrouped.isEmpty()) named else named + ("" to ungrouped)
     }
 }
+
+@Serializable
+data class PromptGroup(
+    val id: String,
+    val name: String,
+    val role: String = "",
+    val opening: String = "",
+    val chat: String = "",
+    val importedCardJson: String = ""
+)

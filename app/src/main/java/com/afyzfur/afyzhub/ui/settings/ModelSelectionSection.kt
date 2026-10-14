@@ -1,6 +1,8 @@
 package com.afyzfur.afyzhub.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
@@ -156,6 +158,8 @@ private fun ModelRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(AppShapeTokens.SettingsGroup)
             .clickable(onClick = onClick)
             .background(if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent)
             .padding(horizontal = 20.dp, vertical = 12.dp),

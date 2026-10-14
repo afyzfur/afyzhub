@@ -196,11 +196,17 @@ fun ApiProfileEditScreen(
 
                 SettingsCategoryTitle("系统提示词")
                 SettingsGroup {
+                    SettingsDropdownItem(
+                        icon = IconBolt, title = "提示词分组", subtitle = "同一 API 配置可切换不同角色",
+                        options = profile.availablePrompts, selected = profile.activePrompt, label = { it.name },
+                        onSelect = { group -> viewModel.changePrompts(profileId) { it.copy(activePromptId = group.id) } }
+                    )
+                    SettingsItemDivider()
                     SettingsTextFieldItem(
-                        identityKey = profileId,
+                        identityKey = profileId + profile.activePrompt.id,
                         title = "角色设定",
-                        value = profile.systemPrompt,
-                        onValueChange = { viewModel.updateProfile(profile.copy(systemPrompt = it)) },
+                        value = profile.activePrompt.role,
+                        onValueChange = { text -> viewModel.changePrompts(profileId) { it.editActivePrompt { group -> group.copy(role = text) } } },
                         placeholder = "例如：助手身份、性格、语气和行为边界",
                         subtitle = "外层只保留角色设定；更多提示词选项请进入高级设置",
                         singleLine = false
@@ -215,10 +221,10 @@ fun ApiProfileEditScreen(
                     SettingsItemDivider()
                     SettingsSwitchItem(
                         icon = IconBolt,
-                        title = "严格遵循提示词",
-                        subtitle = "要求模型优先遵循上面的角色与格式约束",
-                        checked = profile.systemPrompt.isNotBlank(),
-                        onCheckedChange = { if (!it) viewModel.updateProfile(profile.copy(systemPrompt = "")) }
+                        title = "启用系统提示词",
+                        subtitle = "关闭后不注入角色与聊天设定，也不添加新对话开场白；已保存内容不会删除",
+                        checked = profile.promptsEnabled,
+                        onCheckedChange = { enabled -> viewModel.changePrompts(profileId) { it.copy(promptsEnabled = enabled) } }
                     )
                 }
 

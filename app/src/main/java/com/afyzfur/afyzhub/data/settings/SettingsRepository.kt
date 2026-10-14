@@ -73,6 +73,7 @@ data class AppSettings(
      * 全局项而非按配置组：它描述"我希望这个助手是什么样"，
      * 与用哪家的 API 无关。
      */
+    val openingPrompt: String = "",
     val systemPrompt: String = ""
 )
 
@@ -274,7 +275,8 @@ class SettingsRepository(
                 inAppBrowserEnabled = prefs[inAppBrowserKey] ?: true,
                 searchEngine = prefs[searchEngineKey] ?: SearchEngine.BING.id,
                 tavilyApiKey = prefs[tavilyApiKeyKey].orEmpty(),
-                systemPrompt = active.systemPrompt
+                openingPrompt = active.effectiveOpening,
+                systemPrompt = active.effectiveSystemPrompt
             )
         } else {
             val provider = AiProvider.fromId(prefs[providerKey])

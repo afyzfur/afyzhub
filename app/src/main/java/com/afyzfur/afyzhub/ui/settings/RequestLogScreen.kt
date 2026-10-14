@@ -347,7 +347,7 @@ private fun LogCard(
                         if (inSelection) onToggleSelect() else expanded = !expanded
                     },
                     onLongClick = onLongPress
-                )
+                ).padding(12.dp)
             ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (inSelection) {

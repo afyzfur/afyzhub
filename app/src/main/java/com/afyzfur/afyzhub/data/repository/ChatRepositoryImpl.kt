@@ -75,8 +75,14 @@ class ChatRepositoryImpl(
     override fun getMessagesByConversationId(conversationId: Long): Flow<List<Message>> =
         messageDao.getMessagesByConversationId(conversationId).map { list -> list.map { it.toDomain() } }
 
-    override suspend fun createConversation(title: String): Long =
-        conversationDao.insertConversation(ConversationEntity(title = title))
+    override suspend fun createConversation(title: String): Long {
+        val opening = settingsProvider.current().openingPrompt
+        val id = conversationDao.insertConversation(ConversationEntity(title = title))
+        if (opening.isNotBlank()) {
+            messageDao.insertMessage(MessageEntity(conversationId = id, content = opening, role = Constants.ROLE_ASSISTANT, status = Constants.STATUS_SUCCESS))
+        }
+        return id
+    }
 
     override suspend fun sendMessage(
         conversationId: Long,
