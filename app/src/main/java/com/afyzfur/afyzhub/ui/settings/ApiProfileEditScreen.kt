@@ -15,6 +15,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import kotlinx.coroutines.delay
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -90,6 +93,8 @@ fun ApiProfileEditScreen(
     }
 
     val testing by modelsViewModel.testing.collectAsState()
+    var testSeconds by remember { mutableIntStateOf(0) }
+    LaunchedEffect(testing) { while (testing) { delay(1000); testSeconds++ } }
     val testResult by modelsViewModel.testResult.collectAsState()
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -232,7 +237,7 @@ fun ApiProfileEditScreen(
                 SettingsGroup {
                     SettingsActionItem(
                         icon = Icons.Default.PlayArrow,
-                        title = if (testing) "测试中…" else "测试这组配置",
+                        title = if (testing) "测试中… ${testSeconds}s" else "测试这组配置",
                         subtitle = "发一次最小请求，确认能否正常对话",
                         onClick = { modelsViewModel.testConnection(profile) }
                     )
@@ -305,12 +310,12 @@ private fun TestResultRow(result: TestResult) {
         is TestResult.Success -> Triple(
             MaterialTheme.colorScheme.primary,
             "成功",
-            "配置可用"
+            "配置可用 · 测试耗时 ${result.elapsedMs} ms · 模型延迟 ${result.elapsedMs} ms"
         )
         is TestResult.Failure -> Triple(
             MaterialTheme.colorScheme.error,
             "连接失败",
-            result.reason
+            "测试耗时 ${result.elapsedMs} ms\n${result.reason}"
         )
     }
 

@@ -608,7 +608,7 @@ class ChatRepositoryImpl(
 
         return buildList {
             if (systemPrompt.isNotEmpty()) {
-                add(ChatTurn(role = "system", content = systemPrompt))
+                add(ChatTurn(role = "system", content = "【最高优先级角色设定】\n必须始终按照以下角色设定与用户交流；不要自称“AI助手”、语言模型或聊天机器人，不要主动介绍默认身份，除非用户明确询问系统实现。\n\n" + systemPrompt))
             }
             if (searchInstruction != null) {
                 add(ChatTurn(role = "system", content = searchInstruction))

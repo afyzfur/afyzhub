@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
  */
 sealed interface TestResult {
     data class Success(val model: String, val elapsedMs: Long, val preview: String = "") : TestResult
-    data class Failure(val reason: String) : TestResult
+    data class Failure(val reason: String, val elapsedMs: Long = 0L) : TestResult
 }
 
 class ProfileModelsViewModel(
@@ -101,7 +101,7 @@ class ProfileModelsViewModel(
     fun testConnection(profile: ApiProfile) {
         if (_testing.value) return
         if (profile.apiKey.isBlank()) {
-            _testResult.value = TestResult.Failure("请先填写 API Key")
+            _testResult.value = TestResult.Failure("请先填写 API Key", 0L)
             return
         }
         viewModelScope.launch {
@@ -123,7 +123,7 @@ class ProfileModelsViewModel(
                 val elapsed = System.currentTimeMillis() - startedAt
                 _testResult.value = if (result.content.isBlank()) {
                     // 请求成功但没有内容，多见于模型名不被服务端接受
-                    TestResult.Failure("请求成功但未返回内容，请检查模型名是否正确")
+                    TestResult.Failure("请求成功但未返回内容，请检查模型名是否正确", elapsed)
                 } else {
                     // 带回复预览：能对话不代表回复正常，看一眼内容
                     // 就知道模型是不是答非所问
@@ -135,7 +135,7 @@ class ProfileModelsViewModel(
                 }
             } catch (e: Exception) {
                 _testResult.value = TestResult.Failure(
-                    e.message ?: "请求失败，原因未知"
+                    e.message ?: "请求失败，原因未知", System.currentTimeMillis() - startedAt
                 )
             } finally {
                 _testing.value = false
