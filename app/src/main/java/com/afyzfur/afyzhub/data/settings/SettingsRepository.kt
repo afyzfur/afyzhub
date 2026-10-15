@@ -128,6 +128,7 @@ class SettingsRepository(
         booleanPreferencesKey(Constants.KEY_SHOW_USER_AVATAR)
     private val showAssistantAvatarKey =
         booleanPreferencesKey(Constants.KEY_SHOW_ASSISTANT_AVATAR)
+    private val chatAnimationKey = stringPreferencesKey("chat_animation")
     private val transparentTopBarKey =
         booleanPreferencesKey(Constants.KEY_TRANSPARENT_TOP_BAR)
     private val transparentInputBarKey =
@@ -326,6 +327,7 @@ class SettingsRepository(
             shufflePrompts = prefs[shufflePromptsKey] ?: true,
             palette = ThemePalette.fromId(prefs[paletteKey]),
             chatAppearance = ChatAppearance(
+                 animation = ChatAnimation.fromId(prefs[chatAnimationKey]),
                 // 默认值写在这里而非只改 ChatAppearance 的构造默认：
                 // 未设置过该键时用的是这个 fallback，data class 的默认值
                 // 只在别处直接构造 ChatAppearance 时才起作用
@@ -434,6 +436,7 @@ class SettingsRepository(
         dataStore.edit { it[paletteKey] = palette.id }
     }
 
+    suspend fun setChatAnimation(animation: ChatAnimation) { dataStore.edit { it[chatAnimationKey] = animation.id } }
     suspend fun setUserBubble(style: BubbleStyle) {
         dataStore.edit { it[userBubbleKey] = style.id }
     }
