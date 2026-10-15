@@ -57,6 +57,8 @@ data class AppSettings(
     val inAppBrowserEnabled: Boolean = true,
     /** 联网搜索用的搜索引擎 id，取值见 [SearchEngine] */
     val searchEngine: String = SearchEngine.BING.id,
+    /** Tavily 专业搜索的 API Key（选 Tavily 引擎时必填，其余引擎忽略） */
+    val tavilyApiKey: String = "",
     /**
      * Gemini 原生联网搜索（服务端 grounding）。
      *
@@ -71,6 +73,7 @@ data class AppSettings(
      * 全局项而非按配置组：它描述"我希望这个助手是什么样"，
      * 与用哪家的 API 无关。
      */
+    val openingPrompt: String = "",
     val systemPrompt: String = ""
 )
 
@@ -125,7 +128,6 @@ class SettingsRepository(
         booleanPreferencesKey(Constants.KEY_SHOW_USER_AVATAR)
     private val showAssistantAvatarKey =
         booleanPreferencesKey(Constants.KEY_SHOW_ASSISTANT_AVATAR)
-    private val chatAnimationKey = stringPreferencesKey("chat_animation")
     private val transparentTopBarKey =
         booleanPreferencesKey(Constants.KEY_TRANSPARENT_TOP_BAR)
     private val transparentInputBarKey =
@@ -142,6 +144,7 @@ class SettingsRepository(
     private val webSearchEnabledKey = booleanPreferencesKey(Constants.KEY_WEB_SEARCH_ENABLED)
     private val inAppBrowserKey = booleanPreferencesKey(Constants.KEY_IN_APP_BROWSER)
     private val searchEngineKey = stringPreferencesKey(Constants.KEY_SEARCH_ENGINE)
+    private val tavilyApiKeyKey = stringPreferencesKey(Constants.KEY_TAVILY_API_KEY)
     private val geminiSearchKey = booleanPreferencesKey(Constants.KEY_GEMINI_SEARCH)
     private val systemPromptKey = stringPreferencesKey(Constants.KEY_SYSTEM_PROMPT)
     private val logRetentionKey = stringPreferencesKey(Constants.KEY_LOG_RETENTION)
@@ -271,7 +274,9 @@ class SettingsRepository(
                 geminiSearchEnabled = prefs[geminiSearchKey] ?: false,
                 inAppBrowserEnabled = prefs[inAppBrowserKey] ?: true,
                 searchEngine = prefs[searchEngineKey] ?: SearchEngine.BING.id,
-                systemPrompt = active.systemPrompt
+                tavilyApiKey = prefs[tavilyApiKeyKey].orEmpty(),
+                openingPrompt = active.effectiveOpening,
+                systemPrompt = active.effectiveSystemPrompt
             )
         } else {
             val provider = AiProvider.fromId(prefs[providerKey])
@@ -288,6 +293,7 @@ class SettingsRepository(
                 geminiSearchEnabled = prefs[geminiSearchKey] ?: false,
                 inAppBrowserEnabled = prefs[inAppBrowserKey] ?: true,
                 searchEngine = prefs[searchEngineKey] ?: SearchEngine.BING.id,
+                tavilyApiKey = prefs[tavilyApiKeyKey].orEmpty(),
                 systemPrompt = prefs[systemPromptKey].orEmpty()
             )
         }
@@ -308,7 +314,7 @@ class SettingsRepository(
                 showTimestamp = prefs[showTimestampKey] ?: true,
                 showActions = prefs[showActionsKey] ?: true,
                 showModelName = prefs[showModelNameKey] ?: false,
-                showTokenUsage = prefs[showTokenUsageKey] ?: false,
+                showTokenUsage = prefs[showTokenUsageKey] ?: true,
                 showSpeed = prefs[showSpeedKey] ?: false,
                 showLatency = prefs[showLatencyKey] ?: false
             ),
@@ -320,7 +326,6 @@ class SettingsRepository(
             shufflePrompts = prefs[shufflePromptsKey] ?: true,
             palette = ThemePalette.fromId(prefs[paletteKey]),
             chatAppearance = ChatAppearance(
-                 animation = ChatAnimation.fromId(prefs[chatAnimationKey]),
                 // 默认值写在这里而非只改 ChatAppearance 的构造默认：
                 // 未设置过该键时用的是这个 fallback，data class 的默认值
                 // 只在别处直接构造 ChatAppearance 时才起作用
@@ -429,7 +434,6 @@ class SettingsRepository(
         dataStore.edit { it[paletteKey] = palette.id }
     }
 
-    suspend fun setChatAnimation(animation: ChatAnimation) { dataStore.edit { it[chatAnimationKey] = animation.id } }
     suspend fun setUserBubble(style: BubbleStyle) {
         dataStore.edit { it[userBubbleKey] = style.id }
     }
@@ -513,6 +517,9 @@ class SettingsRepository(
     }
     suspend fun setSearchEngine(id: String) {
         dataStore.edit { it[searchEngineKey] = id }
+    }
+    suspend fun setTavilyApiKey(key: String) {
+        dataStore.edit { it[tavilyApiKeyKey] = key.trim() }
     }
     suspend fun setGeminiSearchEnabled(enabled: Boolean) {
         dataStore.edit { it[geminiSearchKey] = enabled }
