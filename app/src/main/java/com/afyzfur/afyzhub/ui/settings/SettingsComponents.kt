@@ -196,6 +196,11 @@ fun SettingsTextFieldItem(
         var field by remember(identityKey) {
             mutableStateOf(TextFieldValue(value, TextRange(value.length)))
         }
+        LaunchedEffect(identityKey, value) {
+            if (field.text != value) {
+                field = TextFieldValue(value, TextRange(value.length))
+            }
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
