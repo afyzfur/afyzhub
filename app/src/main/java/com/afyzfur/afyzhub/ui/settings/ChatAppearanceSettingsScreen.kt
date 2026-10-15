@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.afyzfur.afyzhub.data.image.ImageStore
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
+import com.afyzfur.afyzhub.data.settings.ChatAnimation
 import com.afyzfur.afyzhub.ui.components.IconContrast
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
