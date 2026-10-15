@@ -88,6 +88,13 @@ fun InAppBrowserScreen(
             settings.displayZoomControls = false
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            settings.loadsImagesAutomatically = true
+            settings.allowFileAccess = false
+            settings.allowContentAccess = true
+            settings.javaScriptCanOpenWindowsAutomatically = false
+            settings.setSupportMultipleWindows(false)
+            android.webkit.CookieManager.getInstance().setAcceptCookie(true)
+            android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
         }
     }
 

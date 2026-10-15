@@ -96,17 +96,15 @@ internal fun buildMetaParts(
     if (options.showTokenUsage && !message.isFromUser) {
         val input = message.promptTokens
         val cached = message.cachedTokens
-        if (input != null && input > 0) {
-            // cached 为 null = 提供商压根没在 usage 里返回缓存字段
-            // (实测 docode.cc 的 glm-5.3-flash 就是如此)。
-            // 此时显示 "n/a", 而不是硬凑成 "cache: 0"——后者会让人
-            // 以为缓存失效了, 其实是无从判断。
-            if (cached != null) {
-                val pct = (cached * 100 + input / 2) / input
-                parts += "cache: $cached (hit: $pct%)"
-            } else {
-                parts += "cache: n/a"
-            }
+        // 所有助手消息都显示缓存状态；不同服务商没有该字段时显示 n/a，
+        // 不再因为协议字段差异而让这一行消失。
+        if (cached != null && input != null && input > 0) {
+            val pct = (cached * 100 + input / 2) / input
+            parts += "cache: $cached (hit: $pct%)"
+        } else if (cached != null) {
+            parts += "cache: $cached"
+        } else {
+            parts += "cache: n/a"
         }
     }
     if (options.showSpeed) {
