@@ -83,6 +83,18 @@ class ApiProfilesViewModel(
             } finally { promptMutex.unlock() }
         }
     }
+    fun updateProfileLatest(id: String, transform: (ApiProfile) -> ApiProfile) {
+        viewModelScope.launch {
+            profileUpdateMutex.lock()
+            try {
+                val current = settingsRepository.currentProfiles()
+                settingsRepository.saveProfiles(current.copy(profiles = current.profiles.map {
+                    if (it.id == id) transform(it) else it
+                }))
+            } finally { profileUpdateMutex.unlock() }
+        }
+    }
+
     /** 整组替换，按 id 定位。找不到 id 时什么都不做 */
     fun updateProfile(profile: ApiProfile) {
         viewModelScope.launch {

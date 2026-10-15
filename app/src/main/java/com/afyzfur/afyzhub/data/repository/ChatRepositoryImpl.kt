@@ -230,7 +230,7 @@ class ChatRepositoryImpl(
                     )
                 )
                 val secondOutcome = if (settings.streamEnabled) {
-                    collectStream(client, searchedTurns, settings, assistantId!!, onPhase, reply)
+                    collectStream(client, searchedTurns, settings, assistantId!!, onPhase)
                 } else {
                     client.complete(searchedTurns, settings)
                 }
@@ -248,26 +248,9 @@ class ChatRepositoryImpl(
                 } else {
                     secondOutcome.content
                 }
-                var cleanedSecond = WebSearchService.stripBareUrlLines(
-                    WebSearchService.stripSearchTagsOnly(
-                        WebSearchService.stripModelEchoTags(secondRoundPart)
-                    )
-                )
-                // 模型有时会把二轮上下文里的占位句复读进正文,
-                // 表现为正文开头出现一句奇怪的括号说明。剥掉它。
-                cleanedSecond = cleanedSecond.replace(
-                    "（以上为我本轮已输出的内容：已发起网络搜索并停止输出，等待系统返回搜索结果后继续回答。）", ""
-                )
-                // 第一轮内容截到第一个搜索标签为止: 模型在标签后继续输出
-                // 的内容是搜索前草稿, 和第二轮回答重复(“回答两次”的真凶)。
-                reply = run {
-                    // 第二轮是最终回答。第一轮只是搜索意图草稿，不能再次显示。
-                    var t = cleanedSecond
-                    val opens = Regex("<(?:think|thinking|reasoning)>", RegexOption.IGNORE_CASE).findAll(t).count()
-                    val closes = Regex("</(?:think|thinking|reasoning)>", RegexOption.IGNORE_CASE).findAll(t).count()
-                    if (opens > closes) t += "</think>"
-                    t
-                } + sourcesBlock
+                // 第二轮从空内容开始写入同一个占位消息。第一轮只存在于请求上下文，
+                // 因此不会被再次显示；二轮返回的 think/search 标签由 UI 正常渲染。
+                reply = secondOutcome.content + sourcesBlock
                 if (secondOutcome.content.isBlank()) {
                     throw IllegalStateException("模型返回内容为空")
                 }
