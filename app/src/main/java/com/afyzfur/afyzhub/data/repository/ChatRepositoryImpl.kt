@@ -229,28 +229,15 @@ class ChatRepositoryImpl(
                             "也不要再输出任何搜索标签，搜索已完成。"
                     )
                 )
+                // Preserve the emitted timeline exactly once across the request boundary.
+                val timelinePrefix = reply + sourcesBlock + "\n"
                 val secondOutcome = if (settings.streamEnabled) {
-                    collectStream(client, searchedTurns, settings, assistantId!!, onPhase)
+                    collectStream(client, searchedTurns, settings, assistantId!!, onPhase, timelinePrefix)
                 } else {
                     client.complete(searchedTurns, settings)
                 }
                 searchUsage = mergeTokenUsage(searchUsage, secondOutcome.usage)
-                // 模型有时复读上下文里的搜索/来源标签: 复读的闭合 sources 会把
-                // 整段正文当来源剥掉(表现为回答输出完突然消失)。这里在拼接
-                // 官方 sources 块之前先清掉模型自己输出的这类标签
-                // 第二轮流式起点是第一轮内容(initialContent=reply), 所以:
-                // - 流式时从 reply 之后截出的才是第二轮自己的输出; 非流式时
-                //   complete 返回的就是纯第二轮内容。复读的 web_search 标签
-                //   全部剥掉——它们的查询从未被真正搜索, 留着会多出一个永远
-                //   “正在获取…”的搜索块(即“第二次搜索不到”)。
-                val secondRoundPart = if (settings.streamEnabled && secondOutcome.content.length > reply.length) {
-                    secondOutcome.content.substring(reply.length)
-                } else {
-                    secondOutcome.content
-                }
-                // 第二轮从空内容开始写入同一个占位消息。第一轮只存在于请求上下文，
-                // 因此不会被再次显示；二轮返回的 think/search 标签由 UI 正常渲染。
-                reply = secondOutcome.content + sourcesBlock
+                reply = if (settings.streamEnabled) secondOutcome.content else timelinePrefix + secondOutcome.content
                 if (secondOutcome.content.isBlank()) {
                     throw IllegalStateException("模型返回内容为空")
                 }

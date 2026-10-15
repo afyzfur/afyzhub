@@ -212,7 +212,7 @@ fun parseContentBlocks(content: String): List<ContentBlock> {
     }
     for (m in SEARCH_TAG.findAll(content)) {
         val q = m.groupValues[1].trim()
-        if (q.isNotEmpty() && !seenQueries.contains(q)) {
+        if (q.isNotEmpty()) {
             seenQueries.add(q)
             markers.add(Marker(m.range.first, m.range.last + 1, ContentBlock.Search(q)))
         }
@@ -227,7 +227,7 @@ fun parseContentBlocks(content: String): List<ContentBlock> {
         val openRegion = content.substring(ot.range.first)
         for (m in SEARCH_TAG.findAll(openRegion)) {
             val q = m.groupValues[1].trim()
-            if (q.isNotEmpty() && !seenQueries.contains(q)) {
+            if (q.isNotEmpty()) {
                 seenQueries.add(q)
                 markers.add(Marker(
                     ot.range.first + m.range.first,

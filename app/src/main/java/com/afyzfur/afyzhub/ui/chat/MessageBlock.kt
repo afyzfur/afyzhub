@@ -176,7 +176,8 @@ private fun MessageBody(
     fromUser: Boolean,
     searchEngine: String,
     onLongPress: () -> Unit,
-    onLinkClick: ((String) -> Unit)? = null
+    onLinkClick: ((String) -> Unit)? = null,
+    renderSegments: Boolean = true
 ) {
     // 只有助手回复会带思考标签，用户消息不必解析。
     // remember 以内容为键：流式输出时每个增量都会重组，
@@ -255,25 +256,16 @@ private fun MessageBody(
 
     // 思考/搜索块按出现顺序独立成栏, 与正式回答是并列关系。
     // 两次思考+一次搜索 = 三个条, 段落先后与模型实际行为一致
-    contentBlocks.forEach { block ->
-        when (block) {
-            is ContentBlock.Think -> ReasoningBlock(
-                reasoning = block.text,
-                thinking = block.ongoing,
-                bubbleStyle = style,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-            is ContentBlock.Search -> SearchBlock(
-                query = block.query,
-                sources = searchSources,
-                searchEngine = searchEngine,
-                onLinkClick = onLinkClick,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-            is ContentBlock.Answer -> {}
+    if (!fromUser && renderSegments) {
+        contentBlocks.forEach { block ->
+            when (block) {
+                is ContentBlock.Think -> ReasoningBlock(reasoning = block.text, thinking = block.ongoing, bubbleStyle = style, modifier = Modifier.padding(bottom = 6.dp))
+                is ContentBlock.Search -> SearchBlock(query = block.query, sources = searchSources, searchEngine = searchEngine, onLinkClick = onLinkClick, modifier = Modifier.padding(bottom = 6.dp))
+                is ContentBlock.Answer -> MessageBody(message = message.copy(content = block.text), style = style, fromUser = false, searchEngine = searchEngine, onLongPress = onLongPress, onLinkClick = onLinkClick, renderSegments = false)
+            }
         }
+        return
     }
-
     // 思考进行中而正文尚未开始时不渲染气泡，否则会出现一个空容器。
     // 这正是截图里那条空白圆角块的来源
     //
