@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.afyzfur.afyzhub.data.image.ImageStore
 import com.afyzfur.afyzhub.data.settings.AvatarMode
 import com.afyzfur.afyzhub.data.settings.BubbleStyle
+import com.afyzfur.afyzhub.data.settings.ChatAnimation
 import com.afyzfur.afyzhub.data.settings.ChatBackgroundEffect
 import com.afyzfur.afyzhub.data.settings.ChatBackgroundMode
 import com.afyzfur.afyzhub.data.settings.ColorMode
@@ -62,6 +63,7 @@ class UiPreferencesViewModel(
         viewModelScope.launch { repository.setPalette(palette) }
     }
 
+    fun setChatAnimation(animation: ChatAnimation) { viewModelScope.launch { repository.setChatAnimation(animation) } }
     fun setUserBubble(style: BubbleStyle) {
         viewModelScope.launch { repository.setUserBubble(style) }
     }

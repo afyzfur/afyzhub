@@ -9,6 +9,13 @@ import com.afyzfur.afyzhub.ui.theme.ThemePalette
  * 但这个不对称本身会让人觉得两边"不是一套东西"，是否接受因人而异，
  * 因此改为两边各自可选。
  */
+enum class ChatAnimation(val id: String, val label: String) {
+    STANDARD("standard", "标准"),
+    FADE("fade", "渐隐"),
+    SOFT_SCALE("soft_scale", "柔和缩放"),
+    SPRING("spring", "弹性");
+    companion object { fun fromId(id: String?) = entries.firstOrNull { it.id == id } ?: STANDARD }
+}
 enum class BubbleStyle(val id: String, val label: String) {
     /** 有底色容器，宽度随内容 */
     BUBBLE("bubble", "气泡"),
@@ -160,8 +167,7 @@ data class MessageDisplayOptions(
     val showTimestamp: Boolean = true,
     val showActions: Boolean = true,
     val showModelName: Boolean = false,
-    // 默认开: 用户需要常驻看到 token 用量与缓存命中
-    val showTokenUsage: Boolean = true,
+    val showTokenUsage: Boolean = false,
     val showSpeed: Boolean = false,
     val showLatency: Boolean = false
 ) {
@@ -177,6 +183,7 @@ data class MessageDisplayOptions(
  * 由聊天页整体接收，避免为每项单独穿参。
  */
 data class ChatAppearance(
+    val animation: ChatAnimation = ChatAnimation.STANDARD,
     /**
      * 用户消息默认有气泡。
      *

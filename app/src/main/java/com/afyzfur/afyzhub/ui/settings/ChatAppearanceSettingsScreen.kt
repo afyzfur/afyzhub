@@ -149,6 +149,12 @@ fun ChatAppearanceSettingsScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
+                SettingsCategoryTitle("动画")
+                SettingsGroup {
+                    ChatAnimation.entries.forEach { option ->
+                        SettingsRadioItem(title = option.label, selected = appearance.animation == option, onClick = { viewModel.setChatAnimation(option) })
+                    }
+                }
                 SettingsCategoryTitle("消息样式")
                 SettingsGroup {
                     BubbleStyleItem(
