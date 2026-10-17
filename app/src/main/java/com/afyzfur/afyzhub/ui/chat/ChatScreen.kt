@@ -235,12 +235,14 @@ fun ChatScreen(
             onHorizontalDrag = { _, amount ->
                 if (autoCompleted) return@detectHorizontalDragGestures
                 dragDistance += amount
-                val next = (drawerOffset.value + amount).coerceIn(-drawerWidthPx, 0f)
-                scope.launch { drawerOffset.snapTo(next) }
-                // 固定短距离触发：不再按屏幕/抽屉宽度百分比计算。
+                // 展开从隐藏状态直接开始：达到触发距离前不跟手移动。
                 val trigger = with(density) { 12.dp.toPx() }
                 val opening = !startedOpen && dragDistance >= trigger
                 val closing = startedOpen && dragDistance <= -trigger
+                if (startedOpen) {
+                    val next = (drawerOffset.value + amount).coerceIn(-drawerWidthPx, 0f)
+                    scope.launch { drawerOffset.stop(); drawerOffset.snapTo(next) }
+                }
                 if (opening || closing) {
                     autoCompleted = true
                     scope.launch {
