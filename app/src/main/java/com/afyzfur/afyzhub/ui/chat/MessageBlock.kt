@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.ui.unit.Dp
@@ -170,6 +172,15 @@ fun MessageBlock(
  */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.applyChatAnimation(animation: com.afyzfur.afyzhub.data.settings.ChatAnimation): Modifier = when (animation) {
+    com.afyzfur.afyzhub.data.settings.ChatAnimation.NONE -> this
+    com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> animateContentSize(animationSpec = tween(180))
+    com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> animateContentSize(animationSpec = tween(260))
+    com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> animateContentSize(animationSpec = tween(220))
+    com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> animateContentSize(animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f))
+    com.afyzfur.afyzhub.data.settings.ChatAnimation.FAST -> animateContentSize(animationSpec = tween(90))
+}
+
 private fun MessageBody(
     message: Message,
     style: BubbleStyle,
@@ -302,7 +313,7 @@ private fun MessageBody(
                         else AppShapeTokens.AssistantMessage
                     )
                     .then(longPress)
-                    .animateContentSize()
+                    .applyChatAnimation(appearance.animation)
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 content()
@@ -314,11 +325,11 @@ private fun MessageBody(
         BubbleStyle.PLAIN -> Box(
             // 同 BUBBLE: 平滑流式期间的高度变化
             modifier = if (fromUser) {
-                longPress.animateContentSize()
+                longPress.applyChatAnimation(appearance.animation)
             } else {
                 Modifier
                     .fillMaxWidth()
-                    .animateContentSize()
+                    .applyChatAnimation(appearance.animation)
                     .then(longPress)
             }
         ) {

@@ -99,8 +99,8 @@ fun SettingsHomeScreen(
                     )
                     SettingsNavItem(
                         icon = IconPalette,
-                        title = "外观",
-                        subtitle = "动态取色与配色来源",
+                        title = "个性化",
+                        subtitle = "配色、动画、气泡、头像与背景",
                         onClick = onNavigateToAppearance
                     )
                 }
