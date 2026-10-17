@@ -319,7 +319,6 @@ fun ChatScreen(
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
         )
-    }
         if (drawerProgress > 0f) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f * drawerProgress)).clickable { scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) } })
 
             ModalDrawerSheet(
@@ -366,8 +365,7 @@ fun ChatScreen(
                     }
                 )
             }
-        
-    }
+        }
 
     actionTarget?.let { target ->
         val dismiss = { actionTarget = null }
