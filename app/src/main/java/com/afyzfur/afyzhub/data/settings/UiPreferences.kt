@@ -10,8 +10,13 @@ import com.afyzfur.afyzhub.ui.theme.ThemePalette
  * 因此改为两边各自可选。
  */
 enum class ChatAnimation(val id: String, val label: String) {
-    STANDARD("standard", "标准"), FADE("fade", "渐隐"), SOFT_SCALE("soft_scale", "柔和缩放"), SPRING("spring", "弹性");
-    companion object { fun fromId(id: String?) = entries.firstOrNull { it.id == id } ?: STANDARD }
+    NONE("none", "无动画"),
+    FADE("fade", "渐隐淡出"),
+    SLIDE("slide", "水平滑入"),
+    SCALE("scale", "缩放进入"),
+    SPRING("spring", "弹性回弹"),
+    VERTICAL("vertical", "垂直滑入");
+    companion object { fun fromId(id: String?) = entries.firstOrNull { it.id == id } ?: FADE }
 }
 enum class BubbleStyle(val id: String, val label: String) {
     /** 有底色容器，宽度随内容 */
