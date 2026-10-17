@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -33,7 +34,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import kotlin.math.roundToInt
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -161,51 +171,104 @@ fun ChatScreen(
     val settings by hostViewModel.settings.collectAsState()
     val uiPreferences by hostViewModel.uiPreferences.collectAsState()
     val currentTitle = conversations.firstOrNull { it.id == currentConversationId }?.title
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerShape = AppShapeTokens.Drawer,
-                // 按屏宽取比例而非用 Material 默认的固定 360dp：后者在
-                // 窄屏上几乎铺满，看不见背后的聊天页，也就失去了"临时
-                // 拉出一层"的意味。留出的那一截同时是关闭抽屉的点击区
-                modifier = Modifier.fillMaxWidth(DRAWER_WIDTH_FRACTION)
-            ) {
-                ConversationDrawer(
-                    existingGroups = groups,
-                    onTogglePin = hostViewModel::setPinned,
-                    onToggleStar = hostViewModel::setStarred,
-                    onRenameConversation = hostViewModel::renameConversation,
-                    onUpdateNote = hostViewModel::updateNote,
-                    onMoveToGroup = hostViewModel::moveToGroup,
-                    conversations = conversations,
-                    currentConversationId = currentConversationId,
-                    modelLabel = settings.model,
-                    appearance = uiPreferences.chatAppearance,
-                    onConversationClick = { id ->
-                        hostViewModel.openConversation(id)
-                        scope.launch { drawerState.close() }
-                    },
-                    onNewConversation = {
-                        hostViewModel.startNewConversation()
-                        scope.launch { drawerState.close() }
-                    },
-                    onDeleteConversation = { id ->
-                        hostViewModel.deleteConversation(id)
-                    },
-                    onSettingsClick = {
-                        scope.launch { drawerState.close() }
-                        onNavigateToSettings()
-                    },
-                    onModelClick = {
-                        scope.launch { drawerState.close() }
-                        onNavigateToProvider()
+    val density = LocalDensity.current
+    val drawerAnimation = uiPreferences.chatAppearance.animation
+    val drawerDuration = when (drawerAnimation) {
+        com.afyzfur.afyzhub.data.settings.ChatAnimation.NONE -> 0
+        com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> 220
+        com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> 300
+        com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> 260
+        com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> 0
+        com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL -> 280
+    }
+    val drawerScale by animateFloatAsState(
+        targetValue = when {
+            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE && drawerState.isOpen -> 1f
+            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> 0.78f
+            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING && drawerState.isOpen -> 1f
+            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> 0.86f
+            else -> 1f
+        },
+        animationSpec = when (drawerAnimation) {
+            com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> spring(dampingRatio = 0.52f, stiffness = 280f)
+            com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> tween(260)
+            else -> tween(0)
+        },
+        label = "drawerScale"
+    )
+    val drawerAlpha by animateFloatAsState(
+        targetValue = if (drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE && drawerState.isOpen) 1f else 0.18f,
+        animationSpec = tween(if (drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE) 260 else 0),
+        label = "drawerAlpha"
+    )
+    val drawerOffsetY by animateFloatAsState(
+        targetValue = when {
+            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL && drawerState.isOpen -> 0f
+            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL -> 420f
+            else -> 0f
+        },
+        animationSpec = if (drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL) tween(300) else tween(0),
+        label = "drawerOffsetY"
+    )
+    val drawerRotation by animateFloatAsState(
+        targetValue = when {
+            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING && drawerState.isOpen -> 0f
+            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> -2.5f
+            else -> 0f
+        },
+        animationSpec = if (drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING) spring(dampingRatio = 0.48f, stiffness = 250f) else tween(0),
+        label = "drawerRotation"
+    )
+    var drawerWidthPx by remember { mutableFloatStateOf(0f) }
+    val drawerOffset = remember { Animatable(0f) }
+    val drawerProgress = if (drawerWidthPx > 0f) ((drawerOffset.value + drawerWidthPx) / drawerWidthPx).coerceIn(0f, 1f) else 0f
+    Box(Modifier.fillMaxSize().pointerInput(drawerWidthPx) {
+        var autoCompleted = false
+        var dragDistance = 0f
+        var startedOpen = false
+        detectHorizontalDragGestures(
+            onDragStart = {
+                autoCompleted = false
+                dragDistance = 0f
+                startedOpen = drawerProgress > 0.5f
+            },
+            onHorizontalDrag = { _, amount ->
+                if (autoCompleted) return@detectHorizontalDragGestures
+                dragDistance += amount
+                val next = (drawerOffset.value + amount).coerceIn(-drawerWidthPx, 0f)
+                scope.launch { drawerOffset.snapTo(next) }
+                // 固定短距离触发：不再按屏幕/抽屉宽度百分比计算。
+                val trigger = with(density) { 12.dp.toPx() }
+                val opening = !startedOpen && dragDistance >= trigger
+                val closing = startedOpen && dragDistance <= -trigger
+                if (opening || closing) {
+                    autoCompleted = true
+                    scope.launch {
+                        drawerOffset.animateTo(
+                            if (opening) 0f else -drawerWidthPx,
+                            animationSpec = spring(dampingRatio = 0.9f, stiffness = 900f)
+                        )
                     }
-                )
+                }
+            },
+            onDragEnd = {
+                if (!autoCompleted) {
+                    scope.launch {
+                        drawerOffset.animateTo(
+                            if (startedOpen) 0f else -drawerWidthPx,
+                            spring(dampingRatio = 0.9f, stiffness = 900f)
+                        )
+                    }
+                }
+            },
+            onDragCancel = {
+                if (!autoCompleted) {
+                    scope.launch { drawerOffset.animateTo(if (startedOpen) 0f else -drawerWidthPx, tween(120)) }
+                }
             }
-        }
-    ) {
+        )
+    }) {
+
         ChatContent(
             title = currentTitle,
             modelLabel = "${settings.model} · $profileName",
@@ -227,7 +290,7 @@ fun ChatScreen(
             lastTouchAt = lastTouchAt,
             inputText = inputText,
             onInputChange = { inputText = it },
-            onOpenDrawer = { scope.launch { drawerState.open() } },
+            onOpenDrawer = { scope.launch { drawerOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = 560f)) } },
             onSend = {
                 val text = inputText
                 if (text.isNotBlank() && !isLoading) {
@@ -256,6 +319,54 @@ fun ChatScreen(
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
         )
+    }
+        if (drawerProgress > 0f) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f * drawerProgress)).clickable { scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) } })
+
+            ModalDrawerSheet(
+                drawerShape = AppShapeTokens.Drawer,
+                // 按屏宽取比例而非用 Material 默认的固定 360dp：后者在
+                // 窄屏上几乎铺满，看不见背后的聊天页，也就失去了"临时
+                // 拉出一层"的意味。留出的那一截同时是关闭抽屉的点击区
+                modifier = Modifier
+                    .onSizeChanged { size ->
+                        if (drawerWidthPx == 0f) { drawerWidthPx = size.width.toFloat(); scope.launch { drawerOffset.snapTo(-drawerWidthPx) } }
+                    }
+                    .offset { IntOffset(drawerOffset.value.roundToInt(), 0) }
+                    .fillMaxWidth(DRAWER_WIDTH_FRACTION)
+            ) {
+                ConversationDrawer(
+                    existingGroups = groups,
+                    onTogglePin = hostViewModel::setPinned,
+                    onToggleStar = hostViewModel::setStarred,
+                    onRenameConversation = hostViewModel::renameConversation,
+                    onUpdateNote = hostViewModel::updateNote,
+                    onMoveToGroup = hostViewModel::moveToGroup,
+                    conversations = conversations,
+                    currentConversationId = currentConversationId,
+                    modelLabel = settings.model,
+                    appearance = uiPreferences.chatAppearance,
+                    onConversationClick = { id ->
+                        hostViewModel.openConversation(id)
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) }
+                    },
+                    onNewConversation = {
+                        hostViewModel.startNewConversation()
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) }
+                    },
+                    onDeleteConversation = { id ->
+                        hostViewModel.deleteConversation(id)
+                    },
+                    onSettingsClick = {
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) }
+                        onNavigateToSettings()
+                    },
+                    onModelClick = {
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) }
+                        onNavigateToProvider()
+                    }
+                )
+            }
+        
     }
 
     actionTarget?.let { target ->
