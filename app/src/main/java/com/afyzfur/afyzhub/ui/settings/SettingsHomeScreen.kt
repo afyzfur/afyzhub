@@ -48,7 +48,6 @@ fun SettingsHomeScreen(
     onNavigateBack: () -> Unit,
     onNavigateToProvider: () -> Unit,
     onNavigateToAppearance: () -> Unit,
-    onNavigateToChatAppearance: () -> Unit,
     onNavigateToMessageDisplay: () -> Unit,
     onNavigateToQuickPrompts: () -> Unit,
     onNavigateToRequestLog: () -> Unit,
@@ -131,14 +130,7 @@ fun SettingsHomeScreen(
                 }
 
                 SettingsCategoryTitle("对话")
-
                 SettingsGroup {
-                    SettingsNavItem(
-                        icon = IconChatBubble,
-                        title = "聊天外观",
-                        subtitle = "气泡样式、头像与背景",
-                        onClick = onNavigateToChatAppearance
-                    )
                     SettingsNavItem(
                         icon = IconTextLines,
                         title = "消息显示",

@@ -10,7 +10,6 @@ import com.afyzfur.afyzhub.ui.chat.ChatScreen
 import com.afyzfur.afyzhub.ui.settings.AboutSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.AppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ChangelogScreen
-import com.afyzfur.afyzhub.ui.settings.ChatAppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfileEditScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfilesScreen
@@ -114,9 +113,6 @@ fun NavGraph() {
                 onNavigateToAppearance = {
                     navController.navigate(Screen.AppearanceSettings.route)
                 },
-                onNavigateToChatAppearance = {
-                    navController.navigate(Screen.ChatAppearanceSettings.route)
-                },
                 onNavigateToMessageDisplay = {
                     navController.navigate(Screen.MessageDisplaySettings.route)
                 },
@@ -186,9 +182,6 @@ fun NavGraph() {
             AppearanceSettingsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        composable(Screen.ChatAppearanceSettings.route) {
-            ChatAppearanceSettingsScreen(onNavigateBack = { navController.popBackStack() })
-        }
         composable(Screen.MessageDisplaySettings.route) {
             MessageDisplaySettingsScreen(onNavigateBack = { navController.popBackStack() })
         }

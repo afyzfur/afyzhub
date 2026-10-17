@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import android.os.Build
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Face
@@ -32,8 +33,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.afyzfur.afyzhub.data.image.ImageStore
 import com.afyzfur.afyzhub.data.settings.ChatAppearance
+import com.afyzfur.afyzhub.ui.theme.ThemePalette
 import com.afyzfur.afyzhub.data.settings.ChatAnimation
 import com.afyzfur.afyzhub.ui.components.IconContrast
+import com.afyzfur.afyzhub.ui.components.IconColorSwatch
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -116,7 +119,7 @@ fun ChatAppearanceSettingsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = "聊天外观", onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = "个性化", onNavigateBack = onNavigateBack)
 
             // 加载失败时提示原因。放在页面顶部而非弹窗：
             // 弹窗会打断操作，而这里的失败通常需要用户换一张图重试
@@ -150,6 +153,11 @@ fun ChatAppearanceSettingsScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
+                SettingsCategoryTitle("配色")
+                SettingsGroup {
+                    SettingsSwitchItem(icon = IconColorSwatch, title = "动态取色", subtitle = "跟随系统壁纸生成配色", checked = prefs.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S, onCheckedChange = viewModel::setDynamicColor)
+                    PaletteRow(selected = prefs.palette, enabled = !(prefs.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S), onSelect = viewModel::setPalette)
+                }
                 SettingsCategoryTitle("动画")
                 SettingsGroup {
                     ChatAnimation.entries.forEach { option ->

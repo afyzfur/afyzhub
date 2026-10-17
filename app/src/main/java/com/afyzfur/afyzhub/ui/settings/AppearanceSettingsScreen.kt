@@ -48,7 +48,7 @@ import org.koin.androidx.compose.koinViewModel
  * [enabled] 为 false 时降低不透明度并屏蔽点击，表示动态取色已接管配色。
  */
 @Composable
-private fun PaletteRow(
+fun PaletteRow(
     selected: ThemePalette,
     enabled: Boolean,
     onSelect: (ThemePalette) -> Unit
