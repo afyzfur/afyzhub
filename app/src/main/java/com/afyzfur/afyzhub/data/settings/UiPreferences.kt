@@ -186,7 +186,7 @@ data class MessageDisplayOptions(
  * 由聊天页整体接收，避免为每项单独穿参。
  */
 data class ChatAppearance(
-    val animation: ChatAnimation = ChatAnimation.STANDARD,
+    val animation: ChatAnimation = ChatAnimation.FADE,
     /**
      * 用户消息默认有气泡。
      *
