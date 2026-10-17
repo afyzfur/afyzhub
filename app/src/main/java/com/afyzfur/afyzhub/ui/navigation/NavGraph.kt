@@ -8,7 +8,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.afyzfur.afyzhub.ui.chat.ChatScreen
 import com.afyzfur.afyzhub.ui.settings.AboutSettingsScreen
-import com.afyzfur.afyzhub.ui.settings.AppearanceSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ChangelogScreen
 import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfileEditScreen
