@@ -17,9 +17,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.background
 import android.os.Build
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -64,7 +68,7 @@ import kotlin.math.roundToInt
  * 个性化页面：配色、动画、气泡、头像与背景。
  */
 @Composable
-private fun PaletteRow(
+fun PaletteRow(
     selected: ThemePalette,
     enabled: Boolean,
     onSelect: (ThemePalette) -> Unit
