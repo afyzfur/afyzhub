@@ -61,11 +61,33 @@ import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
 /**
- * 聊天外观子页面：气泡样式、头像与背景。
- *
- * 与「外观」页分开：那页管的是全局配色，这页只影响消息列表的呈现。
- * 合并会让一页过长，且两类设置的调整频率不同。
+ * 个性化页面：配色、动画、气泡、头像与背景。
  */
+@Composable
+private fun PaletteRow(
+    selected: ThemePalette,
+    enabled: Boolean,
+    onSelect: (ThemePalette) -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)
+    ) {
+        ThemePalette.entries.forEach { palette ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.alpha(if (enabled) 1f else 0.4f)) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(48.dp).clip(CircleShape).clickable(enabled = enabled) { onSelect(palette) }.background(palette.swatch)
+                ) {
+                    if (palette == selected) Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(palette.label, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
 @Composable
 fun ChatAppearanceSettingsScreen(
     onNavigateBack: () -> Unit,
