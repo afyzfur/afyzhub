@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -245,12 +246,10 @@ fun ChatScreen(
                 }
                 if (opening || closing) {
                     autoCompleted = true
-                    scope.launch {
-                        drawerOffset.animateTo(
+scope.launch { drawerOffset.animateTo(
                             if (opening) 0f else -drawerWidthPx,
-                            animationSpec = spring(dampingRatio = 0.9f, stiffness = 900f)
-                        )
-                    }
+                            animationSpec = spring(dampingRatio = 0.78f, stiffness = 520f)
+                        ) }
                 }
             },
             onDragEnd = {
@@ -321,7 +320,16 @@ fun ChatScreen(
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
         )
-        if (drawerProgress > 0f) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f * drawerProgress)).clickable { scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) } })
+        if (drawerProgress > 0f) Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.32f * drawerProgress))
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(180)) }
+                    })
+                }
+        )
 
             ModalDrawerSheet(
                 drawerShape = AppShapeTokens.Drawer,
