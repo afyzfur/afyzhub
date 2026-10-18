@@ -173,7 +173,7 @@ class ChatRepositoryImpl(
             // 应用层联网搜索：模型请求了搜索则执行, 把结果作为
             // 补充上下文再次请求, 用新回复替换。Gemini 走原生
             // grounding, 不会输出搜索标签, 此块自然跳过
-            var searchUsage = outcome.usage
+            var searchUsage = mergeTokenUsage(outcome.usage, null)
             var searchQuery = WebSearchService.extractQuery(reply)
             // 查询词补全: 模型常把问题缩写(「重庆的天气」→「重庆市」)。
             // 若查询词是用户问题的子串且明显更短, 直接用用户问题搜索,

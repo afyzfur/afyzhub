@@ -33,6 +33,7 @@ import com.afyzfur.afyzhub.ui.settings.ApiProfilesViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -113,6 +114,7 @@ fun ChatScreen(
 
     /** 模型选择半屏选择器开关 */
     var showModelPicker by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val undoable by viewModel.undoable.collectAsState()
 
@@ -257,7 +259,10 @@ fun ChatScreen(
             modelName = settings.model,
             searchEngine = settings.searchEngine,
             thinkingEffort = settings.thinkingEffort,
-            onCycleThinkingEffort = { showEffortSheet = true },
+            onCycleThinkingEffort = {
+                keyboardController?.hide()
+                showEffortSheet = true
+            },
             appearance = uiPreferences.chatAppearance,
             quickPrompts = uiPreferences.quickPrompts,
             shufflePrompts = uiPreferences.shufflePrompts,
@@ -290,7 +295,10 @@ fun ChatScreen(
                 }
             },
             onStop = { viewModel.stopGenerating() },
-            onPickModel = { showModelPicker = true },
+            onPickModel = {
+                keyboardController?.hide()
+                showModelPicker = true
+            },
             onOpenBrowser = onOpenBrowser,
             undoable = undoable,
             onUndoRemoval = { viewModel.undoRemoval() },

@@ -24,6 +24,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -97,14 +98,14 @@ fun MessageBlock(
     val fromUser = message.isFromUser
     val style = if (fromUser) appearance.userBubble else appearance.assistantBubble
     val enter = when (appearance.animation) {
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.NONE -> androidx.compose.animation.EnterTransition.None
         com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> fadeIn(tween(220))
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { if (fromUser) it else -it }, animationSpec = tween(280))
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> scaleIn(initialScale = 0.82f, animationSpec = tween(240))
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> slideInHorizontally(initialOffsetX = { if (fromUser) it else -it }, animationSpec = spring(dampingRatio = 0.68f, stiffness = 420f)) + scaleIn(initialScale = 0.9f, animationSpec = spring(dampingRatio = 0.68f, stiffness = 420f))
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL -> slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(280))
+        com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { if (fromUser) it else -it }, animationSpec = tween(260))
     }
-        AnimatedVisibility(visible = true, enter = enter, exit = androidx.compose.animation.ExitTransition.None) {
+    val exit = when (appearance.animation) {
+        com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> fadeOut(tween(160))
+        com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { if (fromUser) -it else it }, animationSpec = tween(220))
+    }
+    AnimatedVisibility(visible = true, enter = enter, exit = exit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         // 用户消息整体靠右，助手靠左

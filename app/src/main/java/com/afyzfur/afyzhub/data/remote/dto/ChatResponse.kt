@@ -67,9 +67,14 @@ val Usage.cachedTokens: Int?
     get() = listOfNotNull(
         prompt_cache_hit_tokens,
         prompt_tokens_details?.cached_tokens?.takeIf { it > 0 },
-        cache_read_input_tokens
+        cache_read_input_tokens,
+        // 兼容不同中转服务商常见的字段命名
+        prompt_tokens_details?.cache_read_tokens,
+        prompt_tokens_details?.cached_input_tokens
     ).firstOrNull()
 @Serializable
 data class PromptTokensDetails(
-    @SerialName("cached_tokens") val cached_tokens: Int = 0
+    @SerialName("cached_tokens") val cached_tokens: Int = 0,
+    @SerialName("cache_read_tokens") val cache_read_tokens: Int? = null,
+    @SerialName("cached_input_tokens") val cached_input_tokens: Int? = null
 )
