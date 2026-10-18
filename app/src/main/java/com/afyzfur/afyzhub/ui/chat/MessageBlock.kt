@@ -182,6 +182,7 @@ fun MessageBlock(
     }
     }
 }
+}
 /**
  * 消息正文。
  *
