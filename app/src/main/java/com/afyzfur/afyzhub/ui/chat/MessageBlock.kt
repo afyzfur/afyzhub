@@ -345,6 +345,8 @@ private fun MessageBody(
         }
     }
 
+}
+
 /**
  * 头像。
  *
