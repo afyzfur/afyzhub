@@ -104,7 +104,8 @@ fun MessageBlock(
         com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> slideInHorizontally(initialOffsetX = { if (fromUser) it else -it }, animationSpec = spring(dampingRatio = 0.68f, stiffness = 420f)) + scaleIn(initialScale = 0.9f, animationSpec = spring(dampingRatio = 0.68f, stiffness = 420f))
         com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL -> slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(280))
     }
-    AnimatedVisibility(visible = true, enter = enter, exit = androidx.compose.animation.ExitTransition.None) {
+    key(message.id, appearance.animation) {
+        AnimatedVisibility(visible = true, enter = enter, exit = androidx.compose.animation.ExitTransition.None) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         // 用户消息整体靠右，助手靠左
@@ -342,8 +343,8 @@ private fun MessageBody(
         ) {
             content()
         }
+        }
     }
-
 }
 
 /**

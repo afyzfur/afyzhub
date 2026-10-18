@@ -300,9 +300,9 @@ fun ChatScreen(
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
         )
-        // 遮罩层常驻，不再随开合增删。之前用 if (drawerOpen) 包住，
-        // 开关时整层会被插入/移除，弹簧还没停稳就会闪一下
-        Box(
+        // 只有抽屉打开时才建立遮罩交互层；关闭时不能覆盖聊天页面，
+        // 否则会拦截菜单、输入框和消息点击。
+        if (drawerOpen) Box(
             Modifier
                 .fillMaxSize()
                 // 在绘制阶段读取位移：每帧只重绘，不重组聊天页
