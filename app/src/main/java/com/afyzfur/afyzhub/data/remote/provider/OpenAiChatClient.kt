@@ -45,7 +45,7 @@ class OpenAiChatClient(
             TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
         }
         // 与流式同源的双保险: DTO 缺字段时从原始响应体提取
-        val finalUsage = mergeUsage(dtoUsage, extractUsageManually(text))
+        val finalUsage = mergeUsageNullable(dtoUsage, extractUsageManually(text))
         if (finalUsage != null) {
         }
         return CompletionResult(
@@ -170,7 +170,7 @@ class OpenAiChatClient(
      * (DeepSeek 顶层 / OpenAI 嵌套 / Anthropic 风格), DTO 漏掉哪个
      * 字段名时这里仍能取到。
      */
-    private fun mergeUsage(a: TokenUsage?, b: TokenUsage?): TokenUsage? = when {
+    private fun mergeUsageNullable(a: TokenUsage?, b: TokenUsage?): TokenUsage? = when {
         a == null -> b
         b == null -> a
         else -> TokenUsage(
