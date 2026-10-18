@@ -178,11 +178,11 @@ fun MessageBlock(
                 providerLabel = providerLabel,
                 modelName = message.model
             )
-        }
+    }
     }
     }
 }
-}
+
 /**
  * 消息正文。
  *
