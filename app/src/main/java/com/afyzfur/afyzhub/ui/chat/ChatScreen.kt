@@ -39,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Animatable
@@ -176,53 +175,8 @@ fun ChatScreen(
     val uiPreferences by hostViewModel.uiPreferences.collectAsState()
     val currentTitle = conversations.firstOrNull { it.id == currentConversationId }?.title
     val density = LocalDensity.current
-    val drawerAnimation = uiPreferences.chatAppearance.animation
-    val drawerDuration = when (drawerAnimation) {
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.NONE -> 0
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> 220
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> 300
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> 260
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> 0
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL -> 280
-    }
-    val drawerScale by animateFloatAsState(
-        targetValue = when {
-            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE && drawerState.isOpen -> 1f
-            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> 0.78f
-            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING && drawerState.isOpen -> 1f
-            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> 0.86f
-            else -> 1f
-        },
-        animationSpec = when (drawerAnimation) {
-            com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> spring(dampingRatio = 0.52f, stiffness = 280f)
-            com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> tween(260)
-            else -> tween(0)
-        },
-        label = "drawerScale"
-    )
-    val drawerAlpha by animateFloatAsState(
-        targetValue = if (drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE && drawerState.isOpen) 1f else 0.18f,
-        animationSpec = tween(if (drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE) 260 else 0),
-        label = "drawerAlpha"
-    )
-    val drawerOffsetY by animateFloatAsState(
-        targetValue = when {
-            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL && drawerState.isOpen -> 0f
-            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL -> 420f
-            else -> 0f
-        },
-        animationSpec = if (drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL) tween(300) else tween(0),
-        label = "drawerOffsetY"
-    )
-    val drawerRotation by animateFloatAsState(
-        targetValue = when {
-            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING && drawerState.isOpen -> 0f
-            drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> -2.5f
-            else -> 0f
-        },
-        animationSpec = if (drawerAnimation == com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING) spring(dampingRatio = 0.48f, stiffness = 250f) else tween(0),
-        label = "drawerRotation"
-    )
+    // 抽屉动画固定为统一的轻微弹性效果，不读取个性化里的消息动画选项。
+
     var drawerWidthPx by remember { mutableFloatStateOf(0f) }
     val drawerOffset = remember { Animatable(0f) }
     // 抽屉是否处于打开（或正在打开）状态。仅用于是否拦截外侧点击，
@@ -395,26 +349,7 @@ fun ChatScreen(
                     }
                     .graphicsLayer {
                         // 每个选项只叠加一种明显效果；横向位移仍由抽屉手势本身负责
-                        when (drawerAnimation) {
-                            com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> {
-                                alpha = if (drawerOpen) 1f else 0.18f
-                            }
-                            com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> {
-                                val target = if (drawerOpen) 1f else 0.84f
-                                scaleX = target
-                                scaleY = target
-                            }
-                            com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> {
-                                val target = if (drawerOpen) 1f else 0.9f
-                                scaleX = target
-                                scaleY = target
-                                rotationZ = if (drawerOpen) 0f else -2f
-                            }
-                            com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL -> {
-                                translationY = if (drawerOpen) 0f else 360f
-                            }
-                            else -> Unit
-                        }
+                        // 抽屉固定统一的轻微弹性，不受消息动画选项影响。
                     }
                     .offset { IntOffset(drawerX().roundToInt(), 0) }
                     .fillMaxWidth(DRAWER_WIDTH_FRACTION)
