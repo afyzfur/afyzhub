@@ -46,7 +46,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,7 +104,6 @@ fun MessageBlock(
         com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> slideInHorizontally(initialOffsetX = { if (fromUser) it else -it }, animationSpec = spring(dampingRatio = 0.68f, stiffness = 420f)) + scaleIn(initialScale = 0.9f, animationSpec = spring(dampingRatio = 0.68f, stiffness = 420f))
         com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL -> slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(280))
     }
-    key(message.id, appearance.animation) {
         AnimatedVisibility(visible = true, enter = enter, exit = androidx.compose.animation.ExitTransition.None) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -181,8 +179,6 @@ fun MessageBlock(
     }
     }
     }
-}
-
 /**
  * 消息正文。
  *
