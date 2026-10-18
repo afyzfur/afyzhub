@@ -1,6 +1,7 @@
 package com.afyzfur.afyzhub.ui.navigation
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,9 +69,15 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
-    // 普通返回优先保证点击和三键导航可用；系统返回手势也会走同一回调。
-    BackHandler(enabled = navController.previousBackStackEntry != null) {
-        navController.popBackStack()
+    // 系统返回按钮与侧滑返回都进入同一预测型回调；完成时出栈，
+    // 取消时不执行任何导航操作。
+    PredictiveBackHandler(enabled = navController.previousBackStackEntry != null) { progress ->
+        try {
+            progress.collect { }
+            navController.popBackStack()
+        } catch (_: CancellationException) {
+            // 用户取消返回手势，保持当前页面
+        }
     }
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
     val settingsRepo: com.afyzfur.afyzhub.data.settings.SettingsRepository =

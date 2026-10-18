@@ -458,7 +458,7 @@ class ChatRepositoryImpl(
         var revealed = initialContent.length
         val smoother = CoroutineScope(currentCoroutineContext()).launch(Dispatchers.IO) {
             while (true) {
-                delay(60)
+                delay(16)
                 val snapshot: String
                 val finished: Boolean
                 synchronized(revealLock) {

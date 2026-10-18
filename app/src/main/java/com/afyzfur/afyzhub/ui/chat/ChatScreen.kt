@@ -735,9 +735,14 @@ private fun ModelPickerSheet(
     val store by viewModel.store.collectAsState()
     val activeId = store.active?.id
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    LaunchedEffect(Unit) {
+        // 键盘仍在显示时也强制打开到完整展开状态，避免只露出顶部一小段
+        sheetState.expand()
+    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        sheetState = sheetState
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
