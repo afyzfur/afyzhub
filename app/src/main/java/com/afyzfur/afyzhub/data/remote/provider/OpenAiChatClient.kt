@@ -45,7 +45,7 @@ class OpenAiChatClient(
             TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
         }
         // 与流式同源的双保险: DTO 缺字段时从原始响应体提取
-        val finalUsage = dtoUsage ?: extractUsageManually(text)
+        val finalUsage = mergeUsage(dtoUsage, extractUsageManually(text))
         if (finalUsage != null) {
         }
         return CompletionResult(
@@ -170,6 +170,15 @@ class OpenAiChatClient(
      * (DeepSeek 顶层 / OpenAI 嵌套 / Anthropic 风格), DTO 漏掉哪个
      * 字段名时这里仍能取到。
      */
+    private fun mergeUsage(a: TokenUsage?, b: TokenUsage?): TokenUsage? = when {
+        a == null -> b
+        b == null -> a
+        else -> TokenUsage(
+            promptTokens = maxOf(a.promptTokens, b.promptTokens),
+            completionTokens = maxOf(a.completionTokens, b.completionTokens),
+            cachedTokens = listOfNotNull(a.cachedTokens, b.cachedTokens).maxOrNull()
+        )
+    }
     private fun extractUsageManually(payload: String): TokenUsage? = try {
         val obj = json.parseToJsonElement(payload).jsonObject
         val u = (obj["usage"] ?: obj["usage_metadata"] ?: obj["usageMetadata"])?.jsonObject ?: return null
