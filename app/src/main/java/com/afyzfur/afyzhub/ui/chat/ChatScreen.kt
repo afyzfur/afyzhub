@@ -230,10 +230,12 @@ fun ChatScreen(
     var drawerOpen by remember { mutableStateOf(false) }
     // 抽屉底色：与抽屉本体同色，左侧补齐时才不会出现色差
     val drawerFillColor = MaterialTheme.colorScheme.surfaceContainerLow
-    // 弹簧回正会略微过冲，若直接画原值，最左侧会露出一条背景，
-    // 因此统一把绘制位置限制在 [-抽屉宽度, 0]
-    fun drawerX(): Float =
-        if (drawerWidthPx > 0f) drawerOffset.value.coerceIn(-drawerWidthPx, 0f) else 0f
+    // 保留弹簧的回弹（会略微冲过 0），只把展开侧限制在抽屉宽度内，
+    // 否则继续往右拖会让抽屉飞出屏幕。回弹溢出的那几像素在下面
+    // 用抽屉同色补齐，因此不会露出聊天页背景
+    fun drawerX(): Float = drawerOffset.value.coerceAtLeast(-drawerWidthPx)
+    fun drawerProgress(): Float =
+        if (drawerWidthPx > 0f) ((drawerX() + drawerWidthPx) / drawerWidthPx).coerceIn(0f, 1f) else 0f
     Box(
         Modifier
             .fillMaxSize()
@@ -344,27 +346,34 @@ fun ChatScreen(
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
         )
-        if (drawerOpen) Box(
+        // 遮罩层常驻，不再随开合增删。之前用 if (drawerOpen) 包住，
+        // 开关时整层会被插入/移除，弹簧还没停稳就会闪一下
+        Box(
             Modifier
                 .fillMaxSize()
-                // 遮罩与左侧补齐都在绘制阶段读取位移：
-                // 动画每帧只触发重绘，不会重组整个聊天页，滑动更顺
+                // 在绘制阶段读取位移：每帧只重绘，不重组聊天页
                 .drawBehind {
-                    val x = drawerX()
-                    if (x >= 0f) return@drawBehind
-                    val progress = ((x + drawerWidthPx) / drawerWidthPx).coerceIn(0f, 1f)
-                    drawRect(Color.Black.copy(alpha = 0.32f * progress))
-                    // 抽屉左侧圆角处会透出聊天页，用抽屉同色补一小条
-                    if (x > -drawerWidthPx) {
+                    val progress = drawerProgress()
+                    val xr = drawerX().roundToInt().toFloat()
+                    if (progress > 0f) {
+                        drawRect(Color.Black.copy(alpha = 0.32f * progress))
+                    }
+                    // 抽屉左侧圆角会缺出一小块，加上弹簧回弹露出的缝隙，
+                    // 一起用抽屉同色填满，所以不会透出聊天页背景
+                    val patchWidth = 40.dp.toPx()
+                    val patchStart = if (progress > 0f) minOf(0f, xr) else 0f
+                    val patchEnd = if (progress > 0f) maxOf(patchStart, minOf(size.width, xr + patchWidth)) else 0f
+                    if (patchEnd > patchStart) {
                         drawRect(
                             color = drawerFillColor,
-                            topLeft = Offset(x, 0f),
-                            size = Size(minOf(56.dp.toPx(), drawerWidthPx), size.height)
+                            topLeft = Offset(patchStart, 0f),
+                            size = Size(patchEnd - patchStart, size.height)
                         )
                     }
                 }
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
+                        if (!drawerOpen) return@detectTapGestures
                         scope.launch {
                             drawerOffset.animateTo(-drawerWidthPx, tween(durationMillis = 150))
                             drawerOpen = false
@@ -372,7 +381,6 @@ fun ChatScreen(
                     })
                 }
         )
-
             ModalDrawerSheet(
                 drawerShape = AppShapeTokens.Drawer,
                 // 与补齐色块用同一个颜色，圆角处不会出现色差
