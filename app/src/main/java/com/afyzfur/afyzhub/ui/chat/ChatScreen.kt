@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -25,6 +24,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.font.FontWeight
 import com.afyzfur.afyzhub.ui.components.ModelIcon
 import com.afyzfur.afyzhub.ui.settings.ApiProfilesViewModel
@@ -35,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -222,53 +225,74 @@ fun ChatScreen(
     )
     var drawerWidthPx by remember { mutableFloatStateOf(0f) }
     val drawerOffset = remember { Animatable(0f) }
-    val drawerProgress = if (drawerWidthPx > 0f) ((drawerOffset.value + drawerWidthPx) / drawerWidthPx).coerceIn(0f, 1f) else 0f
-    Box(Modifier.fillMaxSize().pointerInput(drawerWidthPx) {
-        var autoCompleted = false
-        var dragDistance = 0f
-        var startedOpen = false
-        detectHorizontalDragGestures(
-            onDragStart = {
-                autoCompleted = false
-                dragDistance = 0f
-                startedOpen = drawerProgress > 0.5f
-            },
-            onHorizontalDrag = { _, amount ->
-                if (autoCompleted) return@detectHorizontalDragGestures
-                dragDistance += amount
-                // 展开从隐藏状态直接开始：达到触发距离前不跟手移动。
+    // 抽屉是否处于打开（或正在打开）状态。仅用于是否拦截外侧点击，
+    // 位移与遮罩都在绘制阶段才读取，避免动画每帧重组整个聊天页
+    var drawerOpen by remember { mutableStateOf(false) }
+    // 抽屉底色：与抽屉本体同色，左侧补齐时才不会出现色差
+    val drawerFillColor = MaterialTheme.colorScheme.surfaceContainerLow
+    // 弹簧回正会略微过冲，若直接画原值，最左侧会露出一条背景，
+    // 因此统一把绘制位置限制在 [-抽屉宽度, 0]
+    fun drawerX(): Float =
+        if (drawerWidthPx > 0f) drawerOffset.value.coerceIn(-drawerWidthPx, 0f) else 0f
+    Box(
+        Modifier
+            .fillMaxSize()
+            // 手势挂在最外层，并且在 Initial 通道读取原始位移。
+            // 抽屉展开后会出现遮罩层，若沿用普通拖动检测会被子层的
+            // 点击拦截吃掉后续事件，导致必须先松手才能左滑收起
+            .pointerInput(drawerWidthPx) {
                 val trigger = with(density) { 12.dp.toPx() }
-                val opening = !startedOpen && dragDistance >= trigger
-                val closing = startedOpen && dragDistance <= -trigger
-                if (startedOpen) {
-                    val next = (drawerOffset.value + amount).coerceIn(-drawerWidthPx, 0f)
-                    scope.launch { drawerOffset.stop(); drawerOffset.snapTo(next) }
-                }
-                if (opening || closing) {
-                    autoCompleted = true
-scope.launch { drawerOffset.animateTo(
-                            if (opening) 0f else -drawerWidthPx,
-                            animationSpec = spring(dampingRatio = 0.78f, stiffness = 520f)
-                        ) }
-                }
-            },
-            onDragEnd = {
-                if (!autoCompleted) {
-                    scope.launch {
-                        drawerOffset.animateTo(
-                            if (startedOpen) 0f else -drawerWidthPx,
-                            spring(dampingRatio = 0.9f, stiffness = 900f)
-                        )
+                val slop = viewConfiguration.touchSlop
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    // 用目标态判断当前方向：自动动画还没走完也不会判错
+                    var open = drawerWidthPx > 0f && drawerOffset.targetValue > -drawerWidthPx * 0.5f
+                    var dragDistance = 0f
+                    var totalX = 0f
+                    var totalY = 0f
+                    var lastX = down.position.x
+                    var lastY = down.position.y
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        val dx = change.position.x - lastX
+                        val dy = change.position.y - lastY
+                        lastX = change.position.x
+                        lastY = change.position.y
+                        totalX += dx
+                        totalY += dy
+                        // 认定为横向拖动后消费事件，避免聊天页同时在滚动
+                        if (abs(totalX) > slop && abs(totalX) > abs(totalY)) change.consume()
+                        dragDistance += dx
+                        // 只累计当前状态下“能触发切换”的方向，
+                        // 反向的多余位移清零，展开与收起所需距离完全一致
+                        dragDistance = if (open) dragDistance.coerceAtMost(0f) else dragDistance.coerceAtLeast(0f)
+                        if (!open && dragDistance >= trigger) {
+                            open = true
+                            dragDistance = 0f
+                            drawerOpen = true
+                            scope.launch {
+                                drawerOffset.animateTo(
+                                    0f,
+                                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f)
+                                )
+                            }
+                        } else if (open && dragDistance <= -trigger) {
+                            open = false
+                            dragDistance = 0f
+                            scope.launch {
+                                drawerOffset.animateTo(
+                                    -drawerWidthPx,
+                                    animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f)
+                                )
+                                drawerOpen = false
+                            }
+                        }
                     }
                 }
-            },
-            onDragCancel = {
-                if (!autoCompleted) {
-                    scope.launch { drawerOffset.animateTo(if (startedOpen) 0f else -drawerWidthPx, tween(120)) }
-                }
             }
-        )
-    }) {
+    ) {
 
         ChatContent(
             title = currentTitle,
@@ -291,7 +315,7 @@ scope.launch { drawerOffset.animateTo(
             lastTouchAt = lastTouchAt,
             inputText = inputText,
             onInputChange = { inputText = it },
-            onOpenDrawer = { scope.launch { drawerOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = 560f)) } },
+            onOpenDrawer = { drawerOpen = true; scope.launch { drawerOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = 560f)) } },
             onSend = {
                 val text = inputText
                 if (text.isNotBlank() && !isLoading) {
@@ -320,19 +344,40 @@ scope.launch { drawerOffset.animateTo(
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
         )
-        if (drawerProgress > 0f) Box(
+        if (drawerOpen) Box(
             Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.32f * drawerProgress))
+                // 遮罩与左侧补齐都在绘制阶段读取位移：
+                // 动画每帧只触发重绘，不会重组整个聊天页，滑动更顺
+                .drawBehind {
+                    val x = drawerX()
+                    if (x >= 0f) return@drawBehind
+                    val progress = ((x + drawerWidthPx) / drawerWidthPx).coerceIn(0f, 1f)
+                    drawRect(Color.Black.copy(alpha = 0.32f * progress))
+                    // 抽屉左侧圆角处会透出聊天页，用抽屉同色补一小条
+                    if (x > -drawerWidthPx) {
+                        drawRect(
+                            color = drawerFillColor,
+                            topLeft = Offset(x, 0f),
+                            size = Size(minOf(56.dp.toPx(), drawerWidthPx), size.height)
+                        )
+                    }
+                }
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
-                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(180)) }
+                        scope.launch {
+                            drawerOffset.animateTo(-drawerWidthPx, tween(durationMillis = 150))
+                            drawerOpen = false
+                        }
                     })
                 }
         )
 
             ModalDrawerSheet(
                 drawerShape = AppShapeTokens.Drawer,
+                // 与补齐色块用同一个颜色，圆角处不会出现色差
+                drawerContainerColor = drawerFillColor,
+                drawerTonalElevation = 0.dp,
                 // 按屏宽取比例而非用 Material 默认的固定 360dp：后者在
                 // 窄屏上几乎铺满，看不见背后的聊天页，也就失去了"临时
                 // 拉出一层"的意味。留出的那一截同时是关闭抽屉的点击区
@@ -340,7 +385,7 @@ scope.launch { drawerOffset.animateTo(
                     .onSizeChanged { size ->
                         if (drawerWidthPx == 0f) { drawerWidthPx = size.width.toFloat(); scope.launch { drawerOffset.snapTo(-drawerWidthPx) } }
                     }
-                    .offset { IntOffset(drawerOffset.value.roundToInt(), 0) }
+                    .offset { IntOffset(drawerX().roundToInt(), 0) }
                     .fillMaxWidth(DRAWER_WIDTH_FRACTION)
             ) {
                 ConversationDrawer(
@@ -356,21 +401,21 @@ scope.launch { drawerOffset.animateTo(
                     appearance = uiPreferences.chatAppearance,
                     onConversationClick = { id ->
                         hostViewModel.openConversation(id)
-                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) }
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
                     },
                     onNewConversation = {
                         hostViewModel.startNewConversation()
-                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) }
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
                     },
                     onDeleteConversation = { id ->
                         hostViewModel.deleteConversation(id)
                     },
                     onSettingsClick = {
-                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) }
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
                         onNavigateToSettings()
                     },
                     onModelClick = {
-                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)) }
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
                         onNavigateToProvider()
                     }
                 )
