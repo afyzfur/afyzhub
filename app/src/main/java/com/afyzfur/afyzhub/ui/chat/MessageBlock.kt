@@ -621,4 +621,3 @@ private fun SearchBlock(
             }
         }
     }
-}
