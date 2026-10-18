@@ -1,5 +1,6 @@
 package com.afyzfur.afyzhub.ui.navigation
 
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -67,6 +68,13 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
+    // 预测型返回：只在手势完成后真正出栈，取消手势不会误返回。
+    PredictiveBackHandler(enabled = navController.previousBackStackEntry != null) { progress ->
+        // 收集系统进度直到手势完成；取消时抛出 CancellationException，
+        // 不执行 popBackStack，因此不会出现返回后又弹回的错觉。
+        progress.collect { }
+        navController.popBackStack()
+    }
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
     val settingsRepo: com.afyzfur.afyzhub.data.settings.SettingsRepository =
         org.koin.java.KoinJavaComponent.get(

@@ -1,6 +1,8 @@
 package com.afyzfur.afyzhub
 
+import android.os.Build
 import android.os.Bundle
+import android.view.Window
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,6 +30,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // 允许系统在支持高刷新率的设备上为该窗口选择高刷新率模式。
+        // 这不是强制硬件刷新率，设备或省电策略不允许时仍会回落到系统上限。
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.attributes = window.attributes.apply {
+                preferredRefreshRate = 120f
+            }
+        }
 
         setContent {
             val prefs by settingsRepository.uiPreferences.collectAsState()
