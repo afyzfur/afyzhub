@@ -393,6 +393,29 @@ fun ChatScreen(
                     .onSizeChanged { size ->
                         if (drawerWidthPx == 0f) { drawerWidthPx = size.width.toFloat(); scope.launch { drawerOffset.snapTo(-drawerWidthPx) } }
                     }
+                    .graphicsLayer {
+                        // 每个选项只叠加一种明显效果；横向位移仍由抽屉手势本身负责
+                        when (drawerAnimation) {
+                            com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> {
+                                alpha = if (drawerOpen) 1f else 0.18f
+                            }
+                            com.afyzfur.afyzhub.data.settings.ChatAnimation.SCALE -> {
+                                val target = if (drawerOpen) 1f else 0.84f
+                                scaleX = target
+                                scaleY = target
+                            }
+                            com.afyzfur.afyzhub.data.settings.ChatAnimation.SPRING -> {
+                                val target = if (drawerOpen) 1f else 0.9f
+                                scaleX = target
+                                scaleY = target
+                                rotationZ = if (drawerOpen) 0f else -2f
+                            }
+                            com.afyzfur.afyzhub.data.settings.ChatAnimation.VERTICAL -> {
+                                translationY = if (drawerOpen) 0f else 360f
+                            }
+                            else -> Unit
+                        }
+                    }
                     .offset { IntOffset(drawerX().roundToInt(), 0) }
                     .fillMaxWidth(DRAWER_WIDTH_FRACTION)
             ) {
