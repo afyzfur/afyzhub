@@ -11,14 +11,8 @@ import com.afyzfur.afyzhub.ui.theme.ThemePalette
  */
 enum class ChatAnimation(val id: String, val label: String) {
     FADE("fade", "渐隐淡出"),
-    SLIDE("slide", "左右滑入滑出");
-    companion object {
-        // 旧版本保存的动画设置统一迁移到两个实际支持的效果，避免出现名称与效果不一致。
-        fun fromId(id: String?) = when (id) {
-            "slide", "scale", "spring", "vertical" -> SLIDE
-            else -> FADE
-        }
-    }
+    SLIDE("slide", "水平滑入");
+    companion object { fun fromId(id: String?) = if (id == "slide") SLIDE else FADE }
 }
 enum class BubbleStyle(val id: String, val label: String) {
     /** 有底色容器，宽度随内容 */

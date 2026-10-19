@@ -1,9 +1,6 @@
 package com.afyzfur.afyzhub.ui.navigation
 
-import android.app.Activity
-import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.CancellationException
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -71,16 +68,9 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
-    val activity = LocalContext.current as? Activity
-    // 根页面也必须启用回调：没有导航栈时交给 Activity 退出，
-    // 否则主聊天页的系统返回手势会完全没有响应。
-    PredictiveBackHandler(enabled = navController.previousBackStackEntry != null || activity != null) { progress ->
-        try {
-            progress.collect { }
-            if (navController.previousBackStackEntry != null) navController.popBackStack()
-            else activity?.finish()
-        } catch (_: CancellationException) {
-        }
+    // 稳定返回处理：导航页面返回上一页，根聊天页交给系统默认退出。
+    BackHandler(enabled = navController.previousBackStackEntry != null) {
+        navController.popBackStack()
     }
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
     val settingsRepo: com.afyzfur.afyzhub.data.settings.SettingsRepository =

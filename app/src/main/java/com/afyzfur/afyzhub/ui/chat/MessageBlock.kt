@@ -101,11 +101,7 @@ fun MessageBlock(
         com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> fadeIn(tween(220))
         com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { if (fromUser) it else -it }, animationSpec = tween(260))
     }
-    val exit = when (appearance.animation) {
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> fadeOut(tween(160))
-        com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { if (fromUser) -it else it }, animationSpec = tween(220))
-    }
-    AnimatedVisibility(visible = true, enter = enter, exit = exit) {
+    AnimatedVisibility(visible = true, enter = enter, exit = androidx.compose.animation.ExitTransition.None) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         // 用户消息整体靠右，助手靠左
