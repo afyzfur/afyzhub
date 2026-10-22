@@ -280,8 +280,13 @@ fun ChatScreen(
             isLoading = isLoading,
             sendPhase = sendPhase,
             error = error,
-            listState = listState,
-            pressedState = pressedState,
+listState = listState,
+             onShowKeyboard = { keyboardController?.show() },
+             onHideKeyboard = {
+                 focusManager.clearFocus(force = false)
+                 keyboardController?.hide()
+             },
+             pressedState = pressedState,
             lastTouchAt = lastTouchAt,
             inputText = inputText,
             onInputChange = { inputText = it },
@@ -498,6 +503,8 @@ private fun ChatContent(
     sendPhase: SendPhase,
     error: String?,
     listState: LazyListState,
+    onShowKeyboard: () -> Unit,
+    onHideKeyboard: () -> Unit,
     pressedState: androidx.compose.runtime.MutableState<Boolean>,
     lastTouchAt: androidx.compose.runtime.MutableState<Long>,
     inputText: String,
@@ -592,13 +599,10 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .pointerInput(imeVisible) {
+                    .pointerInput(Unit) {
                         detectVerticalDragGestures { _, dragAmount ->
-                            if (dragAmount < -28f) keyboardController?.show()
-                            else if (dragAmount > 28f) {
-                                focusManager.clearFocus(force = false)
-                                keyboardController?.hide()
-                            }
+                            if (dragAmount < -28f) onShowKeyboard()
+                            else if (dragAmount > 28f) onHideKeyboard()
                         }
                     }
                     // 监听手势放在滚动容器外层: LazyColumn 会消耗指针事件,
