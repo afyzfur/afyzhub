@@ -2,6 +2,7 @@ package com.afyzfur.afyzhub
 
 import android.os.Build
 import android.os.Bundle
+// Display modes are read from the Activity display
 import android.view.Window
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,11 +31,23 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // 允许系统在支持高刷新率的设备上为该窗口选择高刷新率模式。
-        // 这不是强制硬件刷新率，设备或省电策略不允许时仍会回落到系统上限。
+        // 按设备显示器支持的最高档位请求 60/90/120Hz。
+        // 这是窗口偏好，不绕过省电模式、系统刷新率限制或温控策略。
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val display = display
+            val supported = display?.supportedModes.orEmpty()
+            val maxSupported = supported.maxOfOrNull { it.refreshRate } ?: 60f
+            val targetRefreshRate = when {
+                maxSupported >= 120f -> 120f
+                maxSupported >= 90f -> 90f
+                else -> 60f
+            }
+            val targetMode = supported
+                .filter { it.refreshRate >= targetRefreshRate - 0.5f }
+                .maxByOrNull { it.refreshRate }
             window.attributes = window.attributes.apply {
-                preferredRefreshRate = 120f
+                preferredRefreshRate = targetRefreshRate
+                if (targetMode != null) preferredDisplayModeId = targetMode.modeId
             }
         }
 
