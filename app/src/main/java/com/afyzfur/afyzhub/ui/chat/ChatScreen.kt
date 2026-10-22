@@ -202,11 +202,12 @@ fun ChatScreen(
             // 手势挂在最外层，并且在 Initial 通道读取原始位移。
             // 抽屉展开后会出现遮罩层，若沿用普通拖动检测会被子层的
             // 点击拦截吃掉后续事件，导致必须先松手才能左滑收起
-            .pointerInput(drawerWidthPx) {
+            .pointerInput(drawerWidthPx, imeVisible) {
                 val trigger = with(density) { 24.dp.toPx() }
                 if (imeVisible) return@pointerInput
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
+                    if (imeVisible) return@awaitEachGesture
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     // 用目标态判断当前方向：自动动画还没走完也不会判错
                     var open = drawerWidthPx > 0f && drawerOffset.targetValue > -drawerWidthPx * 0.5f

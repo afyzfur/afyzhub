@@ -1,6 +1,9 @@
 package com.afyzfur.afyzhub.ui.navigation
 
+import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.activity.compose.ExperimentalActivityComposeApi
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
@@ -75,12 +78,21 @@ sealed class Screen(val route: String) {
     object Changelog : Screen("settings/changelog")
 }
 
+@OptIn(ExperimentalActivityComposeApi::class)
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
-    // 稳定返回处理：导航页面返回上一页，根聊天页交给系统默认退出。
-    BackHandler(enabled = navController.previousBackStackEntry != null) {
-        navController.popBackStack()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // 点击返回和三键导航使用稳定回调；根页面交给 Activity 退出。
+    BackHandler {
+        if (navController.previousBackStackEntry != null) navController.popBackStack()
+        else (context as? Activity)?.finish()
+    }
+    // 预测返回只在手势完成时执行实际导航，取消时保持当前页面。
+    PredictiveBackHandler { progress ->
+        progress.collect { }
+        if (navController.previousBackStackEntry != null) navController.popBackStack()
+        else (context as? Activity)?.finish()
     }
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
     val settingsRepo: com.afyzfur.afyzhub.data.settings.SettingsRepository =
