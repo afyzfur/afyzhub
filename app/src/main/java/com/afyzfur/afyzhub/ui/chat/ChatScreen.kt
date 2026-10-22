@@ -34,6 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -115,6 +117,7 @@ fun ChatScreen(
     /** 模型选择半屏选择器开关 */
     var showModelPicker by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val imeVisible = WindowInsets.isImeVisible
 
     val undoable by viewModel.undoable.collectAsState()
 
@@ -199,7 +202,8 @@ fun ChatScreen(
             // 抽屉展开后会出现遮罩层，若沿用普通拖动检测会被子层的
             // 点击拦截吃掉后续事件，导致必须先松手才能左滑收起
             .pointerInput(drawerWidthPx) {
-                val trigger = with(density) { 12.dp.toPx() }
+                val trigger = with(density) { 24.dp.toPx() }
+                if (imeVisible) return@pointerInput
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)

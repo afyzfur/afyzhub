@@ -47,6 +47,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,8 +102,16 @@ fun MessageBlock(
         com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> fadeIn(tween(220))
         com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { if (fromUser) it else -it }, animationSpec = tween(260))
     }
-    AnimatedVisibility(visible = true, enter = enter, exit = androidx.compose.animation.ExitTransition.None) {
-    Row(
+    key(message.id, appearance.animation) {
+        val exit = when (appearance.animation) {
+            com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> fadeOut(tween(180))
+            com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> slideOutHorizontally(
+                targetOffsetX = { if (fromUser) it else -it },
+                animationSpec = tween(180)
+            )
+        }
+        AnimatedVisibility(visible = true, enter = enter, exit = exit) {
+        Row(
         modifier = Modifier.fillMaxWidth(),
         // 用户消息整体靠右，助手靠左
         horizontalArrangement = if (fromUser) Arrangement.End else Arrangement.Start
@@ -173,6 +182,7 @@ fun MessageBlock(
                 providerLabel = providerLabel,
                 modelName = message.model
             )
+        }
     }
     }
     }
