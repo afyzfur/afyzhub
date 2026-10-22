@@ -3,7 +3,8 @@ package com.afyzfur.afyzhub.ui.navigation
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.activity.compose.ExperimentalActivityComposeApi
+// no opt-in required for the installed activity-compose version
+
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
@@ -78,7 +79,6 @@ sealed class Screen(val route: String) {
     object Changelog : Screen("settings/changelog")
 }
 
-@OptIn(ExperimentalActivityComposeApi::class)
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
