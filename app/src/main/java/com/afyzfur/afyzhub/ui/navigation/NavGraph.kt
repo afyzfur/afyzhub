@@ -1,6 +1,13 @@
 package com.afyzfur.afyzhub.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -21,6 +28,9 @@ import com.afyzfur.afyzhub.ui.settings.QuickPromptsSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.RequestLogScreen
 import com.afyzfur.afyzhub.ui.settings.SettingsHomeScreen
 import com.afyzfur.afyzhub.ui.settings.BrowserSettingsScreen
+import com.afyzfur.afyzhub.data.settings.ChatAnimation
+import com.afyzfur.afyzhub.data.settings.SettingsRepository
+import org.koin.java.KoinJavaComponent
 
 /**
  * 导航目的地。
@@ -80,10 +90,32 @@ fun NavGraph() {
     val browserSettings by settingsRepo.settings.collectAsState()
     // StateFlow 总有值, 但为类型安全仍判空兜底
     val browserEnabled: Boolean = browserSettings?.inAppBrowserEnabled ?: true
+    val uiPreferences by settingsRepo.uiPreferences.collectAsState()
+    val pageAnimation = uiPreferences.chatAppearance.animation
+    val pageEnter: EnterTransition = when (pageAnimation) {
+        ChatAnimation.FADE -> fadeIn(tween(180))
+        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(180))
+    }
+    val pageExit: ExitTransition = when (pageAnimation) {
+        ChatAnimation.FADE -> fadeOut(tween(180))
+        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(180))
+    }
+    val pagePopEnter: EnterTransition = when (pageAnimation) {
+        ChatAnimation.FADE -> fadeIn(tween(180))
+        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(180))
+    }
+    val pagePopExit: ExitTransition = when (pageAnimation) {
+        ChatAnimation.FADE -> fadeOut(tween(180))
+        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(180))
+    }
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Chat.route
+        startDestination = Screen.Chat.route,
+        enterTransition = { pageEnter },
+        exitTransition = { pageExit },
+        popEnterTransition = { pagePopEnter },
+        popExitTransition = { pagePopExit }
     ) {
         composable(Screen.Chat.route) {
             val ctx = androidx.compose.ui.platform.LocalContext.current

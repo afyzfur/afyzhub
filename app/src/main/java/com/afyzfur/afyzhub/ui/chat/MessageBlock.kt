@@ -102,16 +102,7 @@ fun MessageBlock(
         com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> fadeIn(tween(220))
         com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { if (fromUser) it else -it }, animationSpec = tween(260))
     }
-    key(message.id, appearance.animation) {
-        val exit = when (appearance.animation) {
-            com.afyzfur.afyzhub.data.settings.ChatAnimation.FADE -> fadeOut(tween(180))
-            com.afyzfur.afyzhub.data.settings.ChatAnimation.SLIDE -> slideOutHorizontally(
-                targetOffsetX = { if (fromUser) it else -it },
-                animationSpec = tween(180)
-            )
-        }
-        AnimatedVisibility(visible = true, enter = enter, exit = exit) {
-        Row(
+    Row(
         modifier = Modifier.fillMaxWidth(),
         // 用户消息整体靠右，助手靠左
         horizontalArrangement = if (fromUser) Arrangement.End else Arrangement.Start
@@ -183,8 +174,6 @@ fun MessageBlock(
                 modelName = message.model
             )
         }
-    }
-    }
     }
 }
 /**
