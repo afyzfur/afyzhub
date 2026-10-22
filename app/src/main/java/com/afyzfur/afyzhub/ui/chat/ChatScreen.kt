@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.isImeVisible
@@ -118,6 +120,7 @@ fun ChatScreen(
     /** 模型选择半屏选择器开关 */
     var showModelPicker by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     val imeVisible = WindowInsets.isImeVisible
 
     val undoable by viewModel.undoable.collectAsState()
@@ -342,9 +345,10 @@ fun ChatScreen(
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
                         if (!drawerOpen) return@detectTapGestures
+                        drawerOpen = false
                         scope.launch {
                             drawerOffset.animateTo(-drawerWidthPx, tween(durationMillis = 150))
-                            drawerOpen = false
+                            drawerOffset.snapTo(-drawerWidthPx)
                         }
                     })
                 }
@@ -588,6 +592,15 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .pointerInput(imeVisible) {
+                        detectVerticalDragGestures { _, dragAmount ->
+                            if (dragAmount < -28f) keyboardController?.show()
+                            else if (dragAmount > 28f) {
+                                focusManager.clearFocus(force = false)
+                                keyboardController?.hide()
+                            }
+                        }
+                    }
                     // 监听手势放在滚动容器外层: LazyColumn 会消耗指针事件,
                     // 挂在它自身的 modifier 上不一定收得到抬起; 放在外层
                     // 并用 Initial 通道, 确保按下/抬起都能准确捕获。

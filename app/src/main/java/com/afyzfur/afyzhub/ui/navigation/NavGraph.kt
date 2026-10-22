@@ -83,10 +83,9 @@ sealed class Screen(val route: String) {
 fun NavGraph() {
     val navController = rememberNavController()
     val context = androidx.compose.ui.platform.LocalContext.current
-    // 点击返回和三键导航使用稳定回调；根页面交给 Activity 退出。
-    BackHandler {
-        if (navController.previousBackStackEntry != null) navController.popBackStack()
-        else (context as? Activity)?.finish()
+    // 普通点击/三键返回只处理导航子页面，避免在根页面抢占预测返回。
+    BackHandler(enabled = navController.previousBackStackEntry != null) {
+        navController.popBackStack()
     }
     // 预测返回只在手势完成时执行实际导航，取消时保持当前页面。
     PredictiveBackHandler { progress ->
