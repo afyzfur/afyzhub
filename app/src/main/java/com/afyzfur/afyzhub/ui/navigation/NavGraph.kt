@@ -15,9 +15,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+// navigation state is observed through currentBackStackEntryAsState
+// no remembered transition state; current settings apply immediately
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.afyzfur.afyzhub.ui.chat.ChatScreen
 import com.afyzfur.afyzhub.ui.settings.AboutSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ChangelogScreen
@@ -83,8 +86,10 @@ sealed class Screen(val route: String) {
 fun NavGraph() {
     val navController = rememberNavController()
     val context = androidx.compose.ui.platform.LocalContext.current
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val canNavigateBack = currentBackStackEntry != null && navController.previousBackStackEntry != null
     // 普通点击/三键返回只处理导航子页面，避免在根页面抢占预测返回。
-    BackHandler(enabled = navController.previousBackStackEntry != null) {
+    BackHandler(enabled = canNavigateBack) {
         navController.popBackStack()
     }
     // 预测返回只在手势完成时执行实际导航，取消时保持当前页面。

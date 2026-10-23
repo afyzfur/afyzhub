@@ -247,6 +247,7 @@ fun ChatScreen(
                             }
                         } else if (open && dragDistance <= -trigger) {
                             open = false
+                            drawerOpen = false
                             dragDistance = 0f
                             scope.launch {
                                 drawerOffset.animateTo(
