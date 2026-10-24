@@ -631,6 +631,7 @@ private fun ChatContent(
                              var totalY = 0f
                              var totalX = 0f
                              var axis = 0
+                             var lastKeyboardAction = 0 // -1=显示, 1=隐藏
                              while (true) {
                                  val event = awaitPointerEvent(PointerEventPass.Initial)
                                  val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -640,18 +641,17 @@ private fun ChatContent(
 if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
                                      axis = if (abs(totalY) > abs(totalX)) 1 else -1
                                  }
-                                 if (axis == 1 && totalY <= -72f) {
-                                     onShowKeyboard()
-                                     // 保持按下状态，清零本次累计位移，允许
-                                     // 不松手继续下滑触发隐藏键盘。
-                                     totalY = 0f
-                                     totalX = 0f
-                                 } else if (axis == 1 && totalY >= 72f) {
-                                     onHideKeyboard()
-                                     // 同一根手指继续上滑时可再次触发显示。
-                                     totalY = 0f
-                                     totalX = 0f
-                                 }
+if (axis == 1 && totalY <= -72f && lastKeyboardAction != -1) {
+                                      onShowKeyboard()
+                                      lastKeyboardAction = -1
+                                      totalY = 0f
+                                      totalX = 0f
+                                  } else if (axis == 1 && totalY >= 72f && lastKeyboardAction != 1) {
+                                      onHideKeyboard()
+                                      lastKeyboardAction = 1
+                                      totalY = 0f
+                                      totalX = 0f
+                                  }
                              }
                          }
                      }
