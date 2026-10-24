@@ -288,7 +288,10 @@ fun ChatScreen(
 listState = listState,
              drawerOpen = drawerOpen,
              focusRequestToken = focusRequestToken,
-             onShowKeyboard = { focusRequestToken++ },
+             onShowKeyboard = {
+                  // 已经显示时不重复 requestFocus，避免键盘因连续滑动闪烁。
+                  if (!imeVisible) focusRequestToken++ else keyboardController?.show()
+              },
              onHideKeyboard = {
                  focusManager.clearFocus(force = false)
                  keyboardController?.hide()
