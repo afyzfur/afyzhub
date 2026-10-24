@@ -401,12 +401,24 @@ listState = listState,
                         hostViewModel.deleteConversation(id)
                     },
                     onSettingsClick = {
-                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
-                        onNavigateToSettings()
+                        // 先完整收起抽屉，再切换导航页面，避免抽屉弹簧动画
+                        // 与页面转场同时运行造成闪烁。
+                        scope.launch {
+                            drawerOffset.animateTo(-drawerWidthPx, tween(180))
+                            drawerOffset.snapTo(-drawerWidthPx)
+                            drawerOpen = false
+                            onNavigateToSettings()
+                        }
                     },
                     onModelClick = {
-                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
-                        onNavigateToProvider()
+                        // 配置页与设置页使用同样的顺序：先结束抽屉层，
+                        // 再交给 NavHost 执行渐隐或水平滑入转场。
+                        scope.launch {
+                            drawerOffset.animateTo(-drawerWidthPx, tween(180))
+                            drawerOffset.snapTo(-drawerWidthPx)
+                            drawerOpen = false
+                            onNavigateToProvider()
+                        }
                     }
                 )
             }
