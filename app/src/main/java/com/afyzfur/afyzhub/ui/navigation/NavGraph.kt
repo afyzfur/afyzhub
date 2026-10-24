@@ -5,12 +5,11 @@ import androidx.activity.compose.PredictiveBackHandler
 
 // no opt-in required for the installed activity-compose version
 
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -110,20 +109,20 @@ fun NavGraph() {
     val uiPreferences by settingsRepo.uiPreferences.collectAsState()
     val pageAnimation = uiPreferences.chatAppearance.animation
     val pageEnter: EnterTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeIn(tween(260))
-        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(220))
+        ChatAnimation.FADE -> fadeIn(tween(320))
+        ChatAnimation.SLIDE -> slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(300))
     }
     val pageExit: ExitTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeOut(tween(260))
-        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(220))
+        ChatAnimation.FADE -> fadeOut(tween(320))
+        ChatAnimation.SLIDE -> slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(300))
     }
     val pagePopEnter: EnterTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeIn(tween(260))
-        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(220))
+        ChatAnimation.FADE -> fadeIn(tween(320))
+        ChatAnimation.SLIDE -> slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
     }
     val pagePopExit: ExitTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeOut(tween(260))
-        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(220))
+        ChatAnimation.FADE -> fadeOut(tween(320))
+        ChatAnimation.SLIDE -> slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
     }
 
     NavHost(
