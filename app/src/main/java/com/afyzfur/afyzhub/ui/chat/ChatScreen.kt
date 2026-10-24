@@ -210,6 +210,11 @@ fun ChatScreen(
                 val trigger = with(density) { 32.dp.toPx() }
                 val edgeWidth = with(density) { 72.dp.toPx() }
                 val slop = viewConfiguration.touchSlop
+                val showKeyboard = { if (!imeVisible) focusRequestToken++ }
+                val hideKeyboard = {
+                    focusManager.clearFocus(force = false)
+                    keyboardController?.hide()
+                }
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     val edgeEligible = drawerOpen || down.position.x <= edgeWidth
@@ -266,11 +271,11 @@ fun ChatScreen(
                                 if (!drawerState) {
                                     keyboardDistance += dy
                                     if (keyboardDistance <= -72f && lastKeyboardAction != -1) {
-                                        onShowKeyboard()
+                                        showKeyboard()
                                         lastKeyboardAction = -1
                                         keyboardDistance = 0f
                                     } else if (keyboardDistance >= 72f && lastKeyboardAction != 1) {
-                                        onHideKeyboard()
+                                        hideKeyboard()
                                         lastKeyboardAction = 1
                                         keyboardDistance = 0f
                                     }
