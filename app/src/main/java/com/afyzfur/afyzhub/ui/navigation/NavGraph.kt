@@ -15,15 +15,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onSizeChanged
 // no remembered transition state; current settings apply immediately
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -93,8 +84,6 @@ sealed class Screen(val route: String) {
 fun NavGraph() {
     val navController = rememberNavController()
     val context = androidx.compose.ui.platform.LocalContext.current
-    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
-    var containerWidthPx by remember { mutableFloatStateOf(0f) }
     val canNavigateBack = navController.previousBackStackEntry != null
     // 点击返回和三键返回只处理已有导航栈的页面。
     BackHandler(enabled = canNavigateBack) {
@@ -103,17 +92,11 @@ fun NavGraph() {
     // 预测返回必须保持注册在根 NavGraph：根聊天页完成手势退出 Activity，
     // 子页面完成手势返回上一页；collect 期间不提前改变导航栈，取消不会误返回。
     PredictiveBackHandler { progress ->
-        try {
-            progress.collect { event ->
-                predictiveBackProgress = event.progress.coerceIn(0f, 1f)
-            }
-            if (navController.previousBackStackEntry != null) {
-                navController.popBackStack()
-            } else {
-                (context as? Activity)?.finish()
-            }
-        } finally {
-            predictiveBackProgress = 0f
+        progress.collect { }
+        if (navController.previousBackStackEntry != null) {
+            navController.popBackStack()
+        } else {
+            (context as? Activity)?.finish()
         }
     }
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
