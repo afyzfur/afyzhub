@@ -1,5 +1,7 @@
 package com.afyzfur.afyzhub.ui.navigation
+import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 
 // no opt-in required for the installed activity-compose version
 
@@ -81,11 +83,21 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val canNavigateBack = navController.previousBackStackEntry != null
-    // 子页面交给导航栈返回；根页面不注册应用级返回处理器，
-    // 让 AndroidX Activity 将预测返回手势交给系统完成退出动画。
+    // 点击返回和三键返回只处理已有导航栈的页面。
     BackHandler(enabled = canNavigateBack) {
         navController.popBackStack()
+    }
+    // 预测返回必须保持注册在根 NavGraph：根聊天页完成手势退出 Activity，
+    // 子页面完成手势返回上一页；collect 期间不提前改变导航栈，取消不会误返回。
+    PredictiveBackHandler { progress ->
+        progress.collect { }
+        if (navController.previousBackStackEntry != null) {
+            navController.popBackStack()
+        } else {
+            (context as? Activity)?.finish()
+        }
     }
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
     val settingsRepo: com.afyzfur.afyzhub.data.settings.SettingsRepository =
@@ -98,20 +110,20 @@ fun NavGraph() {
     val uiPreferences by settingsRepo.uiPreferences.collectAsState()
     val pageAnimation = uiPreferences.chatAppearance.animation
     val pageEnter: EnterTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeIn(tween(180))
-        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(180))
+        ChatAnimation.FADE -> fadeIn(tween(260))
+        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(220))
     }
     val pageExit: ExitTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeOut(tween(180))
-        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(180))
+        ChatAnimation.FADE -> fadeOut(tween(260))
+        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(220))
     }
     val pagePopEnter: EnterTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeIn(tween(180))
-        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(180))
+        ChatAnimation.FADE -> fadeIn(tween(260))
+        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(220))
     }
     val pagePopExit: ExitTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeOut(tween(180))
-        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(180))
+        ChatAnimation.FADE -> fadeOut(tween(260))
+        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(220))
     }
 
     NavHost(
