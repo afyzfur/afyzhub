@@ -41,7 +41,11 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
@@ -109,9 +113,15 @@ fun ChatInputBar(
     val density = LocalDensity.current
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    var hasFocus by remember { mutableStateOf(false) }
+    var handledFocusToken by remember { mutableStateOf(0) }
     LaunchedEffect(focusRequestToken) {
-        if (focusRequestToken > 0) {
-            focusRequester.requestFocus()
+        if (focusRequestToken > 0 && focusRequestToken != handledFocusToken) {
+            handledFocusToken = focusRequestToken
+            if (!hasFocus) {
+                focusRequester.requestFocus()
+            }
+            // show() 只在新的请求 token 中调用一次，不随 IME 重组重复调用。
             keyboardController?.show()
         }
     }
@@ -201,6 +211,7 @@ fun ChatInputBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
+                    .onFocusChanged { hasFocus = it.isFocused }
                     .heightIn(min = 44.dp)
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 decorationBox = { innerTextField ->
