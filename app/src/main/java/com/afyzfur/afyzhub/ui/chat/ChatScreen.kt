@@ -631,16 +631,14 @@ private fun ChatContent(
                                  totalY += change.positionChange().y
                                  if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
                                      axis = if (abs(totalY) > abs(totalX)) 1 else -1
-                                     if (axis == -1) return@awaitEachGesture
                                  }
-                                 if (axis == 1) change.consume()
                                  if (axis == 1 && totalY <= -72f) {
                                      onShowKeyboard()
-                                     return@awaitEachGesture
+                                     break
                                  }
                                  if (axis == 1 && totalY >= 72f) {
                                      onHideKeyboard()
-                                     return@awaitEachGesture
+                                     break
                                  }
                              }
                          }
