@@ -121,6 +121,7 @@ fun ChatScreen(
     var showModelPicker by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+    var focusRequestToken by remember { mutableIntStateOf(0) }
     val imeVisible = WindowInsets.isImeVisible
 
     val undoable by viewModel.undoable.collectAsState()
@@ -286,7 +287,7 @@ fun ChatScreen(
             error = error,
 listState = listState,
              drawerOpen = drawerOpen,
-             onShowKeyboard = { keyboardController?.show() },
+             onShowKeyboard = { focusRequestToken++ },
              onHideKeyboard = {
                  focusManager.clearFocus(force = false)
                  keyboardController?.hide()
@@ -772,8 +773,9 @@ if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
                         transparent = appearance.transparentInputBar,
                         seeThrough = appearance.inputBarSeeThrough,
                         floating = appearance.inputBarFloating && appearance.inputBarDeepSeeThrough,
-                        deepSeeThrough = appearance.inputBarDeepSeeThrough,
-                        onBodyHeightChange = { inputBarHeight = it },
+deepSeeThrough = appearance.inputBarDeepSeeThrough,
+                         focusRequestToken = focusRequestToken,
+                         onBodyHeightChange = { inputBarHeight = it },
                         
                         value = inputText,
                         onValueChange = onInputChange,

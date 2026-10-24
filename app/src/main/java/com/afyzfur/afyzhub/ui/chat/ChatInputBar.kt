@@ -37,6 +37,11 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
@@ -98,9 +103,18 @@ fun ChatInputBar(
      * 减不干净。列表要让位的恰恰只有本体这一段
      */
     onBodyHeightChange: (Dp) -> Unit = {},
+    focusRequestToken: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    LaunchedEffect(focusRequestToken) {
+        if (focusRequestToken > 0) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
     val canSend = value.isNotBlank() && !isLoading
 
     // 强度是"透多少"，alpha 取其反。不设下界：用户把强度拉满时
@@ -186,6 +200,7 @@ fun ChatInputBar(
                 maxLines = 6,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(focusRequester)
                     .heightIn(min = 44.dp)
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 decorationBox = { innerTextField ->
