@@ -287,6 +287,7 @@ fun ChatScreen(
             error = error,
 listState = listState,
              drawerOpen = drawerOpen,
+             focusRequestToken = focusRequestToken,
              onShowKeyboard = { focusRequestToken++ },
              onHideKeyboard = {
                  focusManager.clearFocus(force = false)
@@ -522,6 +523,7 @@ private fun ChatContent(
     error: String?,
     listState: LazyListState,
     drawerOpen: Boolean,
+    focusRequestToken: Int,
     onShowKeyboard: () -> Unit,
     onHideKeyboard: () -> Unit,
     pressedState: androidx.compose.runtime.MutableState<Boolean>,
