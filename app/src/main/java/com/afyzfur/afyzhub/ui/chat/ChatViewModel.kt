@@ -229,17 +229,10 @@ class ChatViewModel(
         _isLoading.value = false
         _sendPhase.value = SendPhase.IDLE
 
-        val conversationId = currentConversationId
-        if (conversationId <= 0) return
-
-        // 主动结算，不依赖取消异常在 flow / NonCancellable / Room 之间的传播。
-        // 那条链路任一环节没走到，消息就永久停在「发送中」——实测确实如此。
-        //
-        // 用 viewModelScope 新起协程而非复用 sendJob：后者已被取消，
-        // 其子协程里的挂起调用会立即再次抛出取消异常，写库根本执行不到
-        viewModelScope.launch {
-            repository.settleInterrupted(conversationId)
-        }
+        // 不再与发送协程并发调用 settleInterrupted：仓库的取消收尾会在
+        // NonCancellable 中先把最后已写入内容和消息状态落库。此处并发结算
+        // 会与流式收尾竞态，可能把最后一段内容误判为残留。
+        // 进程异常中断的残留消息仍会在下次 loadMessages 时统一结算。
     }
 
     /** 重发一条失败的用户消息。 */
