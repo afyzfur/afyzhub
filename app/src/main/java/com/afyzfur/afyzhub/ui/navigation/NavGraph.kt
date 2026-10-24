@@ -126,16 +126,7 @@ fun NavGraph() {
         ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
     }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .clipToBounds()
-            .onSizeChanged { containerWidthPx = it.width.toFloat() }
-    ) {
     NavHost(
-        modifier = Modifier.graphicsLayer {
-            translationX = containerWidthPx * predictiveBackProgress
-        },
         navController = navController,
         startDestination = Screen.Chat.route,
         enterTransition = { pageEnter },
@@ -270,6 +261,5 @@ fun NavGraph() {
         composable(Screen.Changelog.route) {
             ChangelogScreen(onNavigateBack = { navController.popBackStack() })
         }
-    }
     }
 }
