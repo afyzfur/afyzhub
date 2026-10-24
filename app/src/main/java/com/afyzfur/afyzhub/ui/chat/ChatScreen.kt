@@ -207,7 +207,7 @@ fun ChatScreen(
             // 点击拦截吃掉后续事件，导致必须先松手才能左滑收起
             .pointerInput(drawerWidthPx, imeVisible, drawerOpen) {
                 val trigger = with(density) { 32.dp.toPx() }
-                val edgeWidth = with(density) { 40.dp.toPx() }
+                val edgeWidth = with(density) { 72.dp.toPx() }
                 if (imeVisible && !drawerOpen) return@pointerInput
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
@@ -258,6 +258,8 @@ fun ChatScreen(
                                 drawerOpen = false
                             }
                         }
+                        // 不结束当前 pointer sequence。达到一次阈值后清零，
+                        // 同一次按住不松手可以继续反向滑动再次触发。
                     }
                 }
             }
@@ -629,16 +631,20 @@ private fun ChatContent(
                                  if (!change.pressed) break
                                  totalX += change.positionChange().x
                                  totalY += change.positionChange().y
-                                 if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
+if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
                                      axis = if (abs(totalY) > abs(totalX)) 1 else -1
                                  }
                                  if (axis == 1 && totalY <= -72f) {
                                      onShowKeyboard()
-                                     break
-                                 }
-                                 if (axis == 1 && totalY >= 72f) {
+                                     // 保持按下状态，清零本次累计位移，允许
+                                     // 不松手继续下滑触发隐藏键盘。
+                                     totalY = 0f
+                                     totalX = 0f
+                                 } else if (axis == 1 && totalY >= 72f) {
                                      onHideKeyboard()
-                                     break
+                                     // 同一根手指继续上滑时可再次触发显示。
+                                     totalY = 0f
+                                     totalX = 0f
                                  }
                              }
                          }
