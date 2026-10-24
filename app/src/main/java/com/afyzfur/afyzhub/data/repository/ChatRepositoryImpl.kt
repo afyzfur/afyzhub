@@ -187,7 +187,6 @@ class ChatRepositoryImpl(
             }
             if (searchQuery != null &&
                 settings.webSearchEnabled &&
-                settings.inAppBrowserEnabled &&
                 settings.provider != AiProvider.GEMINI
             ) {
                 onPhase(SendPhase.SEARCHING)
@@ -566,7 +565,6 @@ class ChatRepositoryImpl(
         // Gemini 的服务端 grounding 质量更高，保持原生路径
         val searchInstruction = if (
             settings.webSearchEnabled &&
-            settings.inAppBrowserEnabled &&
             settings.provider != AiProvider.GEMINI
         ) {
             WebSearchService.instruction()

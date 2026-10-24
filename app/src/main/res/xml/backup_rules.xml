@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- DataStore may contain API keys, provider credentials and Tavily keys. -->
+    <exclude domain="file" path="datastore/" />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="database" path="." />
+</full-backup-content>

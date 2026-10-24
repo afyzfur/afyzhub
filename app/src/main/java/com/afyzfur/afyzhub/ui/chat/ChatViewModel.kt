@@ -138,11 +138,12 @@ class ChatViewModel(
             // 必须在创建会话之前取，否则新会话的订阅可能已回填列表
             val isFirstMessage = _messages.value.isEmpty()
 
-            val conversationId = resolveConversationId()
-
-            // 收尾放在 finally：暂停时取消异常会直接穿出这个协程，
-            // 写在末尾的复位执行不到，输入框会永久停在禁用状态
+            // 会话创建也必须纳入 try/finally；创建失败时同样要恢复输入状态。
             try {
+                val conversationId = resolveConversationId()
+
+                // 收尾放在 finally: 暂停时取消异常会直接穿出这个协程，
+                // 写在末尾的复位执行不到，输入框会永久停在禁用状态
                 // 先用本地规则命名，避免抽屉里短暂显示"新对话"。
                 // 模型生成的标题稍后覆盖它
                 if (isFirstMessage) {
