@@ -1,8 +1,6 @@
 package com.afyzfur.afyzhub.ui.navigation
-
-import android.app.Activity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.PredictiveBackHandler
+
 // no opt-in required for the installed activity-compose version
 
 import androidx.compose.animation.EnterTransition
@@ -15,12 +13,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-// navigation state is observed through currentBackStackEntryAsState
 // no remembered transition state; current settings apply immediately
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.afyzfur.afyzhub.ui.chat.ChatScreen
 import com.afyzfur.afyzhub.ui.settings.AboutSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ChangelogScreen
@@ -85,18 +81,11 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val currentBackStackEntry by navController.currentBackStackEntryAsState()
-    val canNavigateBack = currentBackStackEntry != null && navController.previousBackStackEntry != null
-    // 普通点击/三键返回只处理导航子页面，避免在根页面抢占预测返回。
+    val canNavigateBack = navController.previousBackStackEntry != null
+    // 子页面交给导航栈返回；根页面不注册应用级返回处理器，
+    // 让 AndroidX Activity 将预测返回手势交给系统完成退出动画。
     BackHandler(enabled = canNavigateBack) {
         navController.popBackStack()
-    }
-    // 预测返回只在手势完成时执行实际导航，取消时保持当前页面。
-    PredictiveBackHandler { progress ->
-        progress.collect { }
-        if (navController.previousBackStackEntry != null) navController.popBackStack()
-        else (context as? Activity)?.finish()
     }
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
     val settingsRepo: com.afyzfur.afyzhub.data.settings.SettingsRepository =

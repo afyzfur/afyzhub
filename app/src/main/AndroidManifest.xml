@@ -21,7 +21,8 @@
             android:exported="true"
             android:theme="@style/Theme.AfyzHub"
             android:configChanges="uiMode"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:enableOnBackInvokedCallback="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
