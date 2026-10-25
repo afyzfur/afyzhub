@@ -1,5 +1,4 @@
 package com.afyzfur.afyzhub.ui.navigation
-import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 
@@ -83,21 +82,17 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
-    val context = androidx.compose.ui.platform.LocalContext.current
     val canNavigateBack = navController.previousBackStackEntry != null
     // 点击返回和三键返回只处理已有导航栈的页面。
     BackHandler(enabled = canNavigateBack) {
         navController.popBackStack()
     }
-    // 预测返回必须保持注册在根 NavGraph：根聊天页完成手势退出 Activity，
-    // 子页面完成手势返回上一页；collect 期间不提前改变导航栈，取消不会误返回。
-    PredictiveBackHandler { progress ->
+    // 只有在导航栈内还有上一页时才注册应用级预测返回，处理子页面返回。
+    // 根聊天页面不再注册，交回系统默认的预测返回分发，由系统负责退出 Activity。
+    // 这样根页面和子页面不会同时存在两个返回回调互相抢占。
+    PredictiveBackHandler(enabled = canNavigateBack) { progress ->
         progress.collect { }
-        if (navController.previousBackStackEntry != null) {
-            navController.popBackStack()
-        } else {
-            (context as? Activity)?.finish()
-        }
+        navController.popBackStack()
     }
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
     val settingsRepo: com.afyzfur.afyzhub.data.settings.SettingsRepository =
