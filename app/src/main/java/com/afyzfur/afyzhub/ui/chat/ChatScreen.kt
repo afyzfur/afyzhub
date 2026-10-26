@@ -2,6 +2,7 @@ package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -9,7 +10,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.foundation.gestures.awaitPointerEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import kotlin.math.abs
@@ -64,7 +65,7 @@ import org.koin.androidx.compose.koinViewModel
  * 启动时为空白新会话（id 为 null），首次发送消息才落库，
  * 避免每次打开应用都产生一条空的"新对话"记录。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ChatScreen(
     onNavigateToSettings: () -> Unit,
@@ -113,6 +114,8 @@ fun ChatScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     var keyboardRequestToken by remember { mutableIntStateOf(0) }
     val imeVisible = WindowInsets.isImeVisible
+    @Suppress("UNUSED_VARIABLE")
+    val keyboardGestureBase = imeVisible
 
     // 会话切换时重新订阅消息；空白新会话则清空列表
     LaunchedEffect(currentConversationId) {
