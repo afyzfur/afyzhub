@@ -9,6 +9,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import kotlin.math.abs
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.material.icons.Icons
@@ -105,6 +109,10 @@ fun ChatScreen(
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var keyboardRequestToken by remember { mutableIntStateOf(0) }
+    val imeVisible = WindowInsets.isImeVisible
 
     // 会话切换时重新订阅消息；空白新会话则清空列表
     LaunchedEffect(currentConversationId) {
@@ -221,8 +229,12 @@ fun ChatScreen(
             isLoading = isLoading,
             sendPhase = sendPhase,
             error = error,
-            listState = listState,
-            pressedState = pressedState,
+listState = listState,
+             onShowKeyboard = { if (!imeVisible) keyboardRequestToken++ else keyboardController?.show() },
+             onHideKeyboard = { focusManager.clearFocus(force = false); keyboardController?.hide() },
+             focusRequestToken = keyboardRequestToken,
+             drawerOpen = drawerState.isOpen,
+             pressedState = pressedState,
             lastTouchAt = lastTouchAt,
             inputText = inputText,
             onInputChange = { inputText = it },
@@ -348,6 +360,10 @@ private fun ChatContent(
     sendPhase: SendPhase,
     error: String?,
     listState: LazyListState,
+    onShowKeyboard: () -> Unit,
+    onHideKeyboard: () -> Unit,
+    focusRequestToken: Int,
+    drawerOpen: Boolean,
     pressedState: androidx.compose.runtime.MutableState<Boolean>,
     lastTouchAt: androidx.compose.runtime.MutableState<Long>,
     inputText: String,
@@ -442,6 +458,35 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .pointerInput(drawerOpen) {
+                        if (drawerOpen) return@pointerInput
+                        val slop = viewConfiguration.touchSlop
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            var axis = 0
+                            var totalX = 0f
+                            var totalY = 0f
+                            var lastX = down.position.x
+                            var lastY = down.position.y
+                            var lastAction = 0
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                                val dx = change.position.x - lastX
+                                val dy = change.position.y - lastY
+                                lastX = change.position.x; lastY = change.position.y
+                                totalX += dx; totalY += dy
+                                if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
+                                    axis = if (abs(totalY) > abs(totalX)) 1 else -1
+                                }
+                                if (axis == 1) {
+                                    if (totalY <= -72f && lastAction != -1) { onShowKeyboard(); lastAction = -1; totalY = 0f }
+                                    else if (totalY >= 72f && lastAction != 1) { onHideKeyboard(); lastAction = 1; totalY = 0f }
+                                }
+                            }
+                        }
+                    }
                     // 监听手势放在滚动容器外层: LazyColumn 会消耗指针事件,
                     // 挂在它自身的 modifier 上不一定收得到抬起; 放在外层
                     // 并用 Initial 通道, 确保按下/抬起都能准确捕获。
@@ -566,7 +611,7 @@ private fun ChatContent(
                         floating = appearance.inputBarFloating && appearance.inputBarDeepSeeThrough,
                         deepSeeThrough = appearance.inputBarDeepSeeThrough,
                         onBodyHeightChange = { inputBarHeight = it },
-                        
+                        focusRequestToken = focusRequestToken,
                         value = inputText,
                         onValueChange = onInputChange,
                         onSend = onSend,
