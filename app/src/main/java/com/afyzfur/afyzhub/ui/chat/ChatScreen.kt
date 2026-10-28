@@ -269,7 +269,7 @@ fun ChatScreen(
                         change.consume()
                         dragging = true
                         val next = (drawerOffset.value + dx).coerceIn(-drawerWidthPx, 0f)
-                        drawerOffset.snapTo(next)
+                        scope.launch { drawerOffset.snapTo(next) }
                         if (!opening && next > -drawerWidthPx) {
                             opening = true
                             drawerOpen = true
