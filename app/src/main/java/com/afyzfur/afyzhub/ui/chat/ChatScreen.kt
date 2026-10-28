@@ -192,12 +192,17 @@ fun ChatScreen(
     // 抽屉是否处于打开（或正在打开）状态。仅用于是否拦截外侧点击，
     // 位移与遮罩都在绘制阶段才读取，避免动画每帧重组整个聊天页
     var drawerOpen by remember { mutableStateOf(false) }
+    val drawerOpenState = rememberUpdatedState(drawerOpen)
+    val imeVisibleState = rememberUpdatedState(imeVisible)
+    var drawerDragX by remember { mutableFloatStateOf(0f) }
+    var drawerDragging by remember { mutableStateOf(false) }
+
     // 抽屉底色：与抽屉本体同色，左侧补齐时才不会出现色差
     val drawerFillColor = MaterialTheme.colorScheme.surfaceContainerLow
     // 保留弹簧的回弹（会略微冲过 0），只把展开侧限制在抽屉宽度内，
     // 否则继续往右拖会让抽屉飞出屏幕。回弹溢出的那几像素在下面
     // 用抽屉同色补齐，因此不会露出聊天页背景
-    fun drawerX(): Float = drawerOffset.value.coerceAtLeast(-drawerWidthPx)
+    fun drawerX(): Float = (if (drawerDragging) drawerDragX else drawerOffset.value).coerceAtLeast(-drawerWidthPx)
     fun drawerProgress(): Float =
         if (drawerWidthPx > 0f) ((drawerX() + drawerWidthPx) / drawerWidthPx).coerceIn(0f, 1f) else 0f
     Box(
@@ -206,25 +211,20 @@ fun ChatScreen(
             // 手势挂在最外层，并且在 Initial 通道读取原始位移。
             // 抽屉展开后会出现遮罩层，若沿用普通拖动检测会被子层的
             // 点击拦截吃掉后续事件，导致必须先松手才能左滑收起
-            .pointerInput(drawerWidthPx, imeVisible, drawerOpen) {
-                val trigger = with(density) { 32.dp.toPx() }
+            .pointerInput(drawerWidthPx, imeVisible) {
                 val edgeWidth = with(density) { 72.dp.toPx() }
-                if (imeVisible && !drawerOpen) return@pointerInput
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
-                    if (imeVisible && !drawerOpen) return@awaitEachGesture
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    // 抽屉关闭时只接受左边缘横向手势；屏幕中部的竖向滑动
-                    // 必须留给聊天内容层处理键盘，不允许抽屉监听器抢走。
-                    val edgeEligible = drawerOpen || down.position.x <= edgeWidth
-                    if (!edgeEligible) return@awaitEachGesture
-                    var open = drawerOpen
-                    var axis = 0 // 1 = horizontal drawer, -1 = vertical content
-                    var dragDistance = 0f
+                    val openAtDown = drawerOpenState.value
+                    val eligible = openAtDown || (!imeVisibleState.value && down.position.x <= edgeWidth)
+                    if (!eligible) return@awaitEachGesture
+                    var axis = 0
                     var totalX = 0f
                     var totalY = 0f
                     var lastX = down.position.x
                     var lastY = down.position.y
+                    var dragging = false
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -239,28 +239,30 @@ fun ChatScreen(
                             axis = if (abs(totalX) > abs(totalY)) 1 else -1
                             if (axis == -1) return@awaitEachGesture
                         }
-                        if (axis != 1) continue
+                        if (axis != 1 || drawerWidthPx <= 0f) continue
+                        val currentX = if (drawerDragging) drawerDragX else drawerOffset.value
+                        val movingOpen = currentX < -0.5f && dx > 0f
+                        val movingClosed = currentX > -drawerWidthPx + 0.5f && dx < 0f
+                        if (!movingOpen && !movingClosed) continue
+                        dragging = true
                         change.consume()
-                        dragDistance += dx
-                        dragDistance = if (open) dragDistance.coerceAtMost(0f) else dragDistance.coerceAtLeast(0f)
-                        if (!open && dragDistance >= trigger) {
-                            open = true
-                            dragDistance = 0f
-                            drawerOpen = true
-                            scope.launch {
-                                drawerOffset.animateTo(0f, animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f))
-                            }
-                        } else if (open && dragDistance <= -trigger) {
-                            open = false
-                            drawerOpen = false
-                            dragDistance = 0f
-                            scope.launch {
-                                drawerOffset.animateTo(-drawerWidthPx, animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f))
-                                drawerOpen = false
-                            }
+                        drawerDragging = true
+                        drawerDragX = (currentX + dx).coerceIn(-drawerWidthPx, 0f)
+                        drawerOpen = drawerDragX > -drawerWidthPx + 1f
+                    }
+                    if (dragging) {
+                        val targetOpen = drawerDragX > -drawerWidthPx * 0.5f
+                        drawerOpen = targetOpen
+                        scope.launch {
+                            drawerOffset.snapTo(drawerDragX)
+                            drawerDragging = false
+                            drawerOffset.animateTo(
+                                if (targetOpen) 0f else -drawerWidthPx,
+                                animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f)
+                            )
+                            drawerDragX = drawerOffset.value
+                            drawerOpen = targetOpen
                         }
-                        // 不结束当前 pointer sequence。达到一次阈值后清零，
-                        // 同一次按住不松手可以继续反向滑动再次触发。
                     }
                 }
             }
@@ -297,7 +299,7 @@ listState = listState,
             lastTouchAt = lastTouchAt,
             inputText = inputText,
             onInputChange = { inputText = it },
-            onOpenDrawer = { drawerOpen = true; scope.launch { drawerOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = 560f)) } },
+            onOpenDrawer = { drawerOpen = true; scope.launch { drawerOffset.snapTo(drawerDragX); drawerOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = 560f)); drawerDragX = drawerOffset.value } },
             onSend = {
                 val text = inputText
                 if (text.isNotBlank() && !isLoading) {
@@ -375,7 +377,7 @@ listState = listState,
                 // 拉出一层"的意味。留出的那一截同时是关闭抽屉的点击区
                 modifier = Modifier
                     .onSizeChanged { size ->
-                        if (drawerWidthPx == 0f) { drawerWidthPx = size.width.toFloat(); scope.launch { drawerOffset.snapTo(-drawerWidthPx) } }
+                        if (drawerWidthPx == 0f) { drawerWidthPx = size.width.toFloat(); drawerDragX = -drawerWidthPx; scope.launch { drawerOffset.snapTo(-drawerWidthPx) } }
                     }
                     .graphicsLayer {
                         // 每个选项只叠加一种明显效果；横向位移仍由抽屉手势本身负责
@@ -620,9 +622,10 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-.pointerInput(drawerOpen) {
+.pointerInput(drawerOpen, imeVisible) {
                          if (drawerOpen) return@pointerInput
                          val slop = viewConfiguration.touchSlop
+                         val threshold = with(density) { 72.dp.toPx() }
                          awaitEachGesture {
                              val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                              var totalY = 0f
@@ -634,20 +637,15 @@ private fun ChatContent(
                                  if (!change.pressed) break
                                  totalX += change.positionChange().x
                                  totalY += change.positionChange().y
-if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
+                                 if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
                                      axis = if (abs(totalY) > abs(totalX)) 1 else -1
                                  }
-                                 if (axis == 1 && totalY <= -72f) {
-                                     onShowKeyboard()
-                                     // 保持按下状态，清零本次累计位移，允许
-                                     // 不松手继续下滑触发隐藏键盘。
+                                 if (axis == 1 && totalY <= -threshold) {
+                                     if (!imeVisible) onShowKeyboard()
                                      totalY = 0f
-                                     totalX = 0f
-                                 } else if (axis == 1 && totalY >= 72f) {
-                                     onHideKeyboard()
-                                     // 同一根手指继续上滑时可再次触发显示。
+                                 } else if (axis == 1 && totalY >= threshold) {
+                                     if (imeVisible) onHideKeyboard()
                                      totalY = 0f
-                                     totalX = 0f
                                  }
                              }
                          }

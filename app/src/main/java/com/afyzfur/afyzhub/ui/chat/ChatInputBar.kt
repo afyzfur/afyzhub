@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,7 +122,8 @@ fun ChatInputBar(
             if (!hasFocus) {
                 focusRequester.requestFocus()
             }
-            // show() 只在新的请求 token 中调用一次，不随 IME 重组重复调用。
+            // requestFocus 后等待下一帧再 show，避免焦点状态和 IME inset 更新不同步。
+            withFrameNanos { }
             keyboardController?.show()
         }
     }
