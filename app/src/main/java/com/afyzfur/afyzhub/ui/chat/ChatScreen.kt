@@ -2,17 +2,15 @@ package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import kotlin.math.abs
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.material.icons.Icons
@@ -27,17 +25,34 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.font.FontWeight
 import com.afyzfur.afyzhub.ui.components.ModelIcon
 import com.afyzfur.afyzhub.ui.settings.ApiProfilesViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -104,17 +119,15 @@ fun ChatScreen(
 
     /** 模型选择半屏选择器开关 */
     var showModelPicker by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    var focusRequestToken by remember { mutableIntStateOf(0) }
+    val imeVisible = WindowInsets.isImeVisible
 
     val undoable by viewModel.undoable.collectAsState()
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
-    var keyboardRequestToken by remember { mutableIntStateOf(0) }
-    val imeVisible = WindowInsets.isImeVisible
-    @Suppress("UNUSED_VARIABLE")
-    val keyboardGestureBase = imeVisible
 
     // 会话切换时重新订阅消息；空白新会话则清空列表
     LaunchedEffect(currentConversationId) {
@@ -171,58 +184,130 @@ fun ChatScreen(
     val settings by hostViewModel.settings.collectAsState()
     val uiPreferences by hostViewModel.uiPreferences.collectAsState()
     val currentTitle = conversations.firstOrNull { it.id == currentConversationId }?.title
+    val density = LocalDensity.current
+    // 抽屉动画固定为统一的轻微弹性效果，不读取个性化里的消息动画选项。
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerShape = AppShapeTokens.Drawer,
-                // 按屏宽取比例而非用 Material 默认的固定 360dp：后者在
-                // 窄屏上几乎铺满，看不见背后的聊天页，也就失去了"临时
-                // 拉出一层"的意味。留出的那一截同时是关闭抽屉的点击区
-                modifier = Modifier.fillMaxWidth(DRAWER_WIDTH_FRACTION)
-            ) {
-                ConversationDrawer(
-                    existingGroups = groups,
-                    onTogglePin = hostViewModel::setPinned,
-                    onToggleStar = hostViewModel::setStarred,
-                    onRenameConversation = hostViewModel::renameConversation,
-                    onUpdateNote = hostViewModel::updateNote,
-                    onMoveToGroup = hostViewModel::moveToGroup,
-                    conversations = conversations,
-                    currentConversationId = currentConversationId,
-                    modelLabel = settings.model,
-                    appearance = uiPreferences.chatAppearance,
-                    onConversationClick = { id ->
-                        hostViewModel.openConversation(id)
-                        scope.launch { drawerState.close() }
-                    },
-                    onNewConversation = {
-                        hostViewModel.startNewConversation()
-                        scope.launch { drawerState.close() }
-                    },
-                    onDeleteConversation = { id ->
-                        hostViewModel.deleteConversation(id)
-                    },
-                    onSettingsClick = {
-                        scope.launch { drawerState.close() }
-                        onNavigateToSettings()
-                    },
-                    onModelClick = {
-                        scope.launch { drawerState.close() }
-                        onNavigateToProvider()
+    var drawerWidthPx by remember { mutableFloatStateOf(0f) }
+    val drawerOffset = remember { Animatable(0f) }
+    // 抽屉是否处于打开（或正在打开）状态。仅用于是否拦截外侧点击，
+    // 位移与遮罩都在绘制阶段才读取，避免动画每帧重组整个聊天页
+    var drawerOpen by remember { mutableStateOf(false) }
+    // 抽屉底色：与抽屉本体同色，左侧补齐时才不会出现色差
+    val drawerFillColor = MaterialTheme.colorScheme.surfaceContainerLow
+    // 保留弹簧的回弹（会略微冲过 0），只把展开侧限制在抽屉宽度内，
+    // 否则继续往右拖会让抽屉飞出屏幕。回弹溢出的那几像素在下面
+    // 用抽屉同色补齐，因此不会露出聊天页背景
+    fun drawerX(): Float = drawerOffset.value.coerceAtLeast(-drawerWidthPx)
+    fun drawerProgress(): Float =
+        if (drawerWidthPx > 0f) ((drawerX() + drawerWidthPx) / drawerWidthPx).coerceIn(0f, 1f) else 0f
+    Box(
+        Modifier
+            .fillMaxSize()
+            // 手势挂在最外层，并且在 Initial 通道读取原始位移。
+            // 抽屉展开后会出现遮罩层，若沿用普通拖动检测会被子层的
+            // 点击拦截吃掉后续事件，导致必须先松手才能左滑收起
+            .pointerInput(drawerWidthPx, imeVisible, drawerOpen) {
+                val edgeWidth = with(density) { 72.dp.toPx() }
+                val slop = viewConfiguration.touchSlop
+                awaitEachGesture {
+                    val down = awaitFirstDown(
+                        requireUnconsumed = false,
+                        pass = PointerEventPass.Initial
+                    )
+                    // 键盘显示时，关闭状态完全不接收抽屉边缘手势；
+                    // 抽屉已经打开时仍允许横向滑动收起。
+                    val edgeEligible = drawerOpen || (!imeVisible && down.position.x <= edgeWidth)
+                    var axis = 0 // 1 = 抽屉横向，-1 = 键盘/列表竖向
+                    var totalX = 0f
+                    var totalY = 0f
+                    var lastX = down.position.x
+                    var lastY = down.position.y
+                    var dragging = false
+                    var opening = drawerOpen
+                    var keyboardDistance = 0f
+                    var lastKeyboardAction = 0 // -1 显示，1 隐藏
+
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        val dx = change.position.x - lastX
+                        val dy = change.position.y - lastY
+                        lastX = change.position.x
+                        lastY = change.position.y
+
+                        if (!change.pressed) break
+                        totalX += dx
+                        totalY += dy
+
+                        if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
+                            axis = if (abs(totalX) > abs(totalY) && edgeEligible) 1 else -1
+                        }
+                        if (axis == -1) {
+                            // 竖向只观察，不消费，列表滚动和点击仍交给子组件。
+                            if (!drawerOpen) {
+                                keyboardDistance += dy
+                                if (keyboardDistance <= -72f && lastKeyboardAction != -1) {
+                                    onShowKeyboard()
+                                    lastKeyboardAction = -1
+                                    keyboardDistance = 0f
+                                } else if (keyboardDistance >= 72f && lastKeyboardAction != 1) {
+                                    onHideKeyboard()
+                                    lastKeyboardAction = 1
+                                    keyboardDistance = 0f
+                                }
+                            }
+                            continue
+                        }
+                        if (axis != 1 || drawerWidthPx <= 0f) continue
+
+                        // 只在确认左边缘横向后消费；位移实时跟随手指。
+                        change.consume()
+                        dragging = true
+                        val next = (drawerOffset.value + dx).coerceIn(-drawerWidthPx, 0f)
+                        drawerOffset.snapTo(next)
+                        if (!opening && next > -drawerWidthPx) {
+                            opening = true
+                            drawerOpen = true
+                        }
                     }
-                )
+
+                    if (axis == 1 && dragging && drawerWidthPx > 0f) {
+                        val shouldOpen = drawerOffset.value > -drawerWidthPx * 0.5f
+                        if (shouldOpen) {
+                            drawerOpen = true
+                            drawerOffset.animateTo(
+                                0f,
+                                animationSpec = spring(
+                                    dampingRatio = 0.82f,
+                                    stiffness = 520f
+                                )
+                            )
+                        } else {
+                            drawerOpen = false
+                            drawerOffset.animateTo(
+                                -drawerWidthPx,
+                                animationSpec = spring(
+                                    dampingRatio = 0.82f,
+                                    stiffness = 520f
+                                )
+                            )
+                        }
+                    }
+                }
             }
-        }
     ) {
+
         ChatContent(
             title = currentTitle,
             modelLabel = "${settings.model} · $profileName",
             providerLabel = profileName,
             modelName = settings.model,
+            searchEngine = settings.searchEngine,
             thinkingEffort = settings.thinkingEffort,
-            onCycleThinkingEffort = { showEffortSheet = true },
+            onCycleThinkingEffort = {
+                keyboardController?.hide()
+                showEffortSheet = true
+            },
             appearance = uiPreferences.chatAppearance,
             quickPrompts = uiPreferences.quickPrompts,
             shufflePrompts = uiPreferences.shufflePrompts,
@@ -232,15 +317,18 @@ fun ChatScreen(
             sendPhase = sendPhase,
             error = error,
 listState = listState,
-             onShowKeyboard = { if (!imeVisible) keyboardRequestToken++ else keyboardController?.show() },
-             onHideKeyboard = { focusManager.clearFocus(force = false); keyboardController?.hide() },
-             focusRequestToken = keyboardRequestToken,
-             drawerOpen = drawerState.isOpen,
+             drawerOpen = drawerOpen,
+             focusRequestToken = focusRequestToken,
+             onShowKeyboard = { if (!imeVisible) focusRequestToken++ },
+             onHideKeyboard = {
+                 focusManager.clearFocus(force = false)
+                 keyboardController?.hide()
+             },
              pressedState = pressedState,
             lastTouchAt = lastTouchAt,
             inputText = inputText,
             onInputChange = { inputText = it },
-            onOpenDrawer = { scope.launch { drawerState.open() } },
+            onOpenDrawer = { drawerOpen = true; scope.launch { drawerOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = 560f)) } },
             onSend = {
                 val text = inputText
                 if (text.isNotBlank() && !isLoading) {
@@ -259,7 +347,10 @@ listState = listState,
                 }
             },
             onStop = { viewModel.stopGenerating() },
-            onPickModel = { showModelPicker = true },
+            onPickModel = {
+                keyboardController?.hide()
+                showModelPicker = true
+            },
             onOpenBrowser = onOpenBrowser,
             undoable = undoable,
             onUndoRemoval = { viewModel.undoRemoval() },
@@ -269,7 +360,106 @@ listState = listState,
             onRetry = { messageId -> viewModel.retryMessage(messageId) },
             onClearError = { viewModel.clearError() }
         )
-    }
+        // 只有抽屉打开时才建立遮罩交互层；关闭时不能覆盖聊天页面，
+        // 否则会拦截菜单、输入框和消息点击。
+        if (drawerOpen) Box(
+            Modifier
+                .fillMaxSize()
+                // 在绘制阶段读取位移：每帧只重绘，不重组聊天页
+                .drawBehind {
+                    val progress = drawerProgress()
+                    val xr = drawerX().roundToInt().toFloat()
+                    if (progress > 0f) {
+                        drawRect(Color.Black.copy(alpha = 0.32f * progress))
+                    }
+                    // 抽屉左侧圆角会缺出一小块，加上弹簧回弹露出的缝隙，
+                    // 一起用抽屉同色填满，所以不会透出聊天页背景
+                    val patchWidth = 40.dp.toPx()
+                    val patchStart = if (progress > 0f) minOf(0f, xr) else 0f
+                    val patchEnd = if (progress > 0f) maxOf(patchStart, minOf(size.width, xr + patchWidth)) else 0f
+                    if (patchEnd > patchStart) {
+                        drawRect(
+                            color = drawerFillColor,
+                            topLeft = Offset(patchStart, 0f),
+                            size = Size(patchEnd - patchStart, size.height)
+                        )
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        if (!drawerOpen) return@detectTapGestures
+                        drawerOpen = false
+                        scope.launch {
+                            drawerOffset.animateTo(-drawerWidthPx, tween(durationMillis = 150))
+                            drawerOffset.snapTo(-drawerWidthPx)
+                        }
+                    })
+                }
+        )
+            ModalDrawerSheet(
+                drawerShape = AppShapeTokens.Drawer,
+                // 与补齐色块用同一个颜色，圆角处不会出现色差
+                drawerContainerColor = drawerFillColor,
+                drawerTonalElevation = 0.dp,
+                // 按屏宽取比例而非用 Material 默认的固定 360dp：后者在
+                // 窄屏上几乎铺满，看不见背后的聊天页，也就失去了"临时
+                // 拉出一层"的意味。留出的那一截同时是关闭抽屉的点击区
+                modifier = Modifier
+                    .onSizeChanged { size ->
+                        if (drawerWidthPx == 0f) { drawerWidthPx = size.width.toFloat(); scope.launch { drawerOffset.snapTo(-drawerWidthPx) } }
+                    }
+                    .graphicsLayer {
+                        // 每个选项只叠加一种明显效果；横向位移仍由抽屉手势本身负责
+                        // 抽屉固定统一的轻微弹性，不受消息动画选项影响。
+                    }
+                    .offset { IntOffset(drawerX().roundToInt(), 0) }
+                    .fillMaxWidth(DRAWER_WIDTH_FRACTION)
+            ) {
+                ConversationDrawer(
+                    existingGroups = groups,
+                    onTogglePin = hostViewModel::setPinned,
+                    onToggleStar = hostViewModel::setStarred,
+                    onRenameConversation = hostViewModel::renameConversation,
+                    onUpdateNote = hostViewModel::updateNote,
+                    onMoveToGroup = hostViewModel::moveToGroup,
+                    conversations = conversations,
+                    currentConversationId = currentConversationId,
+                    modelLabel = settings.model,
+                    appearance = uiPreferences.chatAppearance,
+                    onConversationClick = { id ->
+                        hostViewModel.openConversation(id)
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
+                    },
+                    onNewConversation = {
+                        hostViewModel.startNewConversation()
+                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
+                    },
+                    onDeleteConversation = { id ->
+                        hostViewModel.deleteConversation(id)
+                    },
+                    onSettingsClick = {
+                        // 先完整收起抽屉，再切换导航页面，避免抽屉弹簧动画
+                        // 与页面转场同时运行造成闪烁。
+                        scope.launch {
+                            drawerOffset.animateTo(-drawerWidthPx, tween(180))
+                            drawerOffset.snapTo(-drawerWidthPx)
+                            drawerOpen = false
+                            onNavigateToSettings()
+                        }
+                    },
+                    onModelClick = {
+                        // 配置页与设置页使用同样的顺序：先结束抽屉层，
+                        // 再交给 NavHost 执行渐隐或水平滑入转场。
+                        scope.launch {
+                            drawerOffset.animateTo(-drawerWidthPx, tween(180))
+                            drawerOffset.snapTo(-drawerWidthPx)
+                            drawerOpen = false
+                            onNavigateToProvider()
+                        }
+                    }
+                )
+            }
+        }
 
     actionTarget?.let { target ->
         val dismiss = { actionTarget = null }
@@ -351,6 +541,7 @@ private fun ChatContent(
     modelLabel: String,
     providerLabel: String,
     modelName: String,
+    searchEngine: String,
     thinkingEffort: ThinkingEffort,
     onCycleThinkingEffort: () -> Unit,
     appearance: ChatAppearance,
@@ -362,10 +553,10 @@ private fun ChatContent(
     sendPhase: SendPhase,
     error: String?,
     listState: LazyListState,
+    drawerOpen: Boolean,
+    focusRequestToken: Int,
     onShowKeyboard: () -> Unit,
     onHideKeyboard: () -> Unit,
-    focusRequestToken: Int,
-    drawerOpen: Boolean,
     pressedState: androidx.compose.runtime.MutableState<Boolean>,
     lastTouchAt: androidx.compose.runtime.MutableState<Long>,
     inputText: String,
@@ -460,36 +651,7 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .pointerInput(drawerOpen) {
-                        if (drawerOpen) return@pointerInput
-                        val slop = viewConfiguration.touchSlop
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                            var axis = 0
-                            var totalX = 0f
-                            var totalY = 0f
-                            var lastX = down.position.x
-                            var lastY = down.position.y
-                            var lastAction = 0
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                if (!change.pressed) break
-                                val dx = change.position.x - lastX
-                                val dy = change.position.y - lastY
-                                lastX = change.position.x; lastY = change.position.y
-                                totalX += dx; totalY += dy
-                                if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
-                                    axis = if (abs(totalY) > abs(totalX)) 1 else -1
-                                }
-                                if (axis == 1) {
-                                    if (totalY <= -72f && lastAction != -1) { onShowKeyboard(); lastAction = -1; totalY = 0f }
-                                    else if (totalY >= 72f && lastAction != 1) { onHideKeyboard(); lastAction = 1; totalY = 0f }
-                                }
-                            }
-                        }
-                    }
-                    // 监听手势放在滚动容器外层: LazyColumn 会消耗指针事件,
+// 监听手势放在滚动容器外层: LazyColumn 会消耗指针事件,
                     // 挂在它自身的 modifier 上不一定收得到抬起; 放在外层
                     // 并用 Initial 通道, 确保按下/抬起都能准确捕获。
                     .pointerInput(Unit) {
@@ -540,6 +702,7 @@ private fun ChatContent(
                                 displayOptions = displayOptions,
                                 appearance = appearance,
                                 providerLabel = providerLabel,
+                                searchEngine = searchEngine,
                                 onRetry = { onRetry(message.id) },
                                 onLongPress = { onLongPress(message) },
                                 onLinkClick = onOpenBrowser
@@ -611,9 +774,10 @@ private fun ChatContent(
                         transparent = appearance.transparentInputBar,
                         seeThrough = appearance.inputBarSeeThrough,
                         floating = appearance.inputBarFloating && appearance.inputBarDeepSeeThrough,
-                        deepSeeThrough = appearance.inputBarDeepSeeThrough,
-                        onBodyHeightChange = { inputBarHeight = it },
-                        focusRequestToken = focusRequestToken,
+deepSeeThrough = appearance.inputBarDeepSeeThrough,
+                         focusRequestToken = focusRequestToken,
+                         onBodyHeightChange = { inputBarHeight = it },
+                        
                         value = inputText,
                         onValueChange = onInputChange,
                         onSend = onSend,
@@ -649,9 +813,14 @@ private fun ModelPickerSheet(
     val store by viewModel.store.collectAsState()
     val activeId = store.active?.id
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    LaunchedEffect(Unit) {
+        // 键盘仍在显示时也强制打开到完整展开状态，避免只露出顶部一小段
+        sheetState.expand()
+    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        sheetState = sheetState
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
