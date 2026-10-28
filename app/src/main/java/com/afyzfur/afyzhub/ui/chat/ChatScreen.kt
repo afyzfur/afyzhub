@@ -280,22 +280,26 @@ fun ChatScreen(
                         val shouldOpen = drawerOffset.value > -drawerWidthPx * 0.5f
                         if (shouldOpen) {
                             drawerOpen = true
-                            drawerOffset.animateTo(
-                                0f,
-                                animationSpec = spring(
-                                    dampingRatio = 0.82f,
-                                    stiffness = 520f
+                            scope.launch {
+                                drawerOffset.animateTo(
+                                    0f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.82f,
+                                        stiffness = 520f
+                                    )
                                 )
-                            )
+                            }
                         } else {
                             drawerOpen = false
-                            drawerOffset.animateTo(
-                                -drawerWidthPx,
-                                animationSpec = spring(
-                                    dampingRatio = 0.82f,
-                                    stiffness = 520f
+                            scope.launch {
+                                drawerOffset.animateTo(
+                                    -drawerWidthPx,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.82f,
+                                        stiffness = 520f
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 }
