@@ -1,5 +1,4 @@
 package com.afyzfur.afyzhub.ui.navigation
-import androidx.activity.compose.PredictiveBackHandler
 
 // no opt-in required for the installed activity-compose version
 
@@ -82,13 +81,8 @@ sealed class Screen(val route: String) {
 fun NavGraph() {
     val navController = rememberNavController()
     val canNavigateBack = navController.previousBackStackEntry != null
-    // 只有在导航栈内还有上一页时才注册应用级预测返回，处理子页面返回。
-    // 根聊天页面不再注册，交回系统默认的预测返回分发，由系统负责退出 Activity。
-    // 这样根页面和子页面不会同时存在两个返回回调互相抢占。
-    PredictiveBackHandler(enabled = canNavigateBack) { progress ->
-        progress.collect { }
-        navController.popBackStack()
-    }
+    // 返回交给 NavHost/Activity 的单一路径处理，避免普通返回和预测返回
+    // 同时注册造成第一次返回出现两层转场叠加。
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
     val settingsRepo: com.afyzfur.afyzhub.data.settings.SettingsRepository =
         org.koin.java.KoinJavaComponent.get(

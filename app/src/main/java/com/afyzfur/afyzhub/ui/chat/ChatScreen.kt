@@ -123,11 +123,6 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
     var focusRequestToken by remember { mutableIntStateOf(0) }
     val imeVisible = WindowInsets.isImeVisible
-    val showKeyboardAction = { if (!imeVisible) focusRequestToken++ }
-    val hideKeyboardAction = {
-        focusManager.clearFocus(force = false)
-        keyboardController?.hide()
-    }
 
     val undoable by viewModel.undoable.collectAsState()
 
@@ -212,95 +207,60 @@ fun ChatScreen(
             // 抽屉展开后会出现遮罩层，若沿用普通拖动检测会被子层的
             // 点击拦截吃掉后续事件，导致必须先松手才能左滑收起
             .pointerInput(drawerWidthPx, imeVisible, drawerOpen) {
+                val trigger = with(density) { 32.dp.toPx() }
                 val edgeWidth = with(density) { 72.dp.toPx() }
+                if (imeVisible && !drawerOpen) return@pointerInput
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
-                    val down = awaitFirstDown(
-                        requireUnconsumed = false,
-                        pass = PointerEventPass.Initial
-                    )
-                    // 键盘显示时，关闭状态完全不接收抽屉边缘手势；
-                    // 抽屉已经打开时仍允许横向滑动收起。
-                    val edgeEligible = drawerOpen || (!imeVisible && down.position.x <= edgeWidth)
-                    var axis = 0 // 1 = 抽屉横向，-1 = 键盘/列表竖向
+                    if (imeVisible && !drawerOpen) return@awaitEachGesture
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    // 抽屉关闭时只接受左边缘横向手势；屏幕中部的竖向滑动
+                    // 必须留给聊天内容层处理键盘，不允许抽屉监听器抢走。
+                    val edgeEligible = drawerOpen || down.position.x <= edgeWidth
+                    if (!edgeEligible) return@awaitEachGesture
+                    var open = drawerOpen
+                    var axis = 0 // 1 = horizontal drawer, -1 = vertical content
+                    var dragDistance = 0f
                     var totalX = 0f
                     var totalY = 0f
                     var lastX = down.position.x
                     var lastY = down.position.y
-                    var dragging = false
-                    var opening = drawerOpen
-                    var keyboardDistance = 0f
-                    var lastKeyboardAction = 0 // -1 显示，1 隐藏
-
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
                         val dx = change.position.x - lastX
                         val dy = change.position.y - lastY
                         lastX = change.position.x
                         lastY = change.position.y
-
-                        if (!change.pressed) break
                         totalX += dx
                         totalY += dy
-
                         if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
-                            axis = if (abs(totalX) > abs(totalY) && edgeEligible) 1 else -1
+                            axis = if (abs(totalX) > abs(totalY)) 1 else -1
+                            if (axis == -1) return@awaitEachGesture
                         }
-                        if (axis == -1) {
-                            // 竖向只观察，不消费，列表滚动和点击仍交给子组件。
-                            if (!drawerOpen) {
-                                keyboardDistance += dy
-                                if (keyboardDistance <= -72f && lastKeyboardAction != -1) {
-                                    showKeyboardAction()
-                                    lastKeyboardAction = -1
-                                    keyboardDistance = 0f
-                                } else if (keyboardDistance >= 72f && lastKeyboardAction != 1) {
-                                    hideKeyboardAction()
-                                    lastKeyboardAction = 1
-                                    keyboardDistance = 0f
-                                }
-                            }
-                            continue
-                        }
-                        if (axis != 1 || drawerWidthPx <= 0f) continue
-
-                        // 只在确认左边缘横向后消费；位移实时跟随手指。
+                        if (axis != 1) continue
                         change.consume()
-                        dragging = true
-                        val next = (drawerOffset.value + dx).coerceIn(-drawerWidthPx, 0f)
-                        scope.launch { drawerOffset.snapTo(next) }
-                        if (!opening && next > -drawerWidthPx) {
-                            opening = true
-                            drawerOpen = true
-                        }
-                    }
-
-                    if (axis == 1 && dragging && drawerWidthPx > 0f) {
-                        val shouldOpen = drawerOffset.value > -drawerWidthPx * 0.5f
-                        if (shouldOpen) {
+                        dragDistance += dx
+                        dragDistance = if (open) dragDistance.coerceAtMost(0f) else dragDistance.coerceAtLeast(0f)
+                        if (!open && dragDistance >= trigger) {
+                            open = true
+                            dragDistance = 0f
                             drawerOpen = true
                             scope.launch {
-                                drawerOffset.animateTo(
-                                    0f,
-                                    animationSpec = spring(
-                                        dampingRatio = 0.82f,
-                                        stiffness = 520f
-                                    )
-                                )
+                                drawerOffset.animateTo(0f, animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f))
                             }
-                        } else {
+                        } else if (open && dragDistance <= -trigger) {
+                            open = false
                             drawerOpen = false
+                            dragDistance = 0f
                             scope.launch {
-                                drawerOffset.animateTo(
-                                    -drawerWidthPx,
-                                    animationSpec = spring(
-                                        dampingRatio = 0.82f,
-                                        stiffness = 520f
-                                    )
-                                )
+                                drawerOffset.animateTo(-drawerWidthPx, animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f))
+                                drawerOpen = false
                             }
                         }
+                        // 不结束当前 pointer sequence。达到一次阈值后清零，
+                        // 同一次按住不松手可以继续反向滑动再次触发。
                     }
                 }
             }
@@ -328,7 +288,7 @@ fun ChatScreen(
 listState = listState,
              drawerOpen = drawerOpen,
              focusRequestToken = focusRequestToken,
-             onShowKeyboard = { if (!imeVisible) focusRequestToken++ },
+             onShowKeyboard = { focusRequestToken++ },
              onHideKeyboard = {
                  focusManager.clearFocus(force = false)
                  keyboardController?.hide()
@@ -660,7 +620,39 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-// 监听手势放在滚动容器外层: LazyColumn 会消耗指针事件,
+.pointerInput(drawerOpen) {
+                         if (drawerOpen) return@pointerInput
+                         val slop = viewConfiguration.touchSlop
+                         awaitEachGesture {
+                             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                             var totalY = 0f
+                             var totalX = 0f
+                             var axis = 0
+                             while (true) {
+                                 val event = awaitPointerEvent(PointerEventPass.Initial)
+                                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                 if (!change.pressed) break
+                                 totalX += change.positionChange().x
+                                 totalY += change.positionChange().y
+if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
+                                     axis = if (abs(totalY) > abs(totalX)) 1 else -1
+                                 }
+                                 if (axis == 1 && totalY <= -72f) {
+                                     onShowKeyboard()
+                                     // 保持按下状态，清零本次累计位移，允许
+                                     // 不松手继续下滑触发隐藏键盘。
+                                     totalY = 0f
+                                     totalX = 0f
+                                 } else if (axis == 1 && totalY >= 72f) {
+                                     onHideKeyboard()
+                                     // 同一根手指继续上滑时可再次触发显示。
+                                     totalY = 0f
+                                     totalX = 0f
+                                 }
+                             }
+                         }
+                     }
+                    // 监听手势放在滚动容器外层: LazyColumn 会消耗指针事件,
                     // 挂在它自身的 modifier 上不一定收得到抬起; 放在外层
                     // 并用 Initial 通道, 确保按下/抬起都能准确捕获。
                     .pointerInput(Unit) {
