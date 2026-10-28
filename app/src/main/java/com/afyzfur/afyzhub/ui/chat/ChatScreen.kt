@@ -123,6 +123,11 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
     var focusRequestToken by remember { mutableIntStateOf(0) }
     val imeVisible = WindowInsets.isImeVisible
+    val showKeyboardAction = { if (!imeVisible) focusRequestToken++ }
+    val hideKeyboardAction = {
+        focusManager.clearFocus(force = false)
+        keyboardController?.hide()
+    }
 
     val undoable by viewModel.undoable.collectAsState()
 
@@ -247,11 +252,11 @@ fun ChatScreen(
                             if (!drawerOpen) {
                                 keyboardDistance += dy
                                 if (keyboardDistance <= -72f && lastKeyboardAction != -1) {
-                                    onShowKeyboard()
+                                    showKeyboardAction()
                                     lastKeyboardAction = -1
                                     keyboardDistance = 0f
                                 } else if (keyboardDistance >= 72f && lastKeyboardAction != 1) {
-                                    onHideKeyboard()
+                                    hideKeyboardAction()
                                     lastKeyboardAction = 1
                                     keyboardDistance = 0f
                                 }
