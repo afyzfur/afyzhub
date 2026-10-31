@@ -45,8 +45,25 @@ class ChatRepositoryImpl(
     private val settingsProvider: SettingsProvider,
     private val webSearchService: WebSearchService
 ) : ChatRepository {
-
     private val streamCollector = ChatStreamCollector()
+
+    private fun sharedChars(a: String, b: String): Double {
+        val setA = a.filter { !it.isWhitespace() }.toSet()
+        if (setA.isEmpty()) return 0.0
+        val setB = b.filter { !it.isWhitespace() }.toSet()
+        return setA.count { it in setB }.toDouble() / setA.size
+    }
+
+    private fun mergeTokenUsage(old: TokenUsage?, next: TokenUsage?): TokenUsage? {
+        if (old == null) return next
+        if (next == null) return old
+        return TokenUsage(
+            promptTokens = maxOf(old.promptTokens, next.promptTokens),
+            completionTokens = maxOf(old.completionTokens, next.completionTokens),
+            cachedTokens = listOfNotNull(old.cachedTokens, next.cachedTokens).maxOrNull()
+        )
+    }
+
 
     override fun getAllConversations(): Flow<List<Conversation>> =
         conversationDao.getAllConversations().map { list -> list.map { it.toDomain() } }
