@@ -12,7 +12,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-// no remembered transition state; current settings apply immediately
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -80,9 +80,7 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
-    val canNavigateBack = navController.previousBackStackEntry != null
-    // 返回交给 NavHost/Activity 的单一路径处理，避免普通返回和预测返回
-    // 同时注册造成第一次返回出现两层转场叠加。
+    // Navigation Compose 2.8 owns predictive back progress, cancellation and completion.
     // 内置浏览器总开关: 链接点开后走内置还是系统浏览器
     val settingsRepo: com.afyzfur.afyzhub.data.settings.SettingsRepository =
         org.koin.java.KoinJavaComponent.get(
@@ -92,33 +90,37 @@ fun NavGraph() {
     // StateFlow 总有值, 但为类型安全仍判空兜底
     val browserEnabled: Boolean = browserSettings?.inAppBrowserEnabled ?: true
     val uiPreferences by settingsRepo.uiPreferences.collectAsState()
-    val pageAnimation = uiPreferences.chatAppearance.animation
-    val pageEnter: EnterTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeIn(tween(320))
-        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300))
-    }
-    val pageExit: ExitTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeOut(tween(320))
-        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300))
-    }
-    val pagePopEnter: EnterTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeIn(tween(320))
-        ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300))
-    }
-    val pagePopExit: ExitTransition = when (pageAnimation) {
-        ChatAnimation.FADE -> fadeOut(tween(320))
-        ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
-    }
-
+    // NavHost remembers its graph. All four callbacks must read the SAME latest state,
+    // rather than capturing Enter/ExitTransition values from different graph compositions.
+    val pageAnimation = rememberUpdatedState(uiPreferences.chatAppearance.animation)
     NavHost(
         navController = navController,
         startDestination = Screen.Chat.route,
-        enterTransition = { pageEnter },
-        exitTransition = { pageExit },
-        // 系统返回动画负责返回方向；禁用 NavHost 的 pop 转场，避免
-        // 系统预测返回与 Compose pop 动画同时执行造成叠加。
-        popEnterTransition = { EnterTransition.None },
-        popExitTransition = { ExitTransition.None }
+        enterTransition = {
+            when (pageAnimation.value) {
+                ChatAnimation.FADE -> fadeIn(tween(320))
+                ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300))
+            }
+        },
+        exitTransition = {
+            when (pageAnimation.value) {
+                ChatAnimation.FADE -> fadeOut(tween(320))
+                ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300))
+            }
+        },
+        popEnterTransition = {
+            when (pageAnimation.value) {
+                ChatAnimation.FADE -> fadeIn(tween(320))
+                ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300))
+            }
+        },
+        popExitTransition = {
+            when (pageAnimation.value) {
+                ChatAnimation.FADE -> fadeOut(tween(320))
+                ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
+            }
+        }
+
     ) {
         composable(Screen.Chat.route) {
             val ctx = androidx.compose.ui.platform.LocalContext.current

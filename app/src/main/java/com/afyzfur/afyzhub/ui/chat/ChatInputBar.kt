@@ -41,7 +41,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -115,16 +114,17 @@ fun ChatInputBar(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     var hasFocus by remember { mutableStateOf(false) }
-    var handledFocusToken by remember { mutableStateOf(0) }
     LaunchedEffect(focusRequestToken) {
-        if (focusRequestToken > 0 && focusRequestToken != handledFocusToken) {
-            handledFocusToken = focusRequestToken
-            if (!hasFocus) {
-                focusRequester.requestFocus()
+        when {
+            focusRequestToken > 0 -> {
+                if (!hasFocus) {
+                    // Gaining text focus starts the text input session and requests IME itself.
+                    focusRequester.requestFocus()
+                } else {
+                    keyboardController?.show()
+                }
             }
-            // requestFocus 后等待下一帧再 show，避免焦点状态和 IME inset 更新不同步。
-            withFrameNanos { }
-            keyboardController?.show()
+            focusRequestToken < 0 -> keyboardController?.hide()
         }
     }
     val canSend = value.isNotBlank() && !isLoading

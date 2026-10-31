@@ -9,10 +9,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.foundation.clickable
@@ -47,12 +45,10 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -67,6 +63,13 @@ import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import androidx.compose.animation.core.animate
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionOnScreen
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.systemGestureExclusion
+import androidx.compose.ui.geometry.Rect
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -126,7 +129,6 @@ fun ChatScreen(
 
     val undoable by viewModel.undoable.collectAsState()
 
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
     // 会话切换时重新订阅消息；空白新会话则清空列表
@@ -188,84 +190,110 @@ fun ChatScreen(
     // 抽屉动画固定为统一的轻微弹性效果，不读取个性化里的消息动画选项。
 
     var drawerWidthPx by remember { mutableFloatStateOf(0f) }
-    val drawerOffset = remember { Animatable(0f) }
-    // 抽屉是否处于打开（或正在打开）状态。仅用于是否拦截外侧点击，
-    // 位移与遮罩都在绘制阶段才读取，避免动画每帧重组整个聊天页
+    // One coordinate owns rendering AND animation. No snap/drag-coordinate handoff.
+    var drawerDragX by remember { mutableFloatStateOf(-100000f) }
     var drawerOpen by remember { mutableStateOf(false) }
-    val drawerOpenState = rememberUpdatedState(drawerOpen)
-    val imeVisibleState = rememberUpdatedState(imeVisible)
-    var drawerDragX by remember { mutableFloatStateOf(0f) }
-    var drawerDragging by remember { mutableStateOf(false) }
-
-    // 抽屉底色：与抽屉本体同色，左侧补齐时才不会出现色差
+    var drawerTargetOpen by remember { mutableStateOf(false) }
+    var drawerAnimation by remember { mutableStateOf<Job?>(null) }
     val drawerFillColor = MaterialTheme.colorScheme.surfaceContainerLow
-    // 保留弹簧的回弹（会略微冲过 0），只把展开侧限制在抽屉宽度内，
-    // 否则继续往右拖会让抽屉飞出屏幕。回弹溢出的那几像素在下面
-    // 用抽屉同色补齐，因此不会露出聊天页背景
-    fun drawerX(): Float = (if (drawerDragging) drawerDragX else drawerOffset.value).coerceAtLeast(-drawerWidthPx)
+    val rootScreenOrigin = remember { mutableStateOf(Offset.Zero) }
+
+    fun animateDrawer(open: Boolean, after: () -> Unit = {}) {
+        drawerAnimation?.cancel()
+        drawerTargetOpen = open
+        drawerOpen = true // Keep the scrim mounted through the last closing frame.
+        val start = drawerDragX.coerceIn(-drawerWidthPx, 0f)
+        val end = if (open) 0f else -drawerWidthPx
+        drawerAnimation = scope.launch {
+            animate(start, end, animationSpec = spring<Float>(dampingRatio = 0.82f, stiffness = 520f)) { x, _ ->
+                drawerDragX = x
+            }
+            drawerDragX = end
+            drawerOpen = open
+            after()
+        }
+    }
+    // State containers update without restarting a pointer coroutine or capturing stale callbacks.
+    val drawerOpenState = rememberUpdatedState(drawerOpen)
+    val drawerTargetState = rememberUpdatedState(drawerTargetOpen)
+    val animateDrawerState = rememberUpdatedState<(Boolean) -> Unit>({ animateDrawer(it) })
+    val drawerWidthState = rememberUpdatedState(drawerWidthPx)
+    val imeVisibleState = rememberUpdatedState(imeVisible)
+    val keyboardActionState = rememberUpdatedState<(Int) -> Unit>({ action ->
+        val next = kotlin.math.abs(focusRequestToken) + 1
+        focusRequestToken = if (action < 0) next else -next
+    })
+    fun drawerX(): Float = drawerDragX.coerceAtLeast(-drawerWidthPx)
     fun drawerProgress(): Float =
         if (drawerWidthPx > 0f) ((drawerX() + drawerWidthPx) / drawerWidthPx).coerceIn(0f, 1f) else 0f
+    BackHandler(enabled = drawerOpen) { animateDrawer(false) }
     Box(
         Modifier
             .fillMaxSize()
-            // 手势挂在最外层，并且在 Initial 通道读取原始位移。
-            // 抽屉展开后会出现遮罩层，若沿用普通拖动检测会被子层的
-            // 点击拦截吃掉后续事件，导致必须先松手才能左滑收起
-            .pointerInput(drawerWidthPx, imeVisible) {
+            .onSizeChanged { size ->
+                val width = size.width * DRAWER_WIDTH_FRACTION
+                if (width != drawerWidthPx && width > 0f) {
+                    drawerAnimation?.cancel()
+                    drawerWidthPx = width
+                    drawerDragX = if (drawerTargetOpen) 0f else -width
+                    drawerOpen = drawerTargetOpen
+                }
+            }
+            .onGloballyPositioned { rootScreenOrigin.value = it.positionOnScreen() }
+            // Reserve only a bounded central left-edge segment on the root chat screen.
+            // Android caps gesture exclusion height; other pages remain system-owned.
+            .systemGestureExclusion { coordinates ->
+                val h = with(density) { 180.dp.toPx() }
+                val w = with(density) { 24.dp.toPx() }
+                val center = coordinates.size.height * 0.5f
+                Rect(0f, center - h / 2f, w, center + h / 2f)
+            }
+            .pointerInput(Unit) {
                 val edgeWidth = with(density) { 72.dp.toPx() }
-                val trigger = with(density) { 32.dp.toPx() }
+                val trigger = 32f
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    val startX = drawerDragX
-                    val openAtDown = drawerOpenState.value || startX > -drawerWidthPx + 1f
-                    val eligible = openAtDown || (!imeVisibleState.value && down.position.x <= edgeWidth)
-                    if (!eligible) return@awaitEachGesture
-                    var axis = 0
-                    var totalX = 0f
-                    var totalY = 0f
-                    var lastX = down.position.x
-                    var lastY = down.position.y
-                    var dragging = false
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!change.pressed) break
-                        val dx = change.position.x - lastX
-                        val dy = change.position.y - lastY
-                        lastX = change.position.x
-                        lastY = change.position.y
-                        totalX += dx
-                        totalY += dy
-                        if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
-                            axis = if (abs(totalX) > abs(totalY)) 1 else -1
-                            if (axis == -1) return@awaitEachGesture
-                            if ((openAtDown && totalX >= 0f) || (!openAtDown && totalX <= 0f)) {
-                                return@awaitEachGesture
+                    val openAtDown = drawerOpenState.value
+                    val gesture = ChatGestureState(
+                        slop = slop, drawerTrigger = trigger,
+                        drawerEligible = openAtDown || (!imeVisibleState.value && down.position.x <= edgeWidth),
+                        drawerInitiallyOpen = drawerTargetState.value
+                    )
+                    var lastScreen = down.position + rootScreenOrigin.value
+                    var drawerCaptured = false
+                    pressedState.value = true
+                    lastTouchAt.value = System.currentTimeMillis()
+                    try {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) break
+                            val screen = change.position + rootScreenOrigin.value
+                            val delta = screen - lastScreen
+                            lastScreen = screen
+                            val step = gesture.move(delta.x, delta.y)
+                            if (step.consume && drawerWidthState.value > 0f) {
+                                change.consume()
+                                if (!drawerCaptured) {
+                                    drawerAnimation?.cancel()
+                                    drawerCaptured = true
+                                    drawerOpen = true
+                                }
+                                // Before activation: directly follow. After threshold: elastic slide-out.
+                                if (!gesture.drawerWasActivated) {
+                                    drawerDragX = (drawerDragX + step.drawerDelta).coerceIn(-drawerWidthState.value, 0f)
+                                }
+                                step.drawerTarget?.let { animateDrawerState.value(it) }
+                            } else if (!openAtDown && step.keyboardAction != 0) {
+                                keyboardActionState.value(step.keyboardAction)
                             }
                         }
-                        if (axis != 1 || drawerWidthPx <= 0f) continue
-                        if ((openAtDown && dx >= 0f) || (!openAtDown && dx <= 0f)) continue
-                        dragging = true
-                        change.consume()
-                        drawerDragging = true
-                        drawerDragX = (drawerDragX + dx).coerceIn(-drawerWidthPx, 0f)
-                        drawerOpen = drawerDragX > -drawerWidthPx + 1f
-                    }
-                    if (dragging) {
-                        val moved = drawerDragX - startX
-                        val settledOpen = if (openAtDown) moved > -trigger else moved >= trigger
-                        drawerOpen = settledOpen
-                        scope.launch {
-                            drawerOffset.stop()
-                            drawerOffset.snapTo(drawerDragX)
-                            drawerDragging = false
-                            drawerOffset.animateTo(
-                                if (settledOpen) 0f else -drawerWidthPx,
-                                animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f)
-                            )
-                            drawerDragX = drawerOffset.value
-                            drawerOpen = settledOpen
+                    } finally {
+                        pressedState.value = false
+                        lastTouchAt.value = System.currentTimeMillis()
+                        if (drawerCaptured && !gesture.drawerWasActivated) {
+                            animateDrawerState.value(gesture.drawerTargetOpen)
                         }
                     }
                 }
@@ -292,19 +320,10 @@ fun ChatScreen(
             sendPhase = sendPhase,
             error = error,
 listState = listState,
-             imeVisibleState = imeVisibleState,
-             drawerOpen = drawerOpen,
-             focusRequestToken = focusRequestToken,
-             onShowKeyboard = { focusRequestToken++ },
-             onHideKeyboard = {
-                 focusManager.clearFocus(force = false)
-                 keyboardController?.hide()
-             },
-             pressedState = pressedState,
-            lastTouchAt = lastTouchAt,
+            focusRequestToken = focusRequestToken,
             inputText = inputText,
             onInputChange = { inputText = it },
-            onOpenDrawer = { drawerOpen = true; scope.launch { drawerOffset.snapTo(drawerDragX); drawerOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = 560f)); drawerDragX = drawerOffset.value } },
+            onOpenDrawer = { animateDrawer(true) },
             onSend = {
                 val text = inputText
                 if (text.isNotBlank() && !isLoading) {
@@ -362,16 +381,7 @@ listState = listState,
                     }
                 }
                 .pointerInput(Unit) {
-                    detectTapGestures(onTap = {
-if (!drawerOpen) return@detectTapGestures
-                         drawerOpen = false
-                         scope.launch {
-                             drawerOffset.stop()
-                             drawerOffset.animateTo(-drawerWidthPx, tween(durationMillis = 150))
-                             drawerOffset.snapTo(-drawerWidthPx)
-                             drawerDragX = -drawerWidthPx
-                         }
-                    })
+                    detectTapGestures(onTap = { animateDrawerState.value(false) })
                 }
         )
             ModalDrawerSheet(
@@ -383,13 +393,6 @@ if (!drawerOpen) return@detectTapGestures
                 // 窄屏上几乎铺满，看不见背后的聊天页，也就失去了"临时
                 // 拉出一层"的意味。留出的那一截同时是关闭抽屉的点击区
                 modifier = Modifier
-                    .onSizeChanged { size ->
-                        if (drawerWidthPx == 0f) { drawerWidthPx = size.width.toFloat(); drawerDragX = -drawerWidthPx; scope.launch { drawerOffset.snapTo(-drawerWidthPx) } }
-                    }
-                    .graphicsLayer {
-                        // 每个选项只叠加一种明显效果；横向位移仍由抽屉手势本身负责
-                        // 抽屉固定统一的轻微弹性，不受消息动画选项影响。
-                    }
                     .offset { IntOffset(drawerX().roundToInt(), 0) }
                     .fillMaxWidth(DRAWER_WIDTH_FRACTION)
             ) {
@@ -406,35 +409,18 @@ if (!drawerOpen) return@detectTapGestures
                     appearance = uiPreferences.chatAppearance,
 onConversationClick = { id ->
                          hostViewModel.openConversation(id)
-                         scope.launch { drawerOffset.stop(); drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOffset.snapTo(-drawerWidthPx); drawerDragX = -drawerWidthPx; drawerOpen = false }
+                         animateDrawer(false)
                      },
 onNewConversation = {
                          hostViewModel.startNewConversation()
-                         scope.launch { drawerOffset.stop(); drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOffset.snapTo(-drawerWidthPx); drawerDragX = -drawerWidthPx; drawerOpen = false }
+                         animateDrawer(false)
                      },
                     onDeleteConversation = { id ->
                         hostViewModel.deleteConversation(id)
                     },
-                    onSettingsClick = {
-                        // 先完整收起抽屉，再切换导航页面，避免抽屉弹簧动画
-                        // 与页面转场同时运行造成闪烁。
-                        scope.launch {
-                            drawerOffset.animateTo(-drawerWidthPx, tween(180))
-                            drawerOffset.snapTo(-drawerWidthPx)
-                            drawerOpen = false
-                            onNavigateToSettings()
-                        }
-                    },
-                    onModelClick = {
-                        // 配置页与设置页使用同样的顺序：先结束抽屉层，
-                        // 再交给 NavHost 执行渐隐或水平滑入转场。
-                        scope.launch {
-                            drawerOffset.animateTo(-drawerWidthPx, tween(180))
-                            drawerOffset.snapTo(-drawerWidthPx)
-                            drawerOpen = false
-                            onNavigateToProvider()
-                        }
-                    }
+onSettingsClick = { animateDrawer(false) { onNavigateToSettings() } },
+                    onModelClick = { animateDrawer(false) { onNavigateToProvider() } }
+
                 )
             }
         }
@@ -531,13 +517,7 @@ private fun ChatContent(
     sendPhase: SendPhase,
     error: String?,
     listState: LazyListState,
-    imeVisibleState: androidx.compose.runtime.State<Boolean>,
-    drawerOpen: Boolean,
     focusRequestToken: Int,
-    onShowKeyboard: () -> Unit,
-    onHideKeyboard: () -> Unit,
-    pressedState: androidx.compose.runtime.MutableState<Boolean>,
-    lastTouchAt: androidx.compose.runtime.MutableState<Long>,
     inputText: String,
     onInputChange: (String) -> Unit,
     onOpenDrawer: () -> Unit,
@@ -630,53 +610,6 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-.pointerInput(drawerOpen) {
-                         if (drawerOpen) return@pointerInput
-                         val slop = viewConfiguration.touchSlop
-                         val threshold = 72f
-                         val imeState = imeVisibleState
-                         awaitEachGesture {
-                             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                             var totalY = 0f
-                             var totalX = 0f
-                             var axis = 0
-                             var lastAction = 0 // -1 = show, 1 = hide
-                             while (true) {
-                                 val event = awaitPointerEvent(PointerEventPass.Initial)
-                                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                 if (!change.pressed) break
-                                 totalX += change.positionChange().x
-                                 totalY += change.positionChange().y
-                                 if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
-                                     axis = if (abs(totalY) > abs(totalX)) 1 else -1
-                                 }
-                                 if (axis == 1 && totalY <= -threshold && lastAction != -1) {
-                                     if (!imeState.value) onShowKeyboard()
-                                     lastAction = -1
-                                     totalY = 0f
-                                 } else if (axis == 1 && totalY >= threshold && lastAction != 1) {
-                                     if (imeState.value) onHideKeyboard()
-                                     lastAction = 1
-                                     totalY = 0f
-                                 }
-                             }
-                         }
-                     }
-                    // 监听手势放在滚动容器外层: LazyColumn 会消耗指针事件,
-                    // 挂在它自身的 modifier 上不一定收得到抬起; 放在外层
-                    // 并用 Initial 通道, 确保按下/抬起都能准确捕获。
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                            lastTouchAt.value = System.currentTimeMillis()
-                            pressedState.value = true
-                            do {
-                                val ev = awaitPointerEvent(PointerEventPass.Initial)
-                            } while (ev.changes.any { it.pressed })
-                            lastTouchAt.value = System.currentTimeMillis()
-                            pressedState.value = false
-                        }
-                    }
             ) {
                 Column(
                     modifier = Modifier
@@ -787,7 +720,7 @@ private fun ChatContent(
                         floating = appearance.inputBarFloating && appearance.inputBarDeepSeeThrough,
 deepSeeThrough = appearance.inputBarDeepSeeThrough,
                          focusRequestToken = focusRequestToken,
-                         onBodyHeightChange = { inputBarHeight = it },
+
                         
                         value = inputText,
                         onValueChange = onInputChange,
