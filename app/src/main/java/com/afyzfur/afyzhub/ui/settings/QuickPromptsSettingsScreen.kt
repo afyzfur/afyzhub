@@ -58,7 +58,7 @@ fun QuickPromptsSettingsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5d4357a73cd4), onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5d4357a73cd4), onNavigateBack = onNavigateBack)
 
             Column(
                 modifier = Modifier
@@ -66,20 +66,20 @@ fun QuickPromptsSettingsScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f0f79689a0fb) +
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f0f79689a0fb) +
                         "点击后填入输入框。首屏一次显示 $QUICK_PROMPT_DISPLAY_COUNT 条。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
                 )
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_75589922ea22))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_75589922ea22))
                 SettingsGroup {
                     SettingsSwitchItem(
                         icon = Icons.Default.Refresh,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c58ae677073b),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_c58ae677073b),
                         subtitle = if (prefs.shufflePrompts) {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_6d17a4cf95b4)
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6d17a4cf95b4)
                         } else {
                             "按下方列表顺序显示前 $QUICK_PROMPT_DISPLAY_COUNT 条"
                         },
@@ -92,7 +92,7 @@ fun QuickPromptsSettingsScreen(
 
                 if (prefs.quickPrompts.isEmpty()) {
                     Text(
-                        text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_32c97fa51c66),
+                        text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_32c97fa51c66),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
@@ -112,7 +112,7 @@ fun QuickPromptsSettingsScreen(
                     }
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_94191ce210d3))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_94191ce210d3))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -123,7 +123,7 @@ fun QuickPromptsSettingsScreen(
                     OutlinedTextField(
                         value = newPrompt,
                         onValueChange = { newPrompt = it },
-                        placeholder = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_461387172760)) },
+                        placeholder = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_461387172760)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
@@ -140,7 +140,7 @@ fun QuickPromptsSettingsScreen(
                         },
                         enabled = newPrompt.isNotBlank()
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_94191ce210d3))
+                        Icon(Icons.Default.Add, contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_94191ce210d3))
                     }
                 }
 
@@ -150,7 +150,7 @@ fun QuickPromptsSettingsScreen(
                     onClick = { viewModel.setQuickPrompts(DefaultQuickPrompts) },
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
-                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a191935bc678))
+                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a191935bc678))
                 }
 
                 Spacer(Modifier.height(24.dp))
@@ -181,7 +181,7 @@ private fun PromptRow(
         IconButton(onClick = onRemove) {
             Icon(
                 Icons.Default.Close,
-                contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3755f56f2f83),
+                contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3755f56f2f83),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

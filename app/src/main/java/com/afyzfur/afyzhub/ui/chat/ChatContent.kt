@@ -179,7 +179,7 @@ internal fun ChatContent(
                     },
                     navigationIcon = {
                         IconButton(onClick = onOpenDrawer) {
-                            Icon(Icons.Default.Menu, contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_0bb4ba2d2e46))
+                            Icon(Icons.Default.Menu, contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_0bb4ba2d2e46))
                         }
                     }
                 )
@@ -290,7 +290,7 @@ internal fun ChatContent(
                                     modifier = Modifier.weight(1f)
                                 )
                                 TextButton(onClick = onClearError) {
-                                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_6c14bd7f6f9e))
+                                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6c14bd7f6f9e))
                                 }
                             }
                         }

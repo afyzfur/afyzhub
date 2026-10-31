@@ -21,7 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.afyzfur.afyzhub.BuildConfig
+import com.afyzhub.chat.BuildConfig
 
 /**
  * 关于子页面：版本与项目链接。
@@ -46,39 +46,39 @@ fun AboutSettingsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bed172efc953), onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bed172efc953), onNavigateBack = onNavigateBack)
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_989d1affa089))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_989d1affa089))
 
                 SettingsGroup {
                     SettingsValueItem(
                         icon = Icons.Default.Info,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_46e66f63217a),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_46e66f63217a),
                         subtitle = "versionCode ${BuildConfig.VERSION_CODE}",
                         value = BuildConfig.VERSION_NAME,
                         onClick = {}
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_22336e6b892f))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_22336e6b892f))
 
                 SettingsGroup {
                     SettingsNavItem(
                         icon = Icons.Default.Share,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1bc5d1cb9ee7),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_1bc5d1cb9ee7),
                         subtitle = REPO_URL.removePrefix("https://"),
                         onClick = { openUrl(REPO_URL) }
                     )
                     SettingsItemDivider()
                     SettingsNavItem(
                         icon = Icons.Default.List,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_185368440e18),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f61d73e36b81),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_185368440e18),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f61d73e36b81),
                         onClick = onNavigateToChangelog
                     )
                 }
@@ -86,8 +86,8 @@ fun AboutSettingsScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Text(
-                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_badf44811a47) +
-                        com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_fca6f0972365),
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_badf44811a47) +
+                        com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_fca6f0972365),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp)

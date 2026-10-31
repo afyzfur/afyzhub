@@ -94,35 +94,35 @@ fun BrowserSettingsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2e345cfee36f), onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2e345cfee36f), onNavigateBack = onNavigateBack)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1a0fdce8f88f))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_1a0fdce8f88f))
                 SettingsGroup {
                     SettingsSwitchItem(
                         icon = IconPalette,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b99c16ed8931),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b24ce2da8283),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_b99c16ed8931),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_b24ce2da8283),
                         checked = browserEnabled,
                         onCheckedChange = viewModel::setBrowserEnabled
                     )
                 }
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_45e62e474f4a))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_45e62e474f4a))
                 SettingsGroup {
                     SettingsSwitchItem(
                         icon = Icons.Default.Search,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8afa289e32a2),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c679c1387b44),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_8afa289e32a2),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_c679c1387b44),
                         checked = aiWebSearch,
                         onCheckedChange = viewModel::setAiWebSearch
                     )
                     SettingsItemDivider()
                     SettingsDropdownItem(
                         icon = Icons.Default.Search,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e58371cb291e),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e58371cb291e),
                         subtitle = engine.label,
                         options = SearchEngine.entries,
                         selected = engine,
@@ -138,7 +138,7 @@ fun BrowserSettingsScreen(
                             value = tavilyKey,
                             onValueChange = viewModel::setTavilyKey,
                             placeholder = "tvly-xxxxxxxx",
-                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e12d30d10108)
+                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e12d30d10108)
                         )
                     }
                 }

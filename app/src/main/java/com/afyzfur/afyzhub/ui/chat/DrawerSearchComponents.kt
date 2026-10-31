@@ -88,7 +88,7 @@ fun ConversationSearchField(
                 decorationBox = { inner ->
                     if (query.isEmpty()) {
                         Text(
-                            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f2bf9a4d0b43),
+                            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f2bf9a4d0b43),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -99,7 +99,7 @@ fun ConversationSearchField(
             IconButton(onClick = onClose) {
                 Icon(
                     Icons.Default.Clear,
-                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e40a06c88b5b),
+                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e40a06c88b5b),
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -135,7 +135,7 @@ fun GroupFilterChip(
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = group.ifEmpty { com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8de957a7b7a2) },
+                text = group.ifEmpty { com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_8de957a7b7a2) },
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -143,7 +143,7 @@ fun GroupFilterChip(
             IconButton(onClick = onClear, modifier = Modifier.size(28.dp)) {
                 Icon(
                     Icons.Default.Clear,
-                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4bbc4e5fd9db),
+                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4bbc4e5fd9db),
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -179,7 +179,7 @@ fun GroupFilterSheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(
-                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ca99aa479c5d),
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ca99aa479c5d),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
@@ -187,7 +187,7 @@ fun GroupFilterSheet(
             Spacer(Modifier.height(4.dp))
 
             GroupOption(
-                label = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_01c43cc6525c),
+                label = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_01c43cc6525c),
                 selected = current == null,
                 onClick = {
                     onSelect(null)
@@ -196,7 +196,7 @@ fun GroupFilterSheet(
             )
             if (hasUngrouped) {
                 GroupOption(
-                    label = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8de957a7b7a2),
+                    label = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_8de957a7b7a2),
                     selected = current == "",
                     onClick = {
                         onSelect("")
@@ -216,7 +216,7 @@ fun GroupFilterSheet(
             }
             if (groups.isEmpty() && !hasUngrouped) {
                 Text(
-                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e6f6c0fc5228),
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e6f6c0fc5228),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)

@@ -549,7 +549,7 @@ private fun ModelPickerSheet(
                 .padding(start = 24.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
         ) {
             Text(
-                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4e769dd289db),
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4e769dd289db),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
@@ -561,7 +561,7 @@ private fun ModelPickerSheet(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(4.dp))
-                Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8d9fe7d003c0), style = MaterialTheme.typography.labelMedium)
+                Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_8d9fe7d003c0), style = MaterialTheme.typography.labelMedium)
             }
         }
         LazyColumn(
@@ -605,7 +605,7 @@ private fun ModelPickerSheet(
                             if (isSelected) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
-                                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_297318c2765c),
+                                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_297318c2765c),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )

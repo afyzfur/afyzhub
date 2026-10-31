@@ -70,11 +70,11 @@ fun TextInputDialog(
                 onClick = { onConfirm(trimmed) },
                 enabled = canConfirm
             ) {
-                Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f526c89937e1))
+                Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f526c89937e1))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d0b4688c787)) }
+            TextButton(onClick = onDismiss) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d0b4688c787)) }
         }
     )
 }
@@ -104,7 +104,7 @@ fun GroupPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_fe238ad8bfec)) },
+        title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_fe238ad8bfec)) },
         text = {
             Column(
                 modifier = Modifier
@@ -112,7 +112,7 @@ fun GroupPickerDialog(
                     .verticalScroll(rememberScrollState())
             ) {
                 GroupOption(
-                    label = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8de957a7b7a2),
+                    label = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_8de957a7b7a2),
                     selected = selected.isEmpty() && typed.isEmpty(),
                     onClick = {
                         selected = ""
@@ -134,18 +134,18 @@ fun GroupPickerDialog(
                 OutlinedTextField(
                     value = newGroup,
                     onValueChange = { newGroup = it },
-                    label = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_fa4ff6b10e32)) },
-                    placeholder = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_dfdc59b706f1)) },
+                    label = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_fa4ff6b10e32)) },
+                    placeholder = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_dfdc59b706f1)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(result) }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f526c89937e1)) }
+            TextButton(onClick = { onConfirm(result) }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f526c89937e1)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d0b4688c787)) }
+            TextButton(onClick = onDismiss) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d0b4688c787)) }
         }
     )
 }

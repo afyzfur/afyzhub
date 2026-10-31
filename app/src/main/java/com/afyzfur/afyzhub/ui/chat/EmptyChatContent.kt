@@ -122,11 +122,11 @@ private fun PromptRow(
 private fun greeting(): String {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     return when (hour) {
-        in 5..10 -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e548bb9ff768)
-        in 11..13 -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_73873269282e)
-        in 14..17 -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_38fbe77e8438)
-        in 18..22 -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_509f35e0ee20)
-        else -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4759e7511ccb)
+        in 5..10 -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e548bb9ff768)
+        in 11..13 -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_73873269282e)
+        in 14..17 -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_38fbe77e8438)
+        in 18..22 -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_509f35e0ee20)
+        else -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4759e7511ccb)
     }
 }
 

@@ -230,7 +230,7 @@ fun ChatInputBar(
                 decorationBox = { innerTextField ->
                     if (value.isEmpty()) {
                         Text(
-                            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a274f5f3a0f0),
+                            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a274f5f3a0f0),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -442,7 +442,7 @@ private fun SendButton(
             } else {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
-                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1214d633a448),
+                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_1214d633a448),
                     tint = content,
                     modifier = Modifier.size(20.dp)
                 )

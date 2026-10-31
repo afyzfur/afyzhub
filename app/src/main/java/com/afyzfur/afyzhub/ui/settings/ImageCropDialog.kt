@@ -70,11 +70,11 @@ fun ImageCropDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_6cfb3364d206)) },
+        title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6cfb3364d206)) },
         text = {
             Column {
                 Text(
-                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ce2680eba019),
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ce2680eba019),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -146,11 +146,11 @@ fun ImageCropDialog(
             TextButton(onClick = {
                 onConfirm(rect.left, rect.top, rect.right, rect.bottom)
             }) {
-                Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f06f360f9706))
+                Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f06f360f9706))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d0b4688c787)) }
+            TextButton(onClick = onDismiss) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d0b4688c787)) }
         }
     )
 }

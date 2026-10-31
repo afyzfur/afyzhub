@@ -80,9 +80,9 @@ fun ApiProfileEditScreen(
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
-                SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d7d7ce790b9a), onNavigateBack = onNavigateBack)
+                SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_d7d7ce790b9a), onNavigateBack = onNavigateBack)
                 Text(
-                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_9f61d7d38215),
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_9f61d7d38215),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(28.dp)
@@ -119,34 +119,34 @@ fun ApiProfileEditScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ab79fd0a625e))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ab79fd0a625e))
                 SettingsGroup {
                     SettingsTextFieldItem(
                         // 切换配置组时重建输入框，否则会留着上一组的值
                         identityKey = profileId,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1be7ae4fc257),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_1be7ae4fc257),
                         value = profile.name,
                         onValueChange = { viewModel.updateProfile(profile.copy(name = it)) },
-                        placeholder = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_afd01c7bd437)
+                        placeholder = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_afd01c7bd437)
                     )
                     SettingsItemDivider()
                     SettingsTextFieldItem(
                         // 切换配置组时重建输入框，否则会留着上一组的值
                         identityKey = profileId,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_97d8a6c05b4c),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_97d8a6c05b4c),
                         value = profile.group,
                         onValueChange = { viewModel.updateProfile(profile.copy(group = it)) },
-                        placeholder = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_abeb9eae8cd2),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_16472019313f)
+                        placeholder = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_abeb9eae8cd2),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_16472019313f)
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f73eee9e85c6))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f73eee9e85c6))
                 SettingsGroup {
                     SettingsDropdownItem(
                         icon = IconKey,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_219c099b6e14),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4c8afa7576a9),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_219c099b6e14),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4c8afa7576a9),
                         options = AiProvider.entries,
                         selected = profile.provider,
                         label = { it.displayName },
@@ -162,27 +162,27 @@ fun ApiProfileEditScreen(
                         SettingsItemDivider()
                         SettingsSwitchItem(
                             icon = IconBolt,
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_91b8b3886a06),
-                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_839be7010244),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_91b8b3886a06),
+                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_839be7010244),
                             checked = geminiSearchEnabled,
                             onCheckedChange = settingsViewModel::updateGeminiSearchEnabled
                         )
                     }
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4c16e86779d2))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4c16e86779d2))
                 SettingsGroup {
                     // 地址放在 Key 前面，配置时先确认请求发往哪里。
                     SettingsTextFieldItem(
                         identityKey = profileId,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_acd8a5043158),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_acd8a5043158),
                         value = profile.baseUrl,
                         onValueChange = {
                             modelsViewModel.clearTestResult()
                             viewModel.updateProfile(profile.copy(baseUrl = it))
                         },
                         placeholder = profile.provider.defaultBaseUrl,
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2264317dc171)
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2264317dc171)
                     )
                     SettingsItemDivider()
                     // 明文显示：便于核对与修改，Key 只存在本机
@@ -199,46 +199,46 @@ fun ApiProfileEditScreen(
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_19398128e0f8))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_19398128e0f8))
                 SettingsGroup {
                     SettingsDropdownItem(
-                        icon = IconBolt, title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7f362bad0c29), subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e928ced77864),
+                        icon = IconBolt, title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_7f362bad0c29), subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e928ced77864),
                         options = profile.availablePrompts, selected = profile.activePrompt, label = { it.name },
                         onSelect = { group -> viewModel.changePrompts(profileId) { it.copy(activePromptId = group.id) } }
                     )
                     SettingsItemDivider()
                     SettingsTextFieldItem(
                         identityKey = profileId + profile.activePrompt.id,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_338affe37fbd),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_338affe37fbd),
                         value = profile.activePrompt.role,
                         onValueChange = { text -> viewModel.changePrompts(profileId) { it.editActivePrompt { group -> group.copy(role = text) } } },
-                        placeholder = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_dba6c64184ee),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_98859a6b7d9a),
+                        placeholder = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_dba6c64184ee),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_98859a6b7d9a),
                         singleLine = false
                     )
                     SettingsItemDivider()
                     SettingsNavItem(
                         icon = Icons.Default.PlayArrow,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_dd07e641ca66),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f7228a388abd),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_dd07e641ca66),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f7228a388abd),
                         onClick = onNavigateToAdvancedPrompt
                     )
                     SettingsItemDivider()
                     SettingsSwitchItem(
                         icon = IconBolt,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f44e0a04c577),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_985302bd5aa3),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f44e0a04c577),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_985302bd5aa3),
                         checked = profile.promptsEnabled,
                         onCheckedChange = { enabled -> viewModel.changePrompts(profileId) { it.copy(promptsEnabled = enabled) } }
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3f09fccffabd))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3f09fccffabd))
                 SettingsGroup {
                     SettingsActionItem(
                         icon = Icons.Default.PlayArrow,
-                        title = if (testing) "测试中… ${testSeconds}s" else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_27fc3c44360f),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_6e995a7133c9),
+                        title = if (testing) "测试中… ${testSeconds}s" else com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_27fc3c44360f),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6e995a7133c9),
                         onClick = { modelsViewModel.testConnection(profile) }
                     )
                     testResult?.let { result ->
@@ -251,22 +251,22 @@ fun ApiProfileEditScreen(
                 // 编辑页曾经六块纵向堆叠, 滚下来信息量过载。这里只留
                 // 一个入口行, 副标题直接显示当前模型, 不进二级页也能
                 // 看到生效值
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_98fd0cbd9c31))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_98fd0cbd9c31))
                 SettingsGroup {
                     SettingsNavItem(
                         icon = Icons.Default.PlayArrow,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_183414408d44),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_183414408d44),
                         subtitle = profile.effectiveModel,
                         onClick = onNavigateToModels
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_fcfcc873ed3c))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_fcfcc873ed3c))
                 SettingsGroup {
                     SettingsActionItem(
                         icon = Icons.Default.Delete,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2054f14a2346),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2abdfd12448c),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2054f14a2346),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2abdfd12448c),
                         destructive = true,
                         onClick = { confirmDelete = true }
                     )
@@ -274,7 +274,7 @@ fun ApiProfileEditScreen(
 
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5a034fa39789),
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5a034fa39789),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp)
@@ -286,14 +286,14 @@ fun ApiProfileEditScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_9764f48bf69c)) },
+            title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_9764f48bf69c)) },
             text = { Text("将删除「${profile.displayName}」及其中保存的 API Key，无法恢复。") },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; viewModel.deleteProfile(profile.id); onNavigateBack() }) {
-                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3755f56f2f83), color = MaterialTheme.colorScheme.error)
+                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3755f56f2f83), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d0b4688c787)) } }
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d0b4688c787)) } }
         )
     }
 }
@@ -309,12 +309,12 @@ private fun TestResultRow(result: TestResult) {
     val (color, title, detail) = when (result) {
         is TestResult.Success -> Triple(
             MaterialTheme.colorScheme.primary,
-            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_51991a5d111a),
+            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_51991a5d111a),
             "配置可用 · 测试耗时 ${result.elapsedMs} ms · 模型延迟 ${result.elapsedMs} ms"
         )
         is TestResult.Failure -> Triple(
             MaterialTheme.colorScheme.error,
-            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2c056f182f42),
+            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2c056f182f42),
             "测试耗时 ${result.elapsedMs} ms\n${result.reason}"
         )
     }

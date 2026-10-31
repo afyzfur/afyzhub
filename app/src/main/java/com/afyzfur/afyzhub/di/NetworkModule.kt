@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import com.afyzfur.afyzhub.BuildConfig
+import com.afyzhub.chat.BuildConfig
 import com.afyzfur.afyzhub.data.remote.provider.AnthropicChatClient
 import com.afyzfur.afyzhub.data.remote.provider.ChatClientRegistry
 import com.afyzfur.afyzhub.data.remote.provider.GeminiChatClient

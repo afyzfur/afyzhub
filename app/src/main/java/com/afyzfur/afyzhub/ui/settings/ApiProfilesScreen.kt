@@ -66,7 +66,7 @@ fun ApiProfilesScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_64f968b0cf1d), onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_64f968b0cf1d), onNavigateBack = onNavigateBack)
 
             Column(
                 modifier = Modifier
@@ -76,7 +76,7 @@ fun ApiProfilesScreen(
                 if (store.profiles.isEmpty()) {
                     Spacer(Modifier.height(24.dp))
                     Text(
-                        text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b05b205e7d9d),
+                        text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_b05b205e7d9d),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 28.dp)
@@ -86,7 +86,7 @@ fun ApiProfilesScreen(
 
                 // 按分组分块展示，未分组的排在最后
                 store.grouped().forEach { (group, profiles) ->
-                    SettingsCategoryTitle(group.ifBlank { com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8de957a7b7a2) })
+                    SettingsCategoryTitle(group.ifBlank { com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_8de957a7b7a2) })
                     SettingsGroup {
                         profiles.forEach { profile ->
                             ProfileRow(
@@ -99,12 +99,12 @@ fun ApiProfilesScreen(
                     }
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4989b5cf9483))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4989b5cf9483))
                 SettingsGroup {
                     SettingsActionItem(
                         icon = Icons.Default.Add,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_31cc2c4c86f0),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bb777b5751df),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_31cc2c4c86f0),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bb777b5751df),
                         // 建完就跳进去填 Key，省一次点击
                         onClick = { viewModel.addProfile(onCreated = onEditProfile) }
                     )
@@ -112,14 +112,14 @@ fun ApiProfilesScreen(
                         SettingsItemDivider()
                         SettingsActionItem(
                             icon = Icons.Default.Add,
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_6c3e065e11a9),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6c3e065e11a9),
                             subtitle = "基于「${active.displayName}」建一组副本",
                             onClick = { viewModel.duplicateProfile(active.id) }
                         )
                         SettingsItemDivider()
                         SettingsActionItem(
                             icon = Icons.Default.Delete,
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a42184082e99),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a42184082e99),
                             subtitle = active.displayName,
                             destructive = true,
                             onClick = { pendingDelete = active }
@@ -129,7 +129,7 @@ fun ApiProfilesScreen(
 
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3fd2c2c8f4a8),
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3fd2c2c8f4a8),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp)
@@ -143,18 +143,18 @@ fun ApiProfilesScreen(
     pendingDelete?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_9764f48bf69c)) },
+            title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_9764f48bf69c)) },
             text = { Text("将删除「${target.displayName}」，其中的 API Key 也会一并清除。") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteProfile(target.id)
                     pendingDelete = null
                 }) {
-                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3755f56f2f83), color = MaterialTheme.colorScheme.error)
+                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3755f56f2f83), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d0b4688c787)) }
+                TextButton(onClick = { pendingDelete = null }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d0b4688c787)) }
             }
         )
     }
@@ -210,7 +210,7 @@ private fun ProfileRow(
                     // Key 是否填过比 Key 本身更有用，列表里不该露出明文
                     text = buildString {
                         append(profile.effectiveModel)
-                        if (profile.apiKey.isBlank()) append(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c89821b90a53))
+                        if (profile.apiKey.isBlank()) append(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_c89821b90a53))
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (profile.apiKey.isBlank()) {
@@ -235,7 +235,7 @@ private fun ProfileRow(
                 shape = MaterialTheme.shapes.small
             ) {
                 Text(
-                    text = if (selected) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e6aa2cbd7b42) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_0e2d3a3c09c2),
+                    text = if (selected) com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e6aa2cbd7b42) else com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_0e2d3a3c09c2),
                     style = MaterialTheme.typography.labelMedium,
                     color = if (selected) {
                         MaterialTheme.colorScheme.onPrimary

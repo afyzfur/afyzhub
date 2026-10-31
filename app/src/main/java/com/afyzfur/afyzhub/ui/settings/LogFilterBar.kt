@@ -54,13 +54,13 @@ internal fun LogFilterBar(
         FilterChip(
             selected = filter.failedOnly,
             onClick = { onFailedOnly(!filter.failedOnly) },
-            label = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bb5c52348c74)) }
+            label = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bb5c52348c74)) }
         )
 
         // 时间分组用下拉而非四个并列的 chip：四个全排开会把后面的
         // 维度挤出屏幕，而时间是单选，下拉更贴合"选一个"的语义
         DropdownFilterChip(
-            label = filter.ageGroup?.label ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_89b4aa6364ce),
+            label = filter.ageGroup?.label ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_89b4aa6364ce),
             selected = filter.ageGroup != null,
             options = LogAgeGroup.entries.map { it to it.label },
             onSelect = { onAgeGroup(it) }
@@ -69,7 +69,7 @@ internal fun LogFilterBar(
         // 数据里没出现过的模型不列出来：选中后必然是空列表
         if (models.isNotEmpty()) {
             DropdownFilterChip(
-                label = filter.model ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_98fd0cbd9c31),
+                label = filter.model ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_98fd0cbd9c31),
                 selected = filter.model != null,
                 options = models.map { it to it },
                 onSelect = { onModel(it) }
@@ -78,7 +78,7 @@ internal fun LogFilterBar(
 
         if (providers.isNotEmpty()) {
             DropdownFilterChip(
-                label = filter.provider ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_219c099b6e14),
+                label = filter.provider ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_219c099b6e14),
                 selected = filter.provider != null,
                 options = providers.map { it to it },
                 onSelect = { onProvider(it) }
@@ -91,7 +91,7 @@ internal fun LogFilterBar(
             FilterChip(
                 selected = false,
                 onClick = onReset,
-                label = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4bbc4e5fd9db)) }
+                label = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4bbc4e5fd9db)) }
             )
         }
     }
@@ -137,7 +137,7 @@ private fun <T> DropdownFilterChip(
             properties = PopupProperties(focusable = true)
         ) {
             DropdownMenuItem(
-                text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_778fc8f99453)) },
+                text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_778fc8f99453)) },
                 onClick = {
                     expanded = false
                     onSelect(null)

@@ -75,21 +75,21 @@ fun SettingsHomeScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7debf9cb0372), onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_7debf9cb0372), onNavigateBack = onNavigateBack)
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1a0fdce8f88f))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_1a0fdce8f88f))
 
                 SettingsGroup {
                     // 下拉而非循环点击：循环时点之前看不到有哪些选项，
                     // 而且从"深色"回到"跟随系统"要连点两次
                     SettingsDropdownItem(
                         icon = IconContrast,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b9f0a68d2400),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_b9f0a68d2400),
                         subtitle = prefs.colorMode.label,
                         options = ColorMode.entries,
                         selected = prefs.colorMode,
@@ -98,30 +98,30 @@ fun SettingsHomeScreen(
                     )
                     SettingsNavItem(
                         icon = IconPalette,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_cd4994e50397),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7f2600022639),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_cd4994e50397),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_7f2600022639),
                         onClick = onNavigateToAppearance
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_143c45e7f0f7))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_143c45e7f0f7))
 
                 SettingsGroup {
                     SettingsNavItem(
                         icon = IconKey,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_64f968b0cf1d),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_64f968b0cf1d),
                         // 副标题显示当前生效的那一组，省去进入子页面确认。
                         // 必须读配置组而非 SettingsViewModel 的单组状态：
                         // 后者不随配置组切换更新，会显示成另一组的值
                         subtitle = activeProfile?.let { "${it.displayName} · ${it.effectiveModel}" }
-                            ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_63595e95b708),
+                            ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_63595e95b708),
                         onClick = onNavigateToProvider
                     )
                     SettingsNavItem(
                         icon = IconBolt,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5d4357a73cd4),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5d4357a73cd4),
                         subtitle = if (prefs.quickPrompts.isEmpty()) {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_55a04b58cd2c)
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_55a04b58cd2c)
                         } else {
                             "${prefs.quickPrompts.size} 条"
                         },
@@ -129,45 +129,45 @@ fun SettingsHomeScreen(
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_00d4cbafeabc))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_00d4cbafeabc))
                 SettingsGroup {
                     SettingsNavItem(
                         icon = IconTextLines,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_76598035e91b),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a50e255aa5c0),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_76598035e91b),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a50e255aa5c0),
                         onClick = onNavigateToMessageDisplay
                     )
                     SettingsSwitchItem(
                         icon = Icons.Default.PlayArrow,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5b6aae8c30dd),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8f7adf702cd8),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5b6aae8c30dd),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_8f7adf702cd8),
                         checked = streamEnabled,
                         onCheckedChange = settingsViewModel::updateStreamEnabled
                     )
                     SettingsNavItem(
                         icon = Icons.Default.Search,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2e345cfee36f),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f824f671818d),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2e345cfee36f),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f824f671818d),
                         onClick = onNavigateToBrowser
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e0b478941707))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e0b478941707))
                 SettingsGroup {
                     SettingsNavItem(
                         icon = IconDocument,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d9d4d4e7ddce),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d9eb3c32dc2d),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_d9d4d4e7ddce),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_d9eb3c32dc2d),
                         onClick = onNavigateToRequestLog
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bed172efc953))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bed172efc953))
                 SettingsGroup {
                     SettingsNavItem(
                         icon = Icons.Default.Info,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a53e89da8563),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ff3d35f0cdcf),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a53e89da8563),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ff3d35f0cdcf),
                         onClick = onNavigateToAbout
                     )
                 }

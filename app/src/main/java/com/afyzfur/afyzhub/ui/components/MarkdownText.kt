@@ -346,7 +346,7 @@ private fun CodeBlockView(block: MarkdownBlock.CodeBlock) {
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = { copyToClipboard(context, block.code) }) {
-                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4edd1d00875d), style = MaterialTheme.typography.labelSmall)
+                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4edd1d00875d), style = MaterialTheme.typography.labelSmall)
                 }
             }
 

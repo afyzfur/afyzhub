@@ -53,20 +53,20 @@ fun MessageDisplaySettingsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_76598035e91b), onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_76598035e91b), onNavigateBack = onNavigateBack)
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5f83e7f6a1ee))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5f83e7f6a1ee))
 
                 SettingsGroup {
                     SettingsSwitchItem(
                         icon = IconClock,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_944257fc0daf),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bacfe515acb9),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_944257fc0daf),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bacfe515acb9),
                         checked = display.showTimestamp,
                         onCheckedChange = {
                             viewModel.setMessageDisplay(display.copy(showTimestamp = it))
@@ -74,8 +74,8 @@ fun MessageDisplaySettingsScreen(
                     )
                     SettingsSwitchItem(
                         icon = IconTag,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_38719c9968ae),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_41555ceece96),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_38719c9968ae),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_41555ceece96),
                         checked = display.showModelName,
                         onCheckedChange = {
                             viewModel.setMessageDisplay(display.copy(showModelName = it))
@@ -83,13 +83,13 @@ fun MessageDisplaySettingsScreen(
                     )
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c1671196957f))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_c1671196957f))
 
                 SettingsGroup {
                     SettingsSwitchItem(
                         icon = IconBarChart,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a075f5fc3d77),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_69a34ae61a54),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a075f5fc3d77),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_69a34ae61a54),
                         checked = display.showTokenUsage,
                         onCheckedChange = {
                             viewModel.setMessageDisplay(display.copy(showTokenUsage = it))
@@ -97,8 +97,8 @@ fun MessageDisplaySettingsScreen(
                     )
                     SettingsSwitchItem(
                         icon = IconSpeed,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bd4d4ac87d76),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8c62cbe70498),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bd4d4ac87d76),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_8c62cbe70498),
                         checked = display.showSpeed,
                         onCheckedChange = {
                             viewModel.setMessageDisplay(display.copy(showSpeed = it))
@@ -106,8 +106,8 @@ fun MessageDisplaySettingsScreen(
                     )
                     SettingsSwitchItem(
                         icon = IconStopwatch,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a9704e1997b9),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bd8c2ba49b52),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a9704e1997b9),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bd8c2ba49b52),
                         checked = display.showLatency,
                         onCheckedChange = {
                             viewModel.setMessageDisplay(display.copy(showLatency = it))
@@ -118,8 +118,8 @@ fun MessageDisplaySettingsScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Text(
-                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f124c69c1402) +
-                        com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f6439d8146e5),
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f124c69c1402) +
+                        com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f6439d8146e5),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp)

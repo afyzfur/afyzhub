@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.afyzfur.afyzhub"
+    namespace = "com.afyzhub.chat"
     compileSdk = 35
 
     defaultConfig {

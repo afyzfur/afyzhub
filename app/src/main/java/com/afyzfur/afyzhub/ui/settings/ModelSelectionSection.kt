@@ -178,7 +178,7 @@ private fun ModelRow(
         if (onRemove != null) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2f752c005ec5),
+                contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2f752c005ec5),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .size(20.dp)
@@ -203,7 +203,7 @@ private fun PaginationControls(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onPrevious, enabled = currentPage > 0) {
-            Icon(Icons.Default.KeyboardArrowLeft, com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b41561d80765))
+            Icon(Icons.Default.KeyboardArrowLeft, com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_b41561d80765))
         }
         Text(
             text = "${currentPage + 1} / $totalPages",
@@ -211,7 +211,7 @@ private fun PaginationControls(
             modifier = Modifier.padding(horizontal = 16.dp)
         )
         IconButton(onClick = onNext, enabled = currentPage < totalPages - 1) {
-            Icon(Icons.Default.KeyboardArrowRight, com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_67a246a344ae))
+            Icon(Icons.Default.KeyboardArrowRight, com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_67a246a344ae))
         }
     }
 }

@@ -145,7 +145,7 @@ fun ChatAppearanceSettingsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_cd4994e50397), onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_cd4994e50397), onNavigateBack = onNavigateBack)
 
             // 加载失败时提示原因。放在页面顶部而非弹窗：
             // 弹窗会打断操作，而这里的失败通常需要用户换一张图重试
@@ -168,7 +168,7 @@ fun ChatAppearanceSettingsScreen(
                             modifier = Modifier.weight(1f)
                         )
                         TextButton(onClick = viewModel::clearImageError) {
-                            Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_6c14bd7f6f9e))
+                            Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6c14bd7f6f9e))
                         }
                     }
                 }
@@ -179,26 +179,26 @@ fun ChatAppearanceSettingsScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5ef29a57bcc9))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5ef29a57bcc9))
                 SettingsGroup {
-                    SettingsSwitchItem(icon = IconColorSwatch, title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_9d180a2c7855), subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2bfbfbbf48f0), checked = prefs.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S, onCheckedChange = viewModel::setDynamicColor)
+                    SettingsSwitchItem(icon = IconColorSwatch, title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_9d180a2c7855), subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2bfbfbbf48f0), checked = prefs.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S, onCheckedChange = viewModel::setDynamicColor)
                     PaletteRow(selected = prefs.palette, enabled = !(prefs.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S), onSelect = viewModel::setPalette)
                 }
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_135f634fede4))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_135f634fede4))
                 SettingsGroup {
                     ChatAnimation.entries.forEach { option ->
                         SettingsRadioItem(title = option.label, selected = appearance.animation == option, onClick = { viewModel.setChatAnimation(option) })
                     }
                 }
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_17df7d688f1e))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_17df7d688f1e))
                 SettingsGroup {
                     BubbleStyleItem(
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_146671b0a192),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_146671b0a192),
                         current = appearance.userBubble,
                         onSelect = viewModel::setUserBubble
                     )
                     BubbleStyleItem(
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e37a7fa52194),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e37a7fa52194),
                         current = appearance.assistantBubble,
                         onSelect = viewModel::setAssistantBubble
                     )
@@ -206,14 +206,14 @@ fun ChatAppearanceSettingsScreen(
 
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a7da6a59e8a9) +
-                        com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_495453826cea),
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a7da6a59e8a9) +
+                        com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_495453826cea),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp)
                 )
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4ceeeb31a55a))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4ceeeb31a55a))
                 SettingsGroup {
                     // 排除 NONE：是否显示已由下面两个开关表达，
                     // 这里只选"用什么图"
@@ -234,15 +234,15 @@ fun ChatAppearanceSettingsScreen(
                     SettingsGroup {
                         SettingsSwitchItem(
                             icon = Icons.Default.Person,
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_97e65da38ee3),
-                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3fe82e0db94c),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_97e65da38ee3),
+                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3fe82e0db94c),
                             checked = appearance.showUserAvatar,
                             onCheckedChange = viewModel::setShowUserAvatar
                         )
                         SettingsSwitchItem(
                             icon = Icons.Default.Face,
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_be8297a3745a),
-                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_0a8d775194af),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_be8297a3745a),
+                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_0a8d775194af),
                             checked = appearance.showAssistantAvatar,
                             onCheckedChange = viewModel::setShowAssistantAvatar
                         )
@@ -254,7 +254,7 @@ fun ChatAppearanceSettingsScreen(
                     Spacer(Modifier.height(12.dp))
                     SettingsGroup {
                         AvatarPickerRow(
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d923295e95ec),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_d923295e95ec),
                             path = appearance.userAvatarPath,
                             version = appearance.imageVersion,
                             fallbackIcon = Icons.Default.Person,
@@ -264,7 +264,7 @@ fun ChatAppearanceSettingsScreen(
                             onClear = viewModel::clearUserAvatar
                         )
                         AvatarPickerRow(
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5e89305738ef),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5e89305738ef),
                             path = appearance.assistantAvatarPath,
                             version = appearance.imageVersion,
                             fallbackIcon = Icons.Default.Face,
@@ -277,16 +277,16 @@ fun ChatAppearanceSettingsScreen(
                         // 要多两个滑块，而想让两侧模糊程度不同的需求罕见
                         SettingsItemDivider()
                         PercentSlider(
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_afdfbfeab7ad),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_afdfbfeab7ad),
                             value = appearance.avatarBlur,
-                            hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3ae10b7249db),
+                            hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3ae10b7249db),
                             onChange = viewModel::setAvatarBlur,
                             onPreview = { avatarBlurOverride = it }
                         )
                     }
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7e9e1587a765))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_7e9e1587a765))
                 SettingsGroup {
                     ChatBackgroundMode.entries.forEach { mode ->
                         SettingsRadioItem(
@@ -332,9 +332,9 @@ fun ChatAppearanceSettingsScreen(
                         if (appearance.backgroundEffect.usesDim) {
                             SettingsItemDivider()
                             PercentSlider(
-                                title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4e83125c4a66),
+                                title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4e83125c4a66),
                                 value = appearance.backgroundDim,
-                                hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ab34a29e9ea6),
+                                hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ab34a29e9ea6),
                                 onChange = viewModel::setBackgroundDim,
                                 onPreview = { dimOverride = it }
                             )
@@ -342,9 +342,9 @@ fun ChatAppearanceSettingsScreen(
                         if (appearance.backgroundEffect.usesBlur) {
                             SettingsItemDivider()
                             PercentSlider(
-                                title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_47d168d38775),
+                                title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_47d168d38775),
                                 value = appearance.backgroundBlur,
-                                hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ea744bc3ff90),
+                                hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ea744bc3ff90),
                                 onChange = viewModel::setBackgroundBlur,
                                 onPreview = { blurOverride = it }
                             )
@@ -354,22 +354,22 @@ fun ChatAppearanceSettingsScreen(
 
                 // 透明度开关独立成组：即使没有背景图也可能想让顶栏
                 // 与页面背景融为一体，因此不限定在有图时才显示
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e9944630f3e4))
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e9944630f3e4))
                 SettingsGroup {
                     SettingsSwitchItem(
                         icon = Icons.Default.KeyboardArrowUp,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b0868e020827),
-                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f7b1792e175b),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_b0868e020827),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f7b1792e175b),
                         checked = appearance.transparentTopBar,
                         onCheckedChange = viewModel::setTransparentTopBar
                     )
                     SettingsSwitchItem(
                         icon = Icons.Default.KeyboardArrowDown,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8ebe97f3d50c),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_8ebe97f3d50c),
                         subtitle = if (appearance.transparentInputBar) {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a1c9cf32c22d)
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a1c9cf32c22d)
                         } else {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5fba648444d4)
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5fba648444d4)
                         },
                         checked = appearance.transparentInputBar,
                         onCheckedChange = viewModel::setTransparentInputBar
@@ -379,13 +379,13 @@ fun ChatAppearanceSettingsScreen(
                     SettingsItemDivider()
                     SettingsSwitchItem(
                         icon = IconContrast,
-                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_461a52654d0d),
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_461a52654d0d),
                         subtitle = if (!appearance.inputBarDeepSeeThrough) {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3730a9b6e216)
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3730a9b6e216)
                         } else if (appearance.inputBarFloating) {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_fe4469fdb011)
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_fe4469fdb011)
                         } else {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d2908949f847)
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_d2908949f847)
                         },
                         checked = appearance.inputBarFloating,
                         onCheckedChange = viewModel::setInputBarFloating,
@@ -396,12 +396,12 @@ fun ChatAppearanceSettingsScreen(
                     if (appearance.transparentInputBar) {
                         SettingsItemDivider()
                         PercentSlider(
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c5e26944beba),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_c5e26944beba),
                             value = appearance.inputBarSeeThrough,
                             hint = if (appearance.inputBarDeepSeeThrough) {
-                                com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_284480e6290c)
+                                com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_284480e6290c)
                             } else {
-                                com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d571d9c547f4)
+                                com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_d571d9c547f4)
                             },
                             onChange = viewModel::setInputBarSeeThrough,
                             onPreview = { inputSeeThroughOverride = it }
@@ -409,11 +409,11 @@ fun ChatAppearanceSettingsScreen(
                         SettingsItemDivider()
                         SettingsSwitchItem(
                             icon = IconContrast,
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d2ad3dcb578),
+                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d2ad3dcb578),
                             subtitle = if (appearance.inputBarDeepSeeThrough) {
-                                com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3cd58a38bcf7)
+                                com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3cd58a38bcf7)
                             } else {
-                                com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bdba71f57166)
+                                com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bdba71f57166)
                             },
                             checked = appearance.inputBarDeepSeeThrough,
                             onCheckedChange = viewModel::setInputBarDeepSeeThrough
@@ -555,18 +555,18 @@ private fun AvatarPickerRow(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = if (path.isNullOrBlank()) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4f528c177134) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d65e1a1ba803),
+                text = if (path.isNullOrBlank()) com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4f528c177134) else com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_d65e1a1ba803),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         if (!path.isNullOrBlank()) {
-            TextButton(onClick = onEdit) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f06f360f9706)) }
+            TextButton(onClick = onEdit) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f06f360f9706)) }
             IconButton(onClick = onClear) {
                 Icon(
                     imageVector = Icons.Default.Clear,
-                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2f752c005ec5),
+                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2f752c005ec5),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -594,9 +594,9 @@ private fun BackgroundPreview(
         )
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onReplace) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b1a3fede2cfc)) }
-            TextButton(onClick = onEdit) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f06f360f9706)) }
-            TextButton(onClick = onClear) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2f752c005ec5)) }
+            TextButton(onClick = onReplace) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_b1a3fede2cfc)) }
+            TextButton(onClick = onEdit) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f06f360f9706)) }
+            TextButton(onClick = onClear) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2f752c005ec5)) }
         }
     }
 }
