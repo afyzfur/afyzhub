@@ -52,7 +52,7 @@ fun ModelSelectionSection(
         // 已选择模型区域
         if (selected.isNotEmpty()) {
             Text(
-                text = "已选择模型（${selected.size}）",
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.models_selected, selected.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp)
@@ -99,7 +99,7 @@ fun ModelSelectionSection(
         if (available.isNotEmpty()) {
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "可用模型（${available.size}）",
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.models_available, available.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp)

@@ -89,7 +89,7 @@ fun ReasoningBlock(
                 Spacer(Modifier.size(6.dp))
                 Text(
                     // 字数比"点击展开"更有信息量：能预估思考的详细程度
-                    text = "${reasoning.length} 字",
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.reasoning_length, reasoning.length),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -237,7 +237,7 @@ fun ApiProfileEditScreen(
                 SettingsGroup {
                     SettingsActionItem(
                         icon = Icons.Default.PlayArrow,
-                        title = if (testing) "测试中… ${testSeconds}s" else com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_27fc3c44360f),
+                        title = if (testing) com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.profile_test_running, testSeconds) else com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_27fc3c44360f),
                         subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6e995a7133c9),
                         onClick = { modelsViewModel.testConnection(profile) }
                     )
@@ -287,7 +287,7 @@ fun ApiProfileEditScreen(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_9764f48bf69c)) },
-            text = { Text("将删除「${profile.displayName}」及其中保存的 API Key，无法恢复。") },
+            text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.profile_delete_confirm, profile.displayName)) },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; viewModel.deleteProfile(profile.id); onNavigateBack() }) {
                     Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3755f56f2f83), color = MaterialTheme.colorScheme.error)
@@ -310,7 +310,7 @@ private fun TestResultRow(result: TestResult) {
         is TestResult.Success -> Triple(
             MaterialTheme.colorScheme.primary,
             com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_51991a5d111a),
-            "配置可用 · 测试耗时 ${result.elapsedMs} ms · 模型延迟 ${result.elapsedMs} ms"
+            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.profile_test_success, result.elapsedMs, result.elapsedMs)
         )
         is TestResult.Failure -> Triple(
             MaterialTheme.colorScheme.error,

@@ -96,7 +96,7 @@ fun ApiProfileModelsScreen(
                         title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_38719c9968ae),
                         value = profile.model,
                         onValueChange = { viewModel.updateProfile(profile.copy(model = it)) },
-                        placeholder = "留空则使用 ${profile.provider.fallbackModel}"
+                        placeholder = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.model_default_hint, profile.provider.fallbackModel)
                     )
                     SettingsItemDivider()
                     ModelFetchRow(

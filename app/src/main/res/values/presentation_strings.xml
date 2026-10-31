@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="conversation_group">分组：%1$s</string>
+  <string name="conversation_delete_confirm">确定要删除「%1$s」吗？此操作无法撤销。</string>
+  <string name="reasoning_length">%1$s 字</string>
+  <string name="messages_removed">已移除 %1$s 条消息</string>
+  <string name="profile_test_running">测试中… %1$ss</string>
+  <string name="profile_delete_confirm">将删除「%1$s」及其中保存的 API Key，无法恢复。</string>
+  <string name="profile_test_success">配置可用 · 测试耗时 %1$s ms · 模型延迟 %2$s ms</string>
+  <string name="model_default_hint">留空则使用 %1$s</string>
+  <string name="profile_copy_hint">基于「%1$s」建一组副本</string>
+  <string name="profile_delete_with_key">将删除「%1$s」，其中的 API Key 也会一并清除。</string>
+  <string name="models_selected">已选择模型（%1$s）</string>
+  <string name="models_available">可用模型（%1$s）</string>
+  <string name="prompt_delete_confirm">将删除「%1$s」，此操作无法恢复。</string>
+  <string name="card_import_title">导入「%1$s」</string>
+  <string name="quick_prompts_hint">点击后填入输入框。首屏一次显示 %1$s 条。</string>
+  <string name="quick_prompts_order">按下方列表顺序显示前 %1$s 条</string>
+  <string name="quick_prompts_count">提示词库（%1$s）</string>
+  <string name="logs_copied_selected">已复制 %1$s 条日志</string>
+  <string name="logs_copied">已复制 %1$s 条日志</string>
+  <string name="logs_filtered_count">筛出 %1$s 条，共 %2$s 条</string>
+  <string name="logs_total_count">共 %1$s 条。一直保留，只在本机，可手动删除</string>
+  <string name="logs_clear_confirm">将删除 %1$s 条记录，无法恢复。</string>
+  <string name="logs_delete_selected_confirm">将删除选中的 %1$s 条记录，无法恢复。</string>
+  <string name="logs_delete_filtered_confirm">将删除当前筛出的 %1$s 条记录，其余保留。无法恢复。</string>
+  <string name="selection_count">已选 %1$s 项</string>
+  <string name="items_count">%1$s 条</string>
+</resources>

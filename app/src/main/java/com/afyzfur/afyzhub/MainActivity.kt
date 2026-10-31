@@ -9,6 +9,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
@@ -69,7 +72,17 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surfaceContainer
                 ) {
-                    NavGraph()
+                    androidx.compose.foundation.layout.Column {
+                        val unavailable by settingsRepository.credentialsUnavailable.collectAsState()
+                        if (unavailable) {
+                            androidx.compose.material3.Text(
+                                androidx.compose.ui.res.stringResource(com.afyzhub.chat.R.string.credential_recovery_message),
+                                modifier = Modifier.padding(16.dp).statusBarsPadding(),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { NavGraph() }
+                    }
                 }
             }
         }

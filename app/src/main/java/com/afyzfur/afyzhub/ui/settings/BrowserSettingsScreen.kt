@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,6 +32,7 @@ import org.koin.androidx.compose.koinViewModel
 class BrowserSettingsViewModel(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+    val credentialsUnavailable = settingsRepository.credentialsUnavailable
     private val _browserEnabled = MutableStateFlow(true)
     val browserEnabled: StateFlow<Boolean> = _browserEnabled.asStateFlow()
     private val _searchEngine = MutableStateFlow(SearchEngine.DEFAULT)
@@ -65,6 +67,7 @@ class BrowserSettingsViewModel(
         viewModelScope.launch { settingsRepository.setWebSearchEnabled(value) }
     }
     fun setTavilyKey(value: String) {
+        if (credentialsUnavailable.value) return
         _tavilyKey.value = value
         viewModelScope.launch { settingsRepository.setTavilyApiKey(value) }
     }
@@ -85,6 +88,7 @@ fun BrowserSettingsScreen(
     val engine by viewModel.searchEngine.collectAsState()
     val aiWebSearch by viewModel.aiWebSearch.collectAsState()
     val tavilyKey by viewModel.tavilyKey.collectAsState()
+    val unavailable by viewModel.credentialsUnavailable.collectAsState()
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxSize()
@@ -100,6 +104,10 @@ fun BrowserSettingsScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
+                if (unavailable) Text(
+                    androidx.compose.ui.res.stringResource(com.afyzhub.chat.R.string.credential_recovery_message),
+                    color = MaterialTheme.colorScheme.error
+                )
                 SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_1a0fdce8f88f))
                 SettingsGroup {
                     SettingsSwitchItem(

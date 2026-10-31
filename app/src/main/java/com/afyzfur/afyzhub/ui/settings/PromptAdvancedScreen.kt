@@ -80,7 +80,7 @@ fun PromptAdvancedScreen(profileId: String, onNavigateBack: () -> Unit, viewMode
                     SettingsGroup { SettingsActionItem(icon = Icons.Default.Delete, title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_28f3d050234f), destructive = true, onClick = { deleting = true }) }
                     Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4a11c79b6032), modifier = Modifier.padding(24.dp), style = MaterialTheme.typography.bodySmall)
                 }
-                if (deleting) AlertDialog(onDismissRequest = { deleting = false }, title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_30352098391a)) }, text = { Text("将删除「${group.name}」，此操作无法恢复。") }, confirmButton = { TextButton(onClick = {
+                if (deleting) AlertDialog(onDismissRequest = { deleting = false }, title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_30352098391a)) }, text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.prompt_delete_confirm, group.name)) }, confirmButton = { TextButton(onClick = {
                     deleting = false
                     val id = group.id
                     viewModel.changePrompts(profileId) { p ->
@@ -92,7 +92,7 @@ fun PromptAdvancedScreen(profileId: String, onNavigateBack: () -> Unit, viewMode
         }
     }
     pendingCard?.let { card ->
-        AlertDialog(onDismissRequest = { pendingCard = null }, title = { Text("导入「${card.name}」") }, text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3f68db538f8d)) }, confirmButton = { TextButton(onClick = { viewModel.changePrompts(profileId) { p -> p.copy(promptGroups = p.availablePrompts + card, activePromptId = card.id) }; pendingCard = null }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_60e2bcad85ac)) } }, dismissButton = { TextButton(onClick = { pendingCard = null }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d0b4688c787)) } })
+        AlertDialog(onDismissRequest = { pendingCard = null }, title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.card_import_title, card.name)) }, text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3f68db538f8d)) }, confirmButton = { TextButton(onClick = { viewModel.changePrompts(profileId) { p -> p.copy(promptGroups = p.availablePrompts + card, activePromptId = card.id) }; pendingCard = null }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_60e2bcad85ac)) } }, dismissButton = { TextButton(onClick = { pendingCard = null }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d0b4688c787)) } })
     }
     importError?.let { message -> AlertDialog(onDismissRequest = { importError = null }, title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a01a8d53938f)) }, text = { Text(message) }, confirmButton = { TextButton(onClick = { importError = null }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f526c89937e1)) } }) }
 }
