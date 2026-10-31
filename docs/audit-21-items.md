@@ -14,16 +14,23 @@
 | 8 密钥明文 | 存在。DataStore 边界使用 Android Keystore AES-GCM 包装，覆盖 profiles、旧 provider Key、Tavily Key；原子迁移失败保留旧文件，增加纯单测与真实 Keystore 测试。 |
 | 9 应用标识 | 采用兼容方案：namespace 对齐为 com.afyzhub.chat，同时保留已发布 applicationId=com.afyzhub.chat，不改变安装标识或升级路径；README 已说明。 |
 | 10 旧依赖 | 存在。成套升级 AGP 8.9.2 / Gradle 8.11.1 / Kotlin 2.1.21 / KSP 2.1.21-2.0.1 / Compose BOM 2025.05.01 / Room 2.7.2 / Navigation 2.9.0；这是兼容性升级，不宣称所有组件最新。 |
-| 11 文案 | 完成第二轮静态 UI 文案资源化；插值、ViewModel 错误、枚举和协议/提示词仍保留在代码中，完整多语言仍不是本轮交付。 |
+| 11 文案 | 又完成一轮安全的动态展示文案资源化；业务错误、枚举、协议、正则和提示词仍保留，完整多语言仍不是本轮交付。 |
 | 12 流式写库 | 确认 16ms。改 33ms，上调步长保持追赶速度，最后完整内容仍落库。 |
 | 13 Regex | 确认循环重复构造；实际 16 个字面表达式。统一预编译，HTML 上游结构变化依然可能使搜索失效。 |
 | 14 非空断言 | 五处存在。改局部判空/已验证不变量，图片使用受条件保护的非空路径；删除全部 !!。 |
 | 15 死代码 | 存在。删除空 usage 分支及 rawUsageLogged 假日志，注释与 33ms 一致。 |
 | 16 Windows wrapper | 缺失。补官方 gradlew.bat，README 增加 Windows 命令。 |
-| 17 大文件 | 将流式揭示/写库拆为 ChatStreamCollector，ChatContent 与 AppSettings 已拆出；WebSearchService、SettingsRepository 等仍需后续按职责继续拆分。 |
+| 17 大文件 | 已拆出 ChatStreamCollector、UiSettingsStore、SearchResultParser 和 SearchEngine；剩余文件按职责继续维护，不为凑行数重写高风险逻辑。 |
 | 18 静态检查 | 存在。CI 增加 Android Lint，加入 editorconfig；不使用空 baseline 隐藏真实错误。 |
 | 19 图标 | PNG 存在。仅使用像素一致的无损 WebP；保留更小的原文件。总量约 543374→398108 字节。 |
 | 20 吞解析异常 | 存在。加入限频诊断，记录 provider、异常类型和次数，不写响应正文/密钥；协程取消继续抛出。 |
 | 21 设计稿 | 已在 docs/ui-redesign.md，无需移动。README 新增链接，标明设计意图而非功能说明。 |
 
 密钥加密属于升级后的本机存储保护，无法防止已获得进程控制权限的攻击者读取运行时凭证。旧版本不认识加密存储，升级后不应直接降级使用旧版。
+
+### 后续复核
+- FIXES_SUMMARY.md 已删除，避免与当前 CI 状态冲突。
+- Lint 继续使用 abortOnError=true，lint.xml 只声明重点策略，不使用空 baseline 隐藏问题。
+- main 并发发布不取消进行中的任务；普通 PR 的迁移模拟器需 ci-migration 标签，main/手动运行不跳过。
+- Keystore 丢失时不自动生成新密钥覆盖旧密文；恢复需用户确认，原密文在确认前保留。
+- ktlint 未接入；本轮使用 Detekt 做可执行的 Kotlin 静态检查，格式化工具仍可后续单独引入。

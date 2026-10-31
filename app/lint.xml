@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Retain all default checks; make safety/correctness policy explicit. -->
+    <issue id="NewApi" severity="error" />
+    <issue id="MissingPermission" severity="error" />
+    <issue id="SetJavaScriptEnabled" severity="warning" />
+    <issue id="HardcodedText" severity="warning" />
+</lint>

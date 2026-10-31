@@ -8,4 +8,5 @@ object AppText {
     private lateinit var application: Context
     fun initialize(context: Context) { application = context.applicationContext }
     fun get(@StringRes id: Int): String = application.getString(id)
+    fun get(@StringRes id: Int, vararg args: Any): String = application.getString(id, *args)
 }

@@ -26,6 +26,22 @@ class ApiProfilesViewModel(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
+    val credentialsUnavailable = settingsRepository.credentialsUnavailable
+    private val mutableRecoveryFailed = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val recoveryFailed: StateFlow<Boolean> = mutableRecoveryFailed
+
+    fun resetCredentialsAfterConfirmation() {
+        viewModelScope.launch {
+            try {
+                settingsRepository.resetCredentialsAfterConfirmation()
+                mutableRecoveryFailed.value = false
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                mutableRecoveryFailed.value = true
+            }
+        }
+    }
+
     val store: StateFlow<ApiProfileStore> = settingsRepository.apiProfilesFlow
         .stateIn(
             scope = viewModelScope,

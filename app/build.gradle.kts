@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("io.gitlab.arturbosch.detekt") version "1.23.8"
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
@@ -64,6 +65,14 @@ android {
         jvmTarget = "17"
     }
     
+    lint {
+        abortOnError = true
+        warningsAsErrors = false
+        lintConfig = file("lint.xml")
+        htmlReport = true
+        xmlReport = true
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -80,7 +89,7 @@ dependencies {
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
 
     // Compose
@@ -139,3 +148,11 @@ tasks.named("preBuild") {
     dependsOn(syncChangelog)
 }
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+
+// Focused first-party Kotlin analysis. Existing formatting debt is not hidden in a baseline.
+detekt {
+    buildUponDefaultConfig = false
+    config.setFrom(files(rootProject.file("config/detekt.yml")))
+    source.setFrom(files("src/main/java", "src/test/java", "src/androidTest/java"))
+    ignoreFailures = false
+}

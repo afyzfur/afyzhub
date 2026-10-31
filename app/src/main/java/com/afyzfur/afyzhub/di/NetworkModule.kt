@@ -29,7 +29,8 @@ import java.util.concurrent.TimeUnit
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = Constants.PREFS_NAME)
 
 val networkModule = module {
-    single<DataStore<Preferences>> { com.afyzfur.afyzhub.data.settings.EncryptedPreferencesStore(androidContext().dataStore, com.afyzfur.afyzhub.data.settings.KeystorePreferenceCipher()) }
+    single { com.afyzfur.afyzhub.data.settings.EncryptedPreferencesStore(androidContext().dataStore, com.afyzfur.afyzhub.data.settings.KeystorePreferenceCipher()) }
+    single<DataStore<Preferences>> { get<com.afyzfur.afyzhub.data.settings.EncryptedPreferencesStore>() }
 
     /** 应用级作用域，用于常驻缓存设置。 */
     single { CoroutineScope(SupervisorJob() + Dispatchers.IO) }

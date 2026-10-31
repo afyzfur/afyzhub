@@ -62,7 +62,7 @@ fun UndoBar(
                 modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
             ) {
                 Text(
-                    text = if (count > 1) "已移除 $count 条消息" else com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_1a6d60a8e162),
+                    text = if (count > 1) com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.messages_removed, count) else com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_1a6d60a8e162),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

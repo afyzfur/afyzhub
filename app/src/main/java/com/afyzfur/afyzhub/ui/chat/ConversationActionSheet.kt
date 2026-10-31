@@ -93,7 +93,7 @@ fun ConversationActionSheet(
             )
             if (conversation.group.isNotEmpty()) {
                 Text(
-                    text = "分组：${conversation.group}",
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.conversation_group, conversation.group),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 24.dp)
@@ -188,7 +188,7 @@ fun ConversationActionSheet(
         ActionDialog.Delete -> AlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3559dc2da370)) },
-            text = { Text("确定要删除「${conversation.title}」吗？此操作无法撤销。") },
+            text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.conversation_delete_confirm, conversation.title)) },
             confirmButton = {
                 TextButton(
                     onClick = {

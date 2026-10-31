@@ -4,10 +4,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 concurrency:
   group: android-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 permissions:
   contents: read
 jobs:
@@ -21,8 +22,8 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
-      - name: Debug, unit tests and lint
-        run: ./gradlew assembleDebug testDebugUnitTest lintDebug --stacktrace
+      - name: Debug, unit tests, Android Lint and Detekt
+        run: ./gradlew assembleDebug testDebugUnitTest lintDebug detekt --stacktrace
       - name: Upload test reports and exported schema
         if: always()
         uses: actions/upload-artifact@v4
@@ -33,6 +34,7 @@ jobs:
             app/build/test-results/
             app/schemas/
   migrations:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci-migration')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -137,23 +139,13 @@ jobs:
             printf '全部版本的更新记录见 [CHANGELOG.md](%s)。\n' \
               "https://github.com/afyzfur/afyzhub/blob/main/CHANGELOG.md"
           } >> release-notes.md
-          # 同名发行版存在时只覆盖附件与说明，不删除发行版和标签，
-          # 避免历史版本连同标签一起丢失。
+          ASSET="AfyzHub-${APP_VERSION}-${GITHUB_SHA:0:8}.apk"
+          cp "AfyzHub-${APP_VERSION}.apk" "$ASSET"
           if gh release view "$APP_VERSION" >/dev/null 2>&1; then
-            echo "发行版 $APP_VERSION 已存在，更新附件与说明"
-            gh release edit "$APP_VERSION" \
-              --title "$APP_VERSION" \
-              --notes-file release-notes.md \
-              --prerelease
-            gh release upload "$APP_VERSION" \
-              "AfyzHub-${APP_VERSION}.apk" --clobber
+            gh release upload "$APP_VERSION" "$ASSET" --clobber
+            gh release edit "$APP_VERSION" --title "$APP_VERSION" --notes-file release-notes.md --prerelease
           else
-            gh release create "$APP_VERSION" \
-              --title "$APP_VERSION" \
-              --notes-file release-notes.md \
-              --prerelease \
-              --target main \
-              "AfyzHub-${APP_VERSION}.apk"
+            gh release create "$APP_VERSION" --title "$APP_VERSION" --notes-file release-notes.md --prerelease --target "$GITHUB_SHA" "$ASSET"
           fi
 
       - name: Clean up keystore

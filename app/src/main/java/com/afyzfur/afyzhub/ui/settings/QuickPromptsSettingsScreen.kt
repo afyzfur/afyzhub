@@ -67,7 +67,7 @@ fun QuickPromptsSettingsScreen(
             ) {
                 Text(
                     text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f0f79689a0fb) +
-                        "点击后填入输入框。首屏一次显示 $QUICK_PROMPT_DISPLAY_COUNT 条。",
+                        com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.quick_prompts_hint, QUICK_PROMPT_DISPLAY_COUNT),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
@@ -81,14 +81,14 @@ fun QuickPromptsSettingsScreen(
                         subtitle = if (prefs.shufflePrompts) {
                             com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6d17a4cf95b4)
                         } else {
-                            "按下方列表顺序显示前 $QUICK_PROMPT_DISPLAY_COUNT 条"
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.quick_prompts_order, QUICK_PROMPT_DISPLAY_COUNT)
                         },
                         checked = prefs.shufflePrompts,
                         onCheckedChange = viewModel::setShufflePrompts
                     )
                 }
 
-                SettingsCategoryTitle("提示词库（${prefs.quickPrompts.size}）")
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.quick_prompts_count, prefs.quickPrompts.size))
 
                 if (prefs.quickPrompts.isEmpty()) {
                     Text(

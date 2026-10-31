@@ -23,4 +23,21 @@ class CredentialCipherTest {
         catch (_: java.security.GeneralSecurityException) { }
         assertEquals("legacy",cipher.decrypt("legacy"))
     }
+
+    @Test fun missingKeystoreAliasDoesNotGetRecreatedOnDecrypt() {
+        val alias = "afyzhub.test." + java.util.UUID.randomUUID().toString()
+        val cipher = KeystorePreferenceCipher(alias)
+        try {
+            val encrypted = cipher.encrypt("secret")
+            cipher.reset()
+            try { cipher.decrypt(encrypted); fail("lost key must fail") }
+            catch (_: IllegalStateException) { }
+            val store = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            assertFalse(store.containsAlias(alias))
+            val fresh = cipher.encrypt("new-secret")
+            assertEquals("new-secret", cipher.decrypt(fresh))
+            try { cipher.decrypt("enc:v1:AA=="); fail("truncated data must fail") }
+            catch (_: IllegalArgumentException) { }
+        } finally { cipher.reset() }
+    }
 }

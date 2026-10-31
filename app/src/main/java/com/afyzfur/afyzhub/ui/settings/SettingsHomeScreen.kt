@@ -123,7 +123,7 @@ fun SettingsHomeScreen(
                         subtitle = if (prefs.quickPrompts.isEmpty()) {
                             com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_55a04b58cd2c)
                         } else {
-                            "${prefs.quickPrompts.size} 条"
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.items_count, prefs.quickPrompts.size)
                         },
                         onClick = onNavigateToQuickPrompts
                     )

@@ -114,7 +114,7 @@ fun RequestLogScreen(
                         }
                     }
                     clipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
-                    android.widget.Toast.makeText(context, "已复制 ${selectedEntries.size} 条日志", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.logs_copied_selected, selectedEntries.size), android.widget.Toast.LENGTH_SHORT).show()
                 },
                 onDelete = { confirmDeleteSelected = true }
             )
@@ -172,8 +172,8 @@ fun RequestLogScreen(
                     allEntries.isEmpty() -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4f9ba23510ec)
                     // 筛过之后要同时说明筛出多少、总共多少，
                     // 否则看到条数变少会以为记录丢了
-                    !filter.isEmpty -> "筛出 ${entries.size} 条，共 ${allEntries.size} 条"
-                    else -> "共 ${entries.size} 条。一直保留，只在本机，可手动删除"
+                    !filter.isEmpty -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.logs_filtered_count, entries.size, allEntries.size)
+                    else -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.logs_total_count, entries.size)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -195,7 +195,7 @@ fun RequestLogScreen(
                             }
                         }
                         clipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
-                        android.widget.Toast.makeText(context, "已复制 ${sourceEntries.size} 条日志", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.logs_copied, sourceEntries.size), android.widget.Toast.LENGTH_SHORT).show()
                     }
                 ) {
                     Text(if (inSelection) com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4edd1d00875d) else com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_55f59bc2f0c3))
@@ -262,7 +262,7 @@ fun RequestLogScreen(
         AlertDialog(
             onDismissRequest = { confirmClearAll = false },
             title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_74c6b428b737)) },
-            text = { Text("将删除 ${allEntries.size} 条记录，无法恢复。") },
+            text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.logs_clear_confirm, allEntries.size)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmClearAll = false
@@ -279,7 +279,7 @@ fun RequestLogScreen(
         AlertDialog(
             onDismissRequest = { confirmDeleteSelected = false },
             title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4373baf54548)) },
-            text = { Text("将删除选中的 ${selected.size} 条记录，无法恢复。") },
+            text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.logs_delete_selected_confirm, selected.size)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDeleteSelected = false
@@ -296,7 +296,7 @@ fun RequestLogScreen(
         AlertDialog(
             onDismissRequest = { confirmDeleteFiltered = false },
             title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_0707ba9f4deb)) },
-            text = { Text("将删除当前筛出的 ${entries.size} 条记录，其余保留。无法恢复。") },
+            text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.logs_delete_filtered_confirm, entries.size)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDeleteFiltered = false
@@ -526,7 +526,7 @@ private fun SelectionHeader(
             )
         }
         Text(
-            text = "已选 $count 项",
+            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.selection_count, count),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .weight(1f)

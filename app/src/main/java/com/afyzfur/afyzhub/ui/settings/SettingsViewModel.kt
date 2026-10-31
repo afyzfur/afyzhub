@@ -123,6 +123,7 @@ class SettingsViewModel(
     }
 
     private suspend fun persist() {
+        if (settingsRepository.credentialsUnavailable.value) return
         settingsRepository.save(
             provider = _provider.value,
             apiKey = _apiKey.value,

@@ -54,8 +54,19 @@ fun ApiProfilesScreen(
     onEditProfile: (String) -> Unit,
     viewModel: ApiProfilesViewModel = koinViewModel()
 ) {
+    val unavailable by viewModel.credentialsUnavailable.collectAsState()
+    val recoveryFailed by viewModel.recoveryFailed.collectAsState()
     val store by viewModel.store.collectAsState()
     var pendingDelete by remember { mutableStateOf<ApiProfile?>(null) }
+
+    if (unavailable) {
+        CredentialRecoveryScreen(
+            failed = recoveryFailed,
+            onNavigateBack = onNavigateBack,
+            onConfirmed = viewModel::resetCredentialsAfterConfirmation
+        )
+        return
+    }
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -113,7 +124,7 @@ fun ApiProfilesScreen(
                         SettingsActionItem(
                             icon = Icons.Default.Add,
                             title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6c3e065e11a9),
-                            subtitle = "基于「${active.displayName}」建一组副本",
+                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.profile_copy_hint, active.displayName),
                             onClick = { viewModel.duplicateProfile(active.id) }
                         )
                         SettingsItemDivider()
@@ -144,7 +155,7 @@ fun ApiProfilesScreen(
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_9764f48bf69c)) },
-            text = { Text("将删除「${target.displayName}」，其中的 API Key 也会一并清除。") },
+            text = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.profile_delete_with_key, target.displayName)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteProfile(target.id)
