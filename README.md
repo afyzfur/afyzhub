@@ -113,7 +113,7 @@ Windows PowerShell 使用 `./gradlew.bat assembleDebug`；Linux/macOS 使用上�
 </div>
 
 ## 开发与验证
-- PR：debug APK、单元测试、Android Lint；不读取签名 Secrets。
+- PR：Debug 构建、单元测试、Android Lint、Detekt；不读取签名 Secrets。Room 模拟器迁移默认仅在 main 或带 ci-migration 标签时运行。
 - Room 1→6：CI 模拟器运行迁移链和历史消息保留断言，schema 位于 `app/schemas/`。
 - `applicationId=com.afyzhub.chat` 是已发布安装标识，`namespace=com.afyzhub.chat` 与其保持一致；不修改 applicationId，以保持已有安装的升级路径。
 - [UI 设计稿](docs/ui-redesign.md) 仅记录设计意图，不代表已实现功能。
