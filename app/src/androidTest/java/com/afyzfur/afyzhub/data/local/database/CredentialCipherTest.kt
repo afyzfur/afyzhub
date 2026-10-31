@@ -1,0 +1,26 @@
+package com.afyzfur.afyzhub.data.local.database
+
+import com.afyzfur.afyzhub.data.settings.KeystorePreferenceCipher
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class CredentialCipherTest {
+    @Test fun keystoreRoundTripRandomIvAndTamperRejection() {
+        val cipher=KeystorePreferenceCipher()
+        val value="secret\n😀\\\""
+        val first=cipher.encrypt(value)
+        val second=cipher.encrypt(value)
+        assertNotEquals(first,second)
+        assertFalse(first.contains("secret"))
+        assertEquals(value,cipher.decrypt(first))
+        assertEquals(value,KeystorePreferenceCipher().decrypt(first))
+        val offset=first.length-5
+        val changed=first.substring(0,offset)+(if (first[offset]=='A') "B" else "A")+first.substring(offset+1)
+        try { cipher.decrypt(changed); fail("Authenticated ciphertext must reject changes") }
+        catch (_: java.security.GeneralSecurityException) { }
+        assertEquals("legacy",cipher.decrypt("legacy"))
+    }
+}

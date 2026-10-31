@@ -17,7 +17,7 @@ object CharacterCardImporter {
             var v3: String? = null
             while (offset + 12 <= bytes.size) {
                 val length = (0..3).fold(0L) { n, i -> (n shl 8) or (bytes[offset+i].toLong() and 255) }
-                require(length <= LIMIT && offset.toLong()+length+12 <= bytes.size) { com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_98c78e0ce81c) }
+                require(length <= LIMIT && offset.toLong()+length+12 <= bytes.size) { "PNG 数据损坏" }
                 val type = String(bytes, offset+4, 4, Charsets.US_ASCII)
                 if (type == "tEXt") {
                     val chunk = bytes.copyOfRange(offset+8, offset+8+length.toInt())
@@ -33,19 +33,19 @@ object CharacterCardImporter {
                 offset += length.toInt()+12
                 if (type == "IEND") break
             }
-            v3 ?: v2 ?: error(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_0184bc10113e))
+            v3 ?: v2 ?: error("图片中没有 chara/ccv3 角色卡数据")
         } else String(bytes, Charsets.UTF_8).removePrefix("\uFEFF")
         return parse(text)
     }
     fun parse(text: String): PromptGroup {
-        require(text.length <= LIMIT) { com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e4b948f26da3) }
+        require(text.length <= LIMIT) { "角色卡过大" }
         val root = Json.parseToJsonElement(text).jsonObject
         val spec = (root["spec"] as? JsonPrimitive)?.contentOrNull
-        require(spec == null || spec in listOf("chara_card_v2", "chara_card_v3")) { com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_cc8146872cf0) }
-        val data = if (spec == null) root else root["data"]?.jsonObject ?: error(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_0ac61bce3982))
+        require(spec == null || spec in listOf("chara_card_v2", "chara_card_v3")) { "不支持的角色卡版本" }
+        val data = if (spec == null) root else root["data"]?.jsonObject ?: error("缺少角色数据")
         fun field(key: String) = (data[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
-        require(listOf("name","description","personality","first_mes").any { field(it).isNotBlank() }) { com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_78d0b3d968cc) }
-        val name = field("name").ifBlank { com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8cdd44e52c0e) }
+        require(listOf("name","description","personality","first_mes").any { field(it).isNotBlank() }) { "不是有效的角色卡" }
+        val name = field("name").ifBlank { "导入角色" }
         val role = listOf(field("description"),field("personality"),field("scenario")).filter { it.isNotBlank() }.joinToString("\n\n")
         val chat = listOf(field("system_prompt"),field("post_history_instructions"),field("mes_example")).filter { it.isNotBlank() }.joinToString("\n\n")
         return PromptGroup(UUID.randomUUID().toString(),name,role,field("first_mes"),chat,text)
@@ -56,7 +56,7 @@ object CharacterCardImporter {
         while (true) {
             val count = read(buffer)
             if (count < 0) break
-            require(out.size()+count <= LIMIT) { com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d2ccbaa699f8) }
+            require(out.size()+count <= LIMIT) { "角色卡文件不能超过 8 MB" }
             out.write(buffer,0,count)
         }
         return out.toByteArray()

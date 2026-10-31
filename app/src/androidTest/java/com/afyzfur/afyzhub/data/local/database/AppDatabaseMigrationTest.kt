@@ -43,14 +43,16 @@ class AppDatabaseMigrationTest {
                 }
                 close()
             }
-            Room.databaseBuilder(context, AppDatabase::class.java, name)
-                .addMigrations(*migrations).build().use { room ->
+            val room = Room.databaseBuilder(context, AppDatabase::class.java, name)
+                .addMigrations(*migrations).build()
+            try {
                     val db = room.openHelper.writableDatabase
                     db.execSQL("DELETE FROM conversations WHERE id=1")
                     db.query("SELECT COUNT(*) FROM messages").use { cursor ->
                         assertTrue(cursor.moveToFirst()); assertEquals(0,cursor.getInt(0))
                     }
                 }
+            finally { room.close() }
             context.deleteDatabase(name)
         }
     }

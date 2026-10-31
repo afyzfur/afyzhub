@@ -84,9 +84,9 @@ private class DayBounds(now: Long) {
     }
 
     fun groupOf(timestamp: Long): ConversationGroup = when {
-        timestamp >= todayStart -> ConversationGroup(0, com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_17e83cc25e22))
-        timestamp >= yesterdayStart -> ConversationGroup(1, com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_59c4fcb09e27))
-        timestamp >= dayBeforeStart -> ConversationGroup(2, com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f252230de210))
+        timestamp >= todayStart -> ConversationGroup(0, "今天")
+        timestamp >= yesterdayStart -> ConversationGroup(1, "昨天")
+        timestamp >= dayBeforeStart -> ConversationGroup(2, "前天")
 
         // 本周内但早于前天，用星期几。序号加上距今天数，
         // 使同周的多个星期几之间也能正确排序
@@ -110,13 +110,13 @@ private class DayBounds(now: Long) {
     private fun weekdayOf(timestamp: Long): String {
         calendar.timeInMillis = timestamp
         return when (calendar.get(Calendar.DAY_OF_WEEK)) {
-            Calendar.MONDAY -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_dded7a48901d)
-            Calendar.TUESDAY -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c80c63617b18)
-            Calendar.WEDNESDAY -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_584bd4db5650)
-            Calendar.THURSDAY -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_712173f5502c)
-            Calendar.FRIDAY -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_9e51ca47a2e9)
-            Calendar.SATURDAY -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_77bef63c5501)
-            else -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d9636d4a9056)
+            Calendar.MONDAY -> "星期一"
+            Calendar.TUESDAY -> "星期二"
+            Calendar.WEDNESDAY -> "星期三"
+            Calendar.THURSDAY -> "星期四"
+            Calendar.FRIDAY -> "星期五"
+            Calendar.SATURDAY -> "星期六"
+            else -> "星期日"
         }
     }
 
@@ -129,7 +129,7 @@ private class DayBounds(now: Long) {
         calendar.timeInMillis = timestamp
         val year = calendar.get(Calendar.YEAR)
         calendar.timeInMillis = todayStart
-        val pattern = if (year == calendar.get(Calendar.YEAR)) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_fbe2ad892d58) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3054424bb632)
+        val pattern = if (year == calendar.get(Calendar.YEAR)) "M月d日" else "yyyy年M月d日"
         return SimpleDateFormat(pattern, Locale.getDefault()).format(Date(timestamp))
     }
 

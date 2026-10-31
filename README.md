@@ -49,7 +49,7 @@ Gemini 原生联网搜索，设置页一键开关。请求日志记录提供商�
 
 ### 隐私
 
-API Key 仅存储在本机，不经过任何第三方服务。
+API Key 使用 Android Keystore 支持的 AES-GCM 加密后存于本机；请求时仅发送给你配置的服务端。旧配置自动迁移，加密失败保留原文件。升级后旧版本不能直接读取加密配置。
 
 ## 快速开始
 
@@ -118,3 +118,5 @@ Windows PowerShell 使用 `./gradlew.bat assembleDebug`；Linux/macOS 使用上�
 - `applicationId=com.afyzhub.chat` 是已发布安装标识；`namespace=com.afyzfur.afyzhub` 是代码命名空间，允许不同，升级时不改安装标识。
 - [UI 设计稿](docs/ui-redesign.md) 仅记录设计意图，不代表已实现功能。
 - HTML 搜索依赖上游页面结构，可选择结构化 Tavily API；遵守服务方条款和使用限制。
+
+[21 项审查记录](docs/audit-21-items.md)。浏览器默认禁用 JavaScript，可按网页需要临时开启。
