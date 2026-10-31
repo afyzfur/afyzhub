@@ -231,7 +231,7 @@ class ChatRepositoryImpl(
                 // Preserve the emitted timeline exactly once across the request boundary.
                 val timelinePrefix = reply + sourcesBlock + "\n"
                 val secondOutcome = if (settings.streamEnabled) {
-                    collectStream(client, searchedTurns, settings, assistantId!!, onPhase, timelinePrefix)
+                    collectStream(client, searchedTurns, settings, requireNotNull(assistantId) { "Assistant placeholder must exist before streaming" }, onPhase, timelinePrefix)
                 } else {
                     client.complete(searchedTurns, settings)
                 }
@@ -448,7 +448,7 @@ class ChatRepositoryImpl(
         var receivedThisRound = false
         // 平滑显示: 揭示进度与网络到达节奏解耦。网络是突发式投递的,
         // 若直接把缓冲区写库, 会出现“几百毫秒无变化→突然蹦一大段”的一顿一顿。
-        // 改为逐字揭示: 每 40ms 把“已揭示”部分落库,
+        // 改为逐字揭示: 每 33ms 把“已揭示”部分落库,
         // 步长按积压量自适应推进——API 一次给一大段也逐字显现,
         // API 慢时原样透传, 观感始终丝滑。
         var lastWritten = ""
@@ -457,18 +457,18 @@ class ChatRepositoryImpl(
         var revealed = initialContent.length
         val smoother = CoroutineScope(currentCoroutineContext()).launch(Dispatchers.IO) {
             while (true) {
-                delay(16)
+                delay(33)
                 val snapshot: String
                 val finished: Boolean
                 synchronized(revealLock) {
                     val full = builder.toString()
                     if (revealed < full.length) {
                         val backlog = full.length - revealed
-                        // DeepSeek 风格逐字渐显: 每 60ms 小步进固定字数,
+                        // DeepSeek 风格逐字渐显: 每 33ms 小步进固定字数,
                         // 步长随积压自适应但幅度小(backlog/20), 视觉上是
                         // 连续的小步进而非大段跳变; 积压大时按比例加速
                         // 追平, 不会无限落后
-                        revealed += maxOf(2, (backlog / 20).coerceAtLeast(1))
+                        revealed += maxOf(4, (backlog / 10).coerceAtLeast(1))
                         if (revealed > full.length) revealed = full.length
                     }
                     // 半标签防护: 截断点若落在协议标签的中间, 库里会短暂

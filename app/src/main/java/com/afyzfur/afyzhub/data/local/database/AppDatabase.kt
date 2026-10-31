@@ -76,7 +76,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
-        /** v5 -> v6：消息表新增缓存命中 token 数，可空并带默认值 0。 */
+        /** v5 -> v6：消息表新增缓存命中 token 数，可空，历史消息保持 null。 */
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(

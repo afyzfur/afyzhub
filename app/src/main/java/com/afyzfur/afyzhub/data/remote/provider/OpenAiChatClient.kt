@@ -46,8 +46,6 @@ class OpenAiChatClient(
         }
         // 与流式同源的双保险: DTO 缺字段时从原始响应体提取
         val finalUsage = mergeUsageNullable(dtoUsage, extractUsageManually(text))
-        if (finalUsage != null) {
-        }
         return CompletionResult(
             // 用 contentWithThinking 而非 content：思考走独立字段的模型
             // 需要拼成 think 标签，否则思考过程会丢失
@@ -59,7 +57,6 @@ class OpenAiChatClient(
     override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> = flow {
         val body = json.encodeToString(ChatRequest.serializer(), buildRequest(turns, settings, true))
         var usage: TokenUsage? = null
-        var rawUsageLogged = false
         // 思考是否已开始/已结束，用于把独立字段拼成 think 标签
         var thinkingOpen = false
 
@@ -82,14 +79,8 @@ class OpenAiChatClient(
             }
             val extracted = dtoUsage ?: extractUsageManually(payload)
             if (extracted != null) {
-                if (!rawUsageLogged) {
-                    // 打印首个 usage 原文与解析结果, 缓存为 0 时可直接定位字段名
-                    rawUsageLogged = true
-                }
                 usage = mergeUsage(usage, extracted)
-            } else if ("usage" in payload && !rawUsageLogged) {
-                // usage 存在但解析失败: 记录原文供诊断
-                rawUsageLogged = true
+
             }
             if (chunk == null) return@collect
             val delta = chunk.choices.firstOrNull()?.delta ?: return@collect
@@ -215,6 +206,7 @@ class OpenAiChatClient(
         if (prompt == null && completion == null) null
         else TokenUsage(prompt ?: 0, completion ?: 0, cached)
     } catch (e: Exception) {
+        ParseDiagnostics.failed("OpenAiChatClient", e)
         null
     }
 
@@ -222,6 +214,7 @@ class OpenAiChatClient(
     private fun parseChunk(payload: String): ChatStreamChunk? = try {
         json.decodeFromString(ChatStreamChunk.serializer(), payload)
     } catch (e: Exception) {
+        ParseDiagnostics.failed("OpenAiChatClient", e)
         null
     }
 

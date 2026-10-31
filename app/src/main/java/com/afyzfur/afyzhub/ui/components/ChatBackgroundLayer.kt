@@ -33,7 +33,7 @@ fun ChatBackgroundLayer(
     // 溢出到容器之外，不裁的话会盖住相邻内容
     Box(modifier = modifier.clipToBounds()) {
         LocalImage(
-            path = appearance.backgroundPath!!,
+            path = appearance.backgroundPath.orEmpty(),
             version = appearance.imageVersion,
             contentDescription = null,
             contentScale = ContentScale.Crop,

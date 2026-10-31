@@ -8,8 +8,8 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android-green.svg)](https://www.android.com)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.20-purple.svg)](https://kotlinlang.org)
-[![Release](https://img.shields.io/badge/version-v0.3.7--dev-orange.svg)](https://github.com/afyzfur/afyzhub/releases)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.1.21-purple.svg)](https://kotlinlang.org)
+[![Release](https://img.shields.io/badge/version-v0.3.8--dev-orange.svg)](https://github.com/afyzfur/afyzhub/releases)
 
 [下载 APK](https://github.com/afyzfur/afyzhub/releases) · [更新日志](CHANGELOG.md)
 
@@ -92,6 +92,8 @@ cd afyzhub
 ./gradlew assembleDebug
 ```
 
+Windows PowerShell 使用 `./gradlew.bat assembleDebug`；Linux/macOS 使用上面的命令。
+
 需要 JDK 17+、Android SDK 35。产物在 `app/build/outputs/apk/`。
 
 ## 版本说明
@@ -109,5 +111,10 @@ cd afyzhub
 **AfyzHub** · 界面为内容服务
 
 </div>
-> 开发状态：当前版本仍在开发中，内置浏览器功能存在已知问题，不建议作为稳定版本使用。
-> 当前开发状态：Tavily 搜索已接入，Markdown 表格已支持；内置浏览器仍存在已知问题，当前版本不建议作为稳定版本使用。
+
+## 开发与验证
+- PR：debug APK、单元测试、Android Lint；不读取签名 Secrets。
+- Room 1→6：CI 模拟器运行迁移链和历史消息保留断言，schema 位于 `app/schemas/`。
+- `applicationId=com.afyzhub.chat` 是已发布安装标识；`namespace=com.afyzfur.afyzhub` 是代码命名空间，允许不同，升级时不改安装标识。
+- [UI 设计稿](docs/ui-redesign.md) 仅记录设计意图，不代表已实现功能。
+- HTML 搜索依赖上游页面结构，可选择结构化 Tavily API；遵守服务方条款和使用限制。

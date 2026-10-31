@@ -203,6 +203,7 @@ class AnthropicChatClient(
     private fun parseEvent(payload: String): AnthropicEvent? = try {
         json.decodeFromString(AnthropicEvent.serializer(), payload)
     } catch (e: Exception) {
+        ParseDiagnostics.failed("AnthropicChatClient", e)
         null
     }
 

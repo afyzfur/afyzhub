@@ -15,6 +15,7 @@ import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.theme.ThemePalette
 import kotlinx.serialization.json.Json
 import com.afyzfur.afyzhub.util.Constants
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -97,6 +98,14 @@ class SettingsRepository(
     private val profileJson = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+    }
+
+    init {
+        scope.launch {
+            // The encrypted boundary migrates legacy values atomically on the first edit.
+            // DataStore retains the original file if encryption fails.
+            dataStore.updateData { it }
+        }
     }
 
     private val providerKey = stringPreferencesKey(Constants.KEY_PROVIDER)

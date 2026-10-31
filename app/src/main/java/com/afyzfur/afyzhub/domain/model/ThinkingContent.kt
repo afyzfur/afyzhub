@@ -247,7 +247,7 @@ fun parseContentBlocks(content: String): List<ContentBlock> {
     // 搜索标签被截断的流式中间态: 只有开标签
     val openSearch = OPEN_SEARCH_ANY
     if (openSearch.findAll(content).count() > SEARCH_TAG.findAll(content).count()) {
-        val m = openSearch.find(content)!!
+        val m = requireNotNull(openSearch.find(content)) { "Expected an opening search tag" }
         val q = m.value.replaceFirst("""<web_search>""", "").trim()
         if (q.isNotEmpty()) markers.add(Marker(m.range.first, content.length, ContentBlock.Search(q)))
     }

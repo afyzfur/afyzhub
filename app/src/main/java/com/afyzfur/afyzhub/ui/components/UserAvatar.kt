@@ -46,7 +46,7 @@ fun UserAvatar(
     ) {
         if (useCustom) {
             LocalImage(
-                path = path!!,
+                path = path.orEmpty(),
                 version = appearance.imageVersion,
                 contentDescription = null,
                 // 与设置页缩略图用同一个值，两处看到的效果才一致

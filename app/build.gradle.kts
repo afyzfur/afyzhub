@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-    kotlin("plugin.serialization") version "2.0.20"
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -25,12 +25,14 @@ android {
 
     // 签名信息来自环境变量（CI 由仓库 Secret 注入），不落盘到版本库。
     val keystorePath = System.getenv("KEYSTORE_PATH")
-    val hasSigningConfig = !keystorePath.isNullOrBlank() && file(keystorePath).exists()
+    val hasSigningConfig = !keystorePath.isNullOrBlank() && file(keystorePath).isFile &&
+        file(keystorePath).length() > 0L &&
+        listOf("KEYSTORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD").all { !System.getenv(it).isNullOrBlank() }
 
     signingConfigs {
         if (hasSigningConfig) {
             create("release") {
-                storeFile = file(keystorePath!!)
+                storeFile = file(requireNotNull(keystorePath))
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("KEY_ALIAS")
                 keyPassword = System.getenv("KEY_PASSWORD")
@@ -38,6 +40,7 @@ android {
         }
     }
 
+    sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -77,6 +80,7 @@ dependencies {
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation(libs.androidx.activity.compose)
 
     // Compose
@@ -134,3 +138,4 @@ val syncChangelog by tasks.registering(Copy::class) {
 tasks.named("preBuild") {
     dependsOn(syncChangelog)
 }
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }

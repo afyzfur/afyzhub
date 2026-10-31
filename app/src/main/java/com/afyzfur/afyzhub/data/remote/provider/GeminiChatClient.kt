@@ -161,6 +161,7 @@ class GeminiChatClient(
     private fun parseResponse(payload: String): GenerateResponse? = try {
         json.decodeFromString(GenerateResponse.serializer(), payload)
     } catch (e: Exception) {
+        ParseDiagnostics.failed("GeminiChatClient", e)
         null
     }
 

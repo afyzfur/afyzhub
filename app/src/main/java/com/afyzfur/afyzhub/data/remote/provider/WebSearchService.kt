@@ -1,6 +1,9 @@
 package com.afyzfur.afyzhub.data.remote.provider
 
 import com.afyzfur.afyzhub.data.log.RequestLogContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -19,7 +22,7 @@ import com.afyzfur.afyzhub.data.settings.AppSettings
  * 搜索源用 DuckDuckGo 的 HTML 版（html.duckduckgo.com）：
  * 无需 API Key、无请求频次的注册流程，返回的简化页面用正则即可
  * 提取标题、摘要与链接。稳定性依赖第三方页面结构，但作为
- * "聊天下文的补充信息"够用——失败时静默降级为无搜索继续回答。
+ * "聊天下文的补充信息"够用——失败时降级为无搜索继续回答。
  */
 /**
  * 联网搜索引擎。
@@ -95,6 +98,8 @@ class WebSearchService(
                 SearchEngine.TAVILY -> searchTavily(query, maxResults, tavilyApiKey)
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            ParseDiagnostics.failed("WebSearch", e)
             emptyList()
         }
     }
@@ -110,11 +115,7 @@ class WebSearchService(
         if (apiKey.isNullOrBlank()) {
             return searchBing(query, maxResults)
         }
-        val safeKey = apiKey.replace("\\", "").replace("\"", "")
-        val safeQuery = query.replace("\\", "").replace("\"", "")
-        val body = "{\"api_key\":\"" + safeKey + "\",\"query\":\"" + safeQuery +
-            "\",\"max_results\":" + maxResults +
-            ",\"search_depth\":\"basic\",\"include_answer\":false,\"include_raw_content\":false}"
+        val body = Json.encodeToString(TavilyRequest(apiKey, query, maxResults.coerceIn(1, 20)))
         val resp = transport.postForText(
             baseUrl = "https://api.tavily.com",
             path = "/search",
@@ -141,6 +142,8 @@ class WebSearchService(
                 Result(title, content, url, siteOf(url))
             }.take(maxResults)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            ParseDiagnostics.failed("WebSearch", e)
             emptyList()
         }
     }
@@ -265,14 +268,8 @@ class WebSearchService(
      * 两者按出现顺序一一对应，各自正则提取后 zip。
      */
     private fun parseResults(html: String, maxResults: Int): List<Result> {
-        val linkPattern = Regex(
-            """<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>""",
-            RegexOption.DOT_MATCHES_ALL
-        )
-        val snippetPattern = Regex(
-            """<a[^>]*class="result__snippet"[^>]*>(.*?)</a>""",
-            RegexOption.DOT_MATCHES_ALL
-        )
+        val linkPattern = SearchPatterns.P1
+        val snippetPattern = SearchPatterns.P2
 
         val links = linkPattern.findAll(html)
             .map { m ->
@@ -303,10 +300,7 @@ class WebSearchService(
      */
     private fun parseBaidu(html: String, maxResults: Int, query: String): List<Result> {
         val out = mutableListOf<Result>()
-        val blockPattern = Regex(
-            "<h3[^>]*>\\s*<a[^>]*href=\"([^\"]+)\"[^>]*>(.*?)</a>",
-            RegexOption.DOT_MATCHES_ALL
-        )
+        val blockPattern = SearchPatterns.P3
         // 相关性过滤: 抓错区块(推荐卡片/广告)时标题与查询词往往零重合。
         // 查询词去掉常见虚词后的实义字符集, 与标题至少重合 1/4 才采纳。
         val queryChars = meaningfulChars(query)
@@ -339,9 +333,9 @@ class WebSearchService(
         val blocks = html.split("<div class=\"g\"").drop(1)
         val out = mutableListOf<Result>()
         for (b in blocks) {
-            val title = Regex("<h3[^>]*>(.*?)</h3>", RegexOption.DOT_MATCHES_ALL)
+            val title = SearchPatterns.P4
                 .find(b)?.groupValues?.get(1) ?: continue
-            val url = Regex("href=\"(https?://[^\"]+)\"").findAll(b)
+            val url = SearchPatterns.P5.findAll(b)
                 .map { it.groupValues[1] }
                 .firstOrNull { !it.contains("google.") && !it.contains("gstatic.") }
                 ?: continue
@@ -372,11 +366,11 @@ class WebSearchService(
         // parseBaidu 同判: 标题与查询实义字符零重合的条目剔除。
         val queryChars = meaningfulChars(query)
         for (item in items) {
-            val title = Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
+            val title = SearchPatterns.P6
                 .find(item)?.groupValues?.get(1) ?: continue
-            val link = Regex("<link>(.*?)</link>", RegexOption.DOT_MATCHES_ALL)
+            val link = SearchPatterns.P7
                 .find(item)?.groupValues?.get(1) ?: continue
-            val desc = Regex("<description>(.*?)</description>", RegexOption.DOT_MATCHES_ALL)
+            val desc = SearchPatterns.P8
                 .find(item)?.groupValues?.get(1) ?: ""
             val url = stripTags(link)
             val cleanTitle = stripTags(title)
@@ -404,18 +398,18 @@ class WebSearchService(
 
     /** 从 url 提取站点域名（去 www.），favicon 与署名用 */
     private fun siteOf(url: String): String =
-        Regex("https?://(?:www\\.)?([^/]+)").find(url)?.groupValues?.get(1) ?: ""
+        SearchPatterns.P9.find(url)?.groupValues?.get(1) ?: ""
 
     private fun parseBing(html: String, maxResults: Int, query: String): List<Result> {
         val blocks = html.split("<li class=\"b_algo\"").drop(1)
         val out = mutableListOf<Result>()
         val queryChars = meaningfulChars(query)
         for (b in blocks) {
-            val url = Regex("href=\"([^\"]+)\"").find(b)?.groupValues?.get(1)
+            val url = SearchPatterns.P10.find(b)?.groupValues?.get(1)
                 ?: continue
-            val title = Regex("<a[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL)
+            val title = SearchPatterns.P11
                 .find(b)?.groupValues?.get(1) ?: continue
-            val snippet = Regex("<p[^>]*>(.*?)</p>", RegexOption.DOT_MATCHES_ALL)
+            val snippet = SearchPatterns.P12
                 .find(b)?.groupValues?.get(1) ?: ""
                         val cleanTitle = stripTags(title)
             if (queryChars.isNotEmpty()) {
@@ -433,14 +427,14 @@ class WebSearchService(
 
     /** 去除 HTML 标签与实体，压缩空白 */
     private fun stripTags(raw: String): String = raw
-        .replace(Regex("<[^>]+>"), "")
+        .replace(SearchPatterns.P13, "")
         .replace("&amp;", "&")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&quot;", "\"")
         .replace("&#x27;", "'")
         .replace("&nbsp;", " ")
-        .replace(Regex("\\s+"), " ")
+        .replace(SearchPatterns.P14, " ")
         .trim()
 
     /**
@@ -448,7 +442,7 @@ class WebSearchService(
      * 解出真实地址；已是直链则原样返回。
      */
     private fun cleanUrl(raw: String): String {
-        val uddg = Regex("""[?&]uddg=([^&]+)""").find(raw)?.groupValues?.get(1)
+        val uddg = SearchPatterns.P15.find(raw)?.groupValues?.get(1)
             ?: return if (raw.startsWith("//")) "https:$raw" else raw
         return java.net.URLDecoder.decode(uddg, "UTF-8")
     }
@@ -576,7 +570,7 @@ class WebSearchService(
          */
         fun dedupeSearchTags(content: String): String {
             val seen = HashSet<String>()
-            val regex = Regex("""<web_search>(.*?)</web_search>""", RegexOption.DOT_MATCHES_ALL)
+            val regex = SearchPatterns.P16
             return regex.replace(content) { m ->
                 val q = m.groupValues[1].trim()
                 if (seen.add(q)) m.value else ""
@@ -593,4 +587,32 @@ class WebSearchService(
                 .trim()
         }
     }
+}
+
+private object SearchPatterns {
+    val P1 = Regex(
+            """<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>""",
+            RegexOption.DOT_MATCHES_ALL
+        )
+    val P2 = Regex(
+            """<a[^>]*class="result__snippet"[^>]*>(.*?)</a>""",
+            RegexOption.DOT_MATCHES_ALL
+        )
+    val P3 = Regex(
+            "<h3[^>]*>\\s*<a[^>]*href=\"([^\"]+)\"[^>]*>(.*?)</a>",
+            RegexOption.DOT_MATCHES_ALL
+        )
+    val P4 = Regex("<h3[^>]*>(.*?)</h3>", RegexOption.DOT_MATCHES_ALL)
+    val P5 = Regex("href=\"(https?://[^\"]+)\"")
+    val P6 = Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
+    val P7 = Regex("<link>(.*?)</link>", RegexOption.DOT_MATCHES_ALL)
+    val P8 = Regex("<description>(.*?)</description>", RegexOption.DOT_MATCHES_ALL)
+    val P9 = Regex("https?://(?:www\\.)?([^/]+)")
+    val P10 = Regex("href=\"([^\"]+)\"")
+    val P11 = Regex("<a[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL)
+    val P12 = Regex("<p[^>]*>(.*?)</p>", RegexOption.DOT_MATCHES_ALL)
+    val P13 = Regex("<[^>]+>")
+    val P14 = Regex("\\s+")
+    val P15 = Regex("""[?&]uddg=([^&]+)""")
+    val P16 = Regex("""<web_search>(.*?)</web_search>""", RegexOption.DOT_MATCHES_ALL)
 }

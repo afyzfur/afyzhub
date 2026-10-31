@@ -1,6 +1,11 @@
 package com.afyzfur.afyzhub.ui.browser
 
 import android.annotation.SuppressLint
+import android.os.Bundle
+import androidx.compose.runtime.saveable.Saver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -39,6 +44,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,6 +74,10 @@ fun InAppBrowserScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val savedWebState = rememberSaveable(initialUrl, saver = Saver<Bundle, Bundle>(save = { it }, restore = { it })) { Bundle() }
+    val browserSettings: com.afyzfur.afyzhub.data.settings.SettingsRepository = org.koin.java.KoinJavaComponent.get(com.afyzfur.afyzhub.data.settings.SettingsRepository::class.java)
+    val searchSettings by browserSettings.settings.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var currentUrl by rememberSaveable(initialUrl) { mutableStateOf(initialUrl) }
     var inputText by rememberSaveable(initialUrl) { mutableStateOf(initialUrl) }
@@ -87,14 +97,14 @@ fun InAppBrowserScreen(
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.cacheMode = WebSettings.LOAD_DEFAULT
-            settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.loadsImagesAutomatically = true
             settings.allowFileAccess = false
-            settings.allowContentAccess = true
+            settings.allowContentAccess = false
             settings.javaScriptCanOpenWindowsAutomatically = false
             settings.setSupportMultipleWindows(false)
             android.webkit.CookieManager.getInstance().setAcceptCookie(true)
-            android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+            android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
         }
     }
 
@@ -111,7 +121,11 @@ fun InAppBrowserScreen(
         if (raw.isEmpty()) return
         val target = when {
             raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true) -> raw
-            raw.contains(' ') || !raw.contains('.') -> "https://www.google.com/search?q=${Uri.encode(raw)}"
+            raw.contains(' ') || !raw.contains('.') -> when (searchSettings?.searchEngine) {
+                "google" -> "https://www.google.com/search?q=${Uri.encode(raw)}"
+                "bing" -> "https://www.bing.com/search?q=${Uri.encode(raw)}"
+                else -> "https://www.baidu.com/s?wd=${Uri.encode(raw)}"
+            }
             else -> "https://$raw" // 裸域名默认 https
         }
         loadError = null
@@ -125,12 +139,19 @@ fun InAppBrowserScreen(
             if (it.startsWith("http://", true) || it.startsWith("https://", true)) it else "https://$it"
         }
         if (webView.url == null && webView.originalUrl == null) {
-            webView.loadUrl(normalizedInitial)
+            if (webView.restoreState(savedWebState) == null) webView.loadUrl(currentUrl.ifBlank { normalizedInitial })
+            syncState(webView)
         }
     }
 
-    DisposableEffect(webView) {
+    DisposableEffect(webView, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) webView.saveState(savedWebState)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            webView.saveState(savedWebState)
+            lifecycleOwner.lifecycle.removeObserver(observer)
             // 页面退出时释放 WebView，避免 Activity/Context 被长期持有。
             webView.stopLoading()
             webView.webChromeClient = null

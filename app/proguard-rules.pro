@@ -1,8 +1,6 @@
 # Add project specific ProGuard rules here.
--keep class com.afyzfur.afyzhub.** { *; }
--keepclassmembers class com.afyzfur.afyzhub.** { *; }
 
-# Retrofit
+# Generic signatures used by serializers
 -keepattributes Signature
 -keepattributes Exceptions
 -keepattributes *Annotation*
