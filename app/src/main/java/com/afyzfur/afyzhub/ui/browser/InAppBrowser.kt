@@ -185,7 +185,7 @@ fun InAppBrowserScreen(
                 IconButton(onClick = { onNavigateBack() }) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "关闭浏览器"
+                        contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2574cdf66c41)
                     )
                 }
                 OutlinedTextField(
@@ -205,13 +205,13 @@ fun InAppBrowserScreen(
                         .height(56.dp)
                 )
                 IconButton(onClick = { webView.reload() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                    Icon(Icons.Default.Refresh, contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_38108eaa1d32))
                 }
                 IconButton(
                     onClick = {
                         runCatching {
                             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(currentUrl)))
-                        }.onFailure { loadError = it.message ?: "无法打开外部浏览器" }
+                        }.onFailure { loadError = it.message ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_aa8c25b80c21) }
                     }
                 ) {
                     Text(
@@ -232,13 +232,13 @@ fun InAppBrowserScreen(
                     onClick = { if (webView.canGoBack()) { webView.goBack(); syncState(webView) } },
                     enabled = canGoBack
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "后退")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4cf4c11a1b0b))
                 }
                 IconButton(
                     onClick = { if (webView.canGoForward()) { webView.goForward(); syncState(webView) } },
                     enabled = canGoForward
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, "前进")
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_320ffeefca2c))
                 }
                 Spacer(Modifier.weight(1f))
                 Text(
@@ -286,7 +286,7 @@ fun InAppBrowserScreen(
                                     context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                                     true
                                 } catch (_: Exception) {
-                                    loadError = "无法打开此链接"
+                                    loadError = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ca819302da03)
                                     true
                                 }
                             }
@@ -304,14 +304,14 @@ fun InAppBrowserScreen(
                             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                                 super.onReceivedError(view, request, error)
                                 if (request.isForMainFrame) {
-                                    loadError = error.description?.toString() ?: "网页加载失败，请检查网络或地址"
+                                    loadError = error.description?.toString() ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_08b2377d1c74)
                                     progress = 100
                                 }
                             }
                             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
                                 // 不绕过证书错误，安全失败并提示用户。
                                 handler.cancel()
-                                loadError = "HTTPS 证书验证失败，已阻止加载"
+                                loadError = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c3b37d90812d)
                                 progress = 100
                             }
                         }

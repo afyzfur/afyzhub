@@ -434,12 +434,12 @@ private fun FailedMessage(
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = message.errorMessage ?: "发送失败",
+            text = message.errorMessage ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e767d34c7847),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.error
         )
         TextButton(onClick = onRetry) {
-            Text("重试")
+            Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e2d53a6d3a6a))
         }
     }
 }
@@ -507,7 +507,7 @@ private fun SiteIcon(url: String, size: Dp) {
 private fun EngineBadge(engine: String) {
     val key = engine.trim().lowercase()
     val (label, color) = when {
-        key == "baidu" || key == "百度" -> "度" to androidx.compose.ui.graphics.Color(0xFF2932E1)
+        key == "baidu" || key == com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_0cc2662f5eb1) -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_304fce687a69) to androidx.compose.ui.graphics.Color(0xFF2932E1)
         key == "google" -> "G" to androidx.compose.ui.graphics.Color(0xFF4285F4)
         else -> "B" to androidx.compose.ui.graphics.Color(0xFF00809D)
     }
@@ -552,13 +552,13 @@ private fun SearchBlock(
                 )
                 Spacer(Modifier.size(10.dp))
                 Text(
-                    text = "已联网搜索",
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ea4bd73a9632),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.size(6.dp))
                 Text(
-                    text = query + "  [" + searchEngine + " · " + sources.size + "条]",
+                    text = query + "  [" + searchEngine + " · " + sources.size + com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3f188da9eead),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -572,7 +572,7 @@ private fun SearchBlock(
                     } else {
                         Icons.Filled.KeyboardArrowDown
                     },
-                    contentDescription = if (expanded) "收起" else "展开",
+                    contentDescription = if (expanded) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5d5815647c76) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b0e24833f752),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
@@ -584,7 +584,7 @@ private fun SearchBlock(
                         // streaming: sources not yet persisted
                         // 与下方来源行同宽的内边距, 否则文字贴左边缘
                         Text(
-                            text = "正在获取搜索结果…",
+                            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7e79e0dfc05f),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 14.dp),

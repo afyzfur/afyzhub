@@ -94,35 +94,35 @@ fun BrowserSettingsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = "内置浏览器", onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2e345cfee36f), onNavigateBack = onNavigateBack)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle("通用")
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1a0fdce8f88f))
                 SettingsGroup {
                     SettingsSwitchItem(
                         icon = IconPalette,
-                        title = "应用内打开链接",
-                        subtitle = "关闭后链接改用系统浏览器打开，且 AI 无法使用联网搜索",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b99c16ed8931),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b24ce2da8283),
                         checked = browserEnabled,
                         onCheckedChange = viewModel::setBrowserEnabled
                     )
                 }
-                SettingsCategoryTitle("联网搜索")
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_45e62e474f4a))
                 SettingsGroup {
                     SettingsSwitchItem(
                         icon = Icons.Default.Search,
-                        title = "AI 联网搜索",
-                        subtitle = "非 Gemini 模型的应用内搜索（Gemini 在 API 配置中开启）",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8afa289e32a2),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c679c1387b44),
                         checked = aiWebSearch,
                         onCheckedChange = viewModel::setAiWebSearch
                     )
                     SettingsItemDivider()
                     SettingsDropdownItem(
                         icon = Icons.Default.Search,
-                        title = "搜索引擎",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e58371cb291e),
                         subtitle = engine.label,
                         options = SearchEngine.entries,
                         selected = engine,
@@ -138,7 +138,7 @@ fun BrowserSettingsScreen(
                             value = tavilyKey,
                             onValueChange = viewModel::setTavilyKey,
                             placeholder = "tvly-xxxxxxxx",
-                            subtitle = "在 tavily.com 注册获取; 免费额度足够日常使用"
+                            subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e12d30d10108)
                         )
                     }
                 }

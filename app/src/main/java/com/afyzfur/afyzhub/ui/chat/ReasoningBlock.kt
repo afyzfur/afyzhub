@@ -82,7 +82,7 @@ fun ReasoningBlock(
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
-                    text = if (thinking) "正在思考" else "思考过程",
+                    text = if (thinking) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_774d85ae0a40) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bcc347f5ce36),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -100,7 +100,7 @@ fun ReasoningBlock(
                     } else {
                         Icons.Default.KeyboardArrowDown
                     },
-                    contentDescription = if (expanded) "收起" else "展开",
+                    contentDescription = if (expanded) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5d5815647c76) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b0e24833f752),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )

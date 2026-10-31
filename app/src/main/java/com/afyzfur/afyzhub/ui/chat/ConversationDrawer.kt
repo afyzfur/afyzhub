@@ -114,7 +114,7 @@ fun ConversationDrawer(
             IconButton(onClick = { searching = !searching }) {
                 Icon(
                     Icons.Default.Search,
-                    contentDescription = "搜索对话",
+                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a89c91c27ebe),
                     tint = if (searching) {
                         MaterialTheme.colorScheme.primary
                     } else {
@@ -127,7 +127,7 @@ fun ConversationDrawer(
                     // FolderOpen 比 List 更贴"分组"：后者在这一栏里
                     // 容易读成"列表视图"
                     IconFolder,
-                    contentDescription = "按分组查看",
+                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ca99aa479c5d),
                     tint = if (groupFilter != null) {
                         MaterialTheme.colorScheme.primary
                     } else {
@@ -157,7 +157,7 @@ fun ConversationDrawer(
         }
 
         DrawerActionRow(
-            text = "新建对话",
+            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b3e55858d9d4),
             onClick = onNewConversation,
             leading = {
                 Icon(
@@ -226,7 +226,7 @@ fun ConversationDrawer(
         )
 
         DrawerActionRow(
-            text = "设置",
+            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7debf9cb0372),
             onClick = onSettingsClick,
             leading = {
                 Icon(
@@ -321,7 +321,7 @@ private fun ConversationRow(
             if (conversation.pinned) {
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowUp,
-                    contentDescription = "已置顶",
+                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d7d97038a32a),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(14.dp)
                 )
@@ -330,7 +330,7 @@ private fun ConversationRow(
             if (conversation.starred) {
                 Icon(
                     imageVector = Icons.Default.Star,
-                    contentDescription = "已加星标",
+                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_603fa1ceb202),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(14.dp)
                 )

@@ -62,7 +62,7 @@ fun UndoBar(
                 modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
             ) {
                 Text(
-                    text = if (count > 1) "已移除 $count 条消息" else "已移除 1 条消息",
+                    text = if (count > 1) "已移除 $count 条消息" else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1a6d60a8e162),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -70,14 +70,14 @@ fun UndoBar(
                 )
                 TextButton(onClick = onUndo) {
                     Text(
-                        text = "撤回",
+                        text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f16418c45919),
                         color = MaterialTheme.colorScheme.inversePrimary
                     )
                 }
                 IconButton(onClick = onDismiss) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "关闭提示",
+                        contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c620893e29da),
                         modifier = Modifier.size(18.dp)
                     )
                 }

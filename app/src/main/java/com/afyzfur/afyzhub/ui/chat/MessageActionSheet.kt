@@ -70,32 +70,32 @@ fun MessageActionSheet(
                 // 可用图标清单里没有 copy，List 的多层视觉与"副本"意象接近；
                 // Create 是铅笔，留给「编辑并重发」
                 icon = Icons.AutoMirrored.Filled.List,
-                text = "复制消息",
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4091858e56ef),
                 onClick = onCopy
             )
 
             if (fromUser) {
                 ActionRow(
                     icon = Icons.Default.Create,
-                    text = "编辑并重发",
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7008886ce8aa),
                     onClick = onEditResend
                 )
                 ActionRow(
                     icon = Icons.Default.Delete,
-                    text = "回滚到此处",
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5e41da81c8fb),
                     onClick = onRollback
                 )
             } else {
                 ActionRow(
                     icon = Icons.Default.Refresh,
-                    text = "重新生成",
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2e19057052a3),
                     onClick = onRegenerate
                 )
             }
 
             ActionRow(
                 icon = Icons.Default.Delete,
-                text = "删除",
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3755f56f2f83),
                 onClick = onDelete,
                 // 删除不可撤销，用 error 色与其他项区分
                 tint = MaterialTheme.colorScheme.error
@@ -103,7 +103,7 @@ fun MessageActionSheet(
 
             ActionRow(
                 icon = Icons.Default.Info,
-                text = "信息",
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2da40f40736c),
                 onClick = onInfo
             )
 

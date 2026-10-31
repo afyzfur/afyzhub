@@ -119,7 +119,7 @@ fun RequestLogScreen(
                 onDelete = { confirmDeleteSelected = true }
             )
         } else {
-            SettingsPageHeader(title = "请求日志", onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d9d4d4e7ddce), onNavigateBack = onNavigateBack)
         }
 
         // 多选时收起设置与筛选：此刻的任务是挑记录，别的都是干扰
@@ -129,11 +129,11 @@ fun RequestLogScreen(
         SettingsGroup {
             SettingsSwitchItem(
                 icon = IconDocument,
-                title = "记录请求日志",
+                title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e12e4a159572),
                 subtitle = if (logEnabled) {
-                    "每次请求都会留下一条，仅存在本机"
+                    com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a5d875e627fa)
                 } else {
-                    "已关闭，不再记录新的请求。已有记录仍保留"
+                    com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_0edf8eee41a5)
                 },
                 checked = logEnabled,
                 onCheckedChange = viewModel::setLogEnabled
@@ -141,15 +141,15 @@ fun RequestLogScreen(
             SettingsItemDivider()
             SettingsDropdownItem(
                 icon = IconHistory,
-                title = "保留时长",
+                title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8c714efbb0b7),
                 // 说明随当前选项变化：固定写"默认一直保留"在用户已经
                 // 选了 7 天时是错的，而这一项的关键差别正是"会不会
                 // 自动消失"
                 subtitle = when (retention) {
-                    LogRetention.FOREVER -> "记录不会自动消失，只在手动删除时清除"
-                    LogRetention.DAY -> "超过 1 天的记录会在下次启动时清掉"
-                    LogRetention.WEEK -> "超过 7 天的记录会在下次启动时清掉"
-                    LogRetention.MONTH -> "超过 30 天的记录会在下次启动时清掉"
+                    LogRetention.FOREVER -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_427f8cb991a4)
+                    LogRetention.DAY -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b588c7cf23a9)
+                    LogRetention.WEEK -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_97f80bd6a855)
+                    LogRetention.MONTH -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_76bf3e5f1707)
                 },
                 options = LogRetention.entries,
                 selected = retention,
@@ -169,7 +169,7 @@ fun RequestLogScreen(
         ) {
             Text(
                 text = when {
-                    allEntries.isEmpty() -> "暂无记录"
+                    allEntries.isEmpty() -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4f9ba23510ec)
                     // 筛过之后要同时说明筛出多少、总共多少，
                     // 否则看到条数变少会以为记录丢了
                     !filter.isEmpty -> "筛出 ${entries.size} 条，共 ${allEntries.size} 条"
@@ -198,7 +198,7 @@ fun RequestLogScreen(
                         android.widget.Toast.makeText(context, "已复制 ${sourceEntries.size} 条日志", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 ) {
-                    Text(if (inSelection) "复制" else "复制全部")
+                    Text(if (inSelection) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4edd1d00875d) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_55f59bc2f0c3))
                 }
                 IconButton(
                     onClick = {
@@ -208,7 +208,7 @@ fun RequestLogScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = if (filter.isEmpty) "清空日志" else "删除筛选结果",
+                        contentDescription = if (filter.isEmpty) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1ef9339dbae3) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_0707ba9f4deb),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -234,7 +234,7 @@ fun RequestLogScreen(
 
         if (entries.isEmpty() && !filter.isEmpty) {
             Text(
-                text = "没有符合条件的记录",
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1911830559dd),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)
@@ -261,16 +261,16 @@ fun RequestLogScreen(
     if (confirmClearAll) {
         AlertDialog(
             onDismissRequest = { confirmClearAll = false },
-            title = { Text("清空全部日志") },
+            title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_74c6b428b737)) },
             text = { Text("将删除 ${allEntries.size} 条记录，无法恢复。") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmClearAll = false
                     viewModel.clear()
-                }) { Text("清空") }
+                }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_84fcd70d4280)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmClearAll = false }) { Text("取消") }
+                TextButton(onClick = { confirmClearAll = false }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d0b4688c787)) }
             }
         )
     }
@@ -278,16 +278,16 @@ fun RequestLogScreen(
     if (confirmDeleteSelected) {
         AlertDialog(
             onDismissRequest = { confirmDeleteSelected = false },
-            title = { Text("删除所选记录") },
+            title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4373baf54548)) },
             text = { Text("将删除选中的 ${selected.size} 条记录，无法恢复。") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDeleteSelected = false
                     viewModel.deleteSelected()
-                }) { Text("删除") }
+                }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3755f56f2f83)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDeleteSelected = false }) { Text("取消") }
+                TextButton(onClick = { confirmDeleteSelected = false }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d0b4688c787)) }
             }
         )
     }
@@ -295,16 +295,16 @@ fun RequestLogScreen(
     if (confirmDeleteFiltered) {
         AlertDialog(
             onDismissRequest = { confirmDeleteFiltered = false },
-            title = { Text("删除筛选结果") },
+            title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_0707ba9f4deb)) },
             text = { Text("将删除当前筛出的 ${entries.size} 条记录，其余保留。无法恢复。") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDeleteFiltered = false
                     viewModel.deleteFiltered()
-                }) { Text("删除") }
+                }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3755f56f2f83)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDeleteFiltered = false }) { Text("取消") }
+                TextButton(onClick = { confirmDeleteFiltered = false }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d0b4688c787)) }
             }
         )
     }
@@ -383,7 +383,7 @@ private fun LogCard(
                     append(formatTime(entry.startedAt))
                     append("  ")
                     append(entry.method)
-                    if (entry.restored) append("  · 上次运行")
+                    if (entry.restored) append(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e3060a504ec0))
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -409,13 +409,13 @@ private fun LogCard(
 
                 if (entry.headers.isNotEmpty()) {
                     DetailSection(
-                        label = "请求头",
+                        label = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7cabf2e2bdc6),
                         content = entry.headers.entries.joinToString("\n") { "${it.key}: ${it.value}" }
                     )
                 }
 
-                entry.requestBody?.let { DetailSection(label = "请求体", content = it) }
-                entry.responseBody?.let { DetailSection(label = "响应体", content = it) }
+                entry.requestBody?.let { DetailSection(label = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a526db39fb8c), content = it) }
+                entry.responseBody?.let { DetailSection(label = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_6e83ee0273ad), content = it) }
 
                 // 删除入口只在展开后出现：折叠那一行已有状态、主机、
                 // 耗时三样，再塞图标会挤掉主机名。展开也意味着用户
@@ -423,13 +423,13 @@ private fun LogCard(
                 if (!inSelection) {
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = onDelete) { Text("删除这条") }
+                        TextButton(onClick = onDelete) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bcf10102a080)) }
                     }
                 }
             } else {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "点击查看详情",
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_cdd65356222b),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -522,7 +522,7 @@ private fun SelectionHeader(
         IconButton(onClick = onExit) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "退出多选"
+                contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_c194fdd677d2)
             )
         }
         Text(
@@ -532,12 +532,12 @@ private fun SelectionHeader(
                 .weight(1f)
                 .padding(start = 4.dp)
         )
-        TextButton(onClick = onSelectAll) { Text("全选") }
-        TextButton(onClick = onCopy) { Text("复制") }
+        TextButton(onClick = onSelectAll) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3e44b2a93338)) }
+        TextButton(onClick = onCopy) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4edd1d00875d)) }
         IconButton(onClick = onDelete) {
             Icon(
                 imageVector = Icons.Default.Delete,
-                contentDescription = "删除所选",
+                contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5d071a7a421e),
                 tint = MaterialTheme.colorScheme.error
             )
         }

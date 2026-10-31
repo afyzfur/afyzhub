@@ -50,14 +50,14 @@ fun ThinkingEffortSheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(
-                text = "思考程度",
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3cd1d85095d0),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "思考会增加耗时与费用。o 系、R1 等推理模型自带思考，无法用此开关关闭",
+                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_51fcaecc7b42),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 24.dp)
@@ -149,8 +149,8 @@ private fun EffortCard(
 
 /** 一句话说明这档意味着什么，避免只有"低/中/高"让人猜。 */
 private fun ThinkingEffort.hint(): String = when (this) {
-    ThinkingEffort.OFF -> "最快"
-    ThinkingEffort.LOW -> "略作思考"
-    ThinkingEffort.MEDIUM -> "适中"
-    ThinkingEffort.HIGH -> "最慢最细"
+    ThinkingEffort.OFF -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_cbac4df6962d)
+    ThinkingEffort.LOW -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bb6a620120e1)
+    ThinkingEffort.MEDIUM -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ff08d13e6ae6)
+    ThinkingEffort.HIGH -> com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_54af477ffc14)
 }

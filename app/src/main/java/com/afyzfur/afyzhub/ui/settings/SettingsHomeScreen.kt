@@ -75,21 +75,21 @@ fun SettingsHomeScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = "设置", onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7debf9cb0372), onNavigateBack = onNavigateBack)
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle("通用")
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1a0fdce8f88f))
 
                 SettingsGroup {
                     // 下拉而非循环点击：循环时点之前看不到有哪些选项，
                     // 而且从"深色"回到"跟随系统"要连点两次
                     SettingsDropdownItem(
                         icon = IconContrast,
-                        title = "颜色模式",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b9f0a68d2400),
                         subtitle = prefs.colorMode.label,
                         options = ColorMode.entries,
                         selected = prefs.colorMode,
@@ -98,30 +98,30 @@ fun SettingsHomeScreen(
                     )
                     SettingsNavItem(
                         icon = IconPalette,
-                        title = "个性化",
-                        subtitle = "配色、动画、气泡、头像与背景",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_cd4994e50397),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_7f2600022639),
                         onClick = onNavigateToAppearance
                     )
                 }
 
-                SettingsCategoryTitle("模型与服务")
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_143c45e7f0f7))
 
                 SettingsGroup {
                     SettingsNavItem(
                         icon = IconKey,
-                        title = "API 配置",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_64f968b0cf1d),
                         // 副标题显示当前生效的那一组，省去进入子页面确认。
                         // 必须读配置组而非 SettingsViewModel 的单组状态：
                         // 后者不随配置组切换更新，会显示成另一组的值
                         subtitle = activeProfile?.let { "${it.displayName} · ${it.effectiveModel}" }
-                            ?: "未配置",
+                            ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_63595e95b708),
                         onClick = onNavigateToProvider
                     )
                     SettingsNavItem(
                         icon = IconBolt,
-                        title = "首屏提示词",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5d4357a73cd4),
                         subtitle = if (prefs.quickPrompts.isEmpty()) {
-                            "未设置"
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_55a04b58cd2c)
                         } else {
                             "${prefs.quickPrompts.size} 条"
                         },
@@ -129,45 +129,45 @@ fun SettingsHomeScreen(
                     )
                 }
 
-                SettingsCategoryTitle("对话")
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_00d4cbafeabc))
                 SettingsGroup {
                     SettingsNavItem(
                         icon = IconTextLines,
-                        title = "消息显示",
-                        subtitle = "时间戳、token 用量等元信息",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_76598035e91b),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a50e255aa5c0),
                         onClick = onNavigateToMessageDisplay
                     )
                     SettingsSwitchItem(
                         icon = Icons.Default.PlayArrow,
-                        title = "流式输出",
-                        subtitle = "逐字显示回复，部分中转服务不支持",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5b6aae8c30dd),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_8f7adf702cd8),
                         checked = streamEnabled,
                         onCheckedChange = settingsViewModel::updateStreamEnabled
                     )
                     SettingsNavItem(
                         icon = Icons.Default.Search,
-                        title = "内置浏览器",
-                        subtitle = "链接打开方式与联网搜索引擎",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2e345cfee36f),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f824f671818d),
                         onClick = onNavigateToBrowser
                     )
                 }
 
-                SettingsCategoryTitle("诊断")
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e0b478941707))
                 SettingsGroup {
                     SettingsNavItem(
                         icon = IconDocument,
-                        title = "请求日志",
-                        subtitle = "查看最近的接口请求与响应，排查失败原因",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d9d4d4e7ddce),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_d9eb3c32dc2d),
                         onClick = onNavigateToRequestLog
                     )
                 }
 
-                SettingsCategoryTitle("关于")
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_bed172efc953))
                 SettingsGroup {
                     SettingsNavItem(
                         icon = Icons.Default.Info,
-                        title = "关于 AfyzHub",
-                        subtitle = "版本与项目链接",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a53e89da8563),
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ff3d35f0cdcf),
                         onClick = onNavigateToAbout
                     )
                 }

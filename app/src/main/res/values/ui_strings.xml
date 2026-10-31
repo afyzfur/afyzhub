@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="ui_00d4cbafeabc" formatted="false">"对话"</string>
+  <string name="ui_0184bc10113e" formatted="false">"图片中没有 chara/ccv3 角色卡数据"</string>
+  <string name="ui_01c43cc6525c" formatted="false">"全部对话"</string>
+  <string name="ui_037758fcfffe" formatted="false">"请求失败，原因未知"</string>
+  <string name="ui_05adbf557d50" formatted="false">"开场白"</string>
+  <string name="ui_0707ba9f4deb" formatted="false">"删除筛选结果"</string>
+  <string name="ui_08b2377d1c74" formatted="false">"网页加载失败，请检查网络或地址"</string>
+  <string name="ui_09ad4eff85d8" formatted="false">"(zhipu|glm|智谱)"</string>
+  <string name="ui_0a8d775194af" formatted="false">"在助手消息旁显示模型厂商图标"</string>
+  <string name="ui_0ac61bce3982" formatted="false">"缺少角色数据"</string>
+  <string name="ui_0bb4ba2d2e46" formatted="false">"打开会话列表"</string>
+  <string name="ui_0cc2662f5eb1" formatted="false">"百度"</string>
+  <string name="ui_0e2d3a3c09c2" formatted="false">"使用"</string>
+  <string name="ui_0edf8eee41a5" formatted="false">"已关闭，不再记录新的请求。已有记录仍保留"</string>
+  <string name="ui_0f2097438931" formatted="false">"输入 token"</string>
+  <string name="ui_1020e9a63924" formatted="false">"修改简介"</string>
+  <string name="ui_10f48e5a005e" formatted="false">"字数"</string>
+  <string name="ui_11d024154013" formatted="false">"返回"</string>
+  <string name="ui_1214d633a448" formatted="false">"发送"</string>
+  <string name="ui_135f634fede4" formatted="false">"动画"</string>
+  <string name="ui_143c45e7f0f7" formatted="false">"模型与服务"</string>
+  <string name="ui_146671b0a192" formatted="false">"用户消息"</string>
+  <string name="ui_15a01ba16143" formatted="false">"(hunyuan|tencent|腾讯|混元)"</string>
+  <string name="ui_16472019313f" formatted="false">"同名分组会归到一起"</string>
+  <string name="ui_17df7d688f1e" formatted="false">"消息样式"</string>
+  <string name="ui_17e83cc25e22" formatted="false">"今天"</string>
+  <string name="ui_183414408d44" formatted="false">"模型管理"</string>
+  <string name="ui_185368440e18" formatted="false">"更新日志"</string>
+  <string name="ui_1911830559dd" formatted="false">"没有符合条件的记录"</string>
+  <string name="ui_19398128e0f8" formatted="false">"系统提示词"</string>
+  <string name="ui_1940477a0ad5" formatted="false">"(doubao|豆包)"</string>
+  <string name="ui_1a0fdce8f88f" formatted="false">"通用"</string>
+  <string name="ui_1a6d60a8e162" formatted="false">"已移除 1 条消息"</string>
+  <string name="ui_1b7abf96f8bc" formatted="false">"新对话"</string>
+  <string name="ui_1bc5d1cb9ee7" formatted="false">"源仓库"</string>
+  <string name="ui_1be7ae4fc257" formatted="false">"名称"</string>
+  <string name="ui_1c35de136c41" formatted="false">"藤紫"</string>
+  <string name="ui_1cd80fd7a8b3" formatted="false">"重命名"</string>
+  <string name="ui_1ef9339dbae3" formatted="false">"清空日志"</string>
+  <string name="ui_2054f14a2346" formatted="false">"删除此配置"</string>
+  <string name="ui_20d49aca4989" formatted="false">"正在读取角色卡…"</string>
+  <string name="ui_219c099b6e14" formatted="false">"提供商"</string>
+  <string name="ui_22336e6b892f" formatted="false">"项目"</string>
+  <string name="ui_2264317dc171" formatted="false">"留空则用官方地址；中转服务填对应地址"</string>
+  <string name="ui_2401b106e4ec" formatted="false">"当前分组"</string>
+  <string name="ui_2445db35e509" formatted="false">"(qwen|qwq|qvq|通义)"</string>
+  <string name="ui_2574cdf66c41" formatted="false">"关闭浏览器"</string>
+  <string name="ui_27fc3c44360f" formatted="false">"测试这组配置"</string>
+  <string name="ui_284480e6290c" formatted="false">"越高越透。增强透视下输入的文字也会跟着变淡"</string>
+  <string name="ui_28f3d050234f" formatted="false">"删除当前提示词分组"</string>
+  <string name="ui_297318c2765c" formatted="false">"当前使用"</string>
+  <string name="ui_2abdfd12448c" formatted="false">"删除这组配置及其中保存的 API Key"</string>
+  <string name="ui_2bfbfbbf48f0" formatted="false">"跟随系统壁纸生成配色"</string>
+  <string name="ui_2c056f182f42" formatted="false">"连接失败"</string>
+  <string name="ui_2d69581fa470" formatted="false">"标为星标"</string>
+  <string name="ui_2da40f40736c" formatted="false">"信息"</string>
+  <string name="ui_2e19057052a3" formatted="false">"重新生成"</string>
+  <string name="ui_2e345cfee36f" formatted="false">"内置浏览器"</string>
+  <string name="ui_2f752c005ec5" formatted="false">"移除"</string>
+  <string name="ui_30352098391a" formatted="false">"删除提示词分组"</string>
+  <string name="ui_304fce687a69" formatted="false">"度"</string>
+  <string name="ui_3054424bb632" formatted="false">"yyyy年M月d日"</string>
+  <string name="ui_31cc2c4c86f0" formatted="false">"新建配置"</string>
+  <string name="ui_320ffeefca2c" formatted="false">"前进"</string>
+  <string name="ui_32c97fa51c66" formatted="false">"没有提示词，首屏只显示问候语。"</string>
+  <string name="ui_338affe37fbd" formatted="false">"角色设定"</string>
+  <string name="ui_3559dc2da370" formatted="false">"删除对话"</string>
+  <string name="ui_3730a9b6e216" formatted="false">"非增强透视的悬浮模式暂不支持，请先开启增强透视"</string>
+  <string name="ui_3755f56f2f83" formatted="false">"删除"</string>
+  <string name="ui_38108eaa1d32" formatted="false">"刷新"</string>
+  <string name="ui_38719c9968ae" formatted="false">"模型名称"</string>
+  <string name="ui_38fbe77e8438" formatted="false">"下午好"</string>
+  <string name="ui_3ae10b7249db" formatted="false">"让画面复杂的头像不那么抢眼，0% 为不处理"</string>
+  <string name="ui_3cd1d85095d0" formatted="false">"思考程度"</string>
+  <string name="ui_3cd58a38bcf7" formatted="false">"连文字一起透，能看见输入栏后面的消息"</string>
+  <string name="ui_3e44b2a93338" formatted="false">"全选"</string>
+  <string name="ui_3f09fccffabd" formatted="false">"连接测试"</string>
+  <string name="ui_3f188da9eead" formatted="false">"条]"</string>
+  <string name="ui_3f68db538f8d" formatted="false">"将新增提示词分组并选中。导入角色设定、首条开场白和聊天规则；世界书、附件、脚本和替代开场白暂不执行，原始 JSON 会保留。请先检查导入内容。"</string>
+  <string name="ui_3fd2c2c8f4a8" formatted="false">"选中的配置对全部会话生效。API Key 仅存在本机，不会上传到第三方。"</string>
+  <string name="ui_3fe82e0db94c" formatted="false">"在抽屉顶部与自己的消息旁显示"</string>
+  <string name="ui_4091858e56ef" formatted="false">"复制消息"</string>
+  <string name="ui_41555ceece96" formatted="false">"标注每条回复由哪个模型生成"</string>
+  <string name="ui_427f8cb991a4" formatted="false">"记录不会自动消失，只在手动删除时清除"</string>
+  <string name="ui_4373baf54548" formatted="false">"删除所选记录"</string>
+  <string name="ui_45e62e474f4a" formatted="false">"联网搜索"</string>
+  <string name="ui_461387172760" formatted="false">"输入一条提示词"</string>
+  <string name="ui_461a52654d0d" formatted="false">"输入栏悬浮"</string>
+  <string name="ui_46e66f63217a" formatted="false">"当前版本"</string>
+  <string name="ui_4759e7511ccb" formatted="false">"夜深了"</string>
+  <string name="ui_47d168d38775" formatted="false">"模糊强度"</string>
+  <string name="ui_495453826cea" formatted="false">"有气泡时两边样式统一。"</string>
+  <string name="ui_4989b5cf9483" formatted="false">"管理"</string>
+  <string name="ui_49963d80622f" formatted="false">"重新生成失败"</string>
+  <string name="ui_4a11c79b6032" formatted="false">"修改自动保存。关闭总开关只停止应用提示词，不清空任何分组。"</string>
+  <string name="ui_4bbc4e5fd9db" formatted="false">"清除筛选"</string>
+  <string name="ui_4c16e86779d2" formatted="false">"接口配置"</string>
+  <string name="ui_4c8afa7576a9" formatted="false">"决定请求的协议格式与默认地址"</string>
+  <string name="ui_4ceeeb31a55a" formatted="false">"头像"</string>
+  <string name="ui_4cf4c11a1b0b" formatted="false">"后退"</string>
+  <string name="ui_4d0b4688c787" formatted="false">"取消"</string>
+  <string name="ui_4d2ad3dcb578" formatted="false">"增强透视"</string>
+  <string name="ui_4e05b066d017" formatted="false">"请先填写 API Key"</string>
+  <string name="ui_4e769dd289db" formatted="false">"选择模型"</string>
+  <string name="ui_4e83125c4a66" formatted="false">"遮罩浓度"</string>
+  <string name="ui_4edd1d00875d" formatted="false">"复制"</string>
+  <string name="ui_4f528c177134" formatted="false">"点击选择图片"</string>
+  <string name="ui_4f9ba23510ec" formatted="false">"暂无记录"</string>
+  <string name="ui_509f35e0ee20" formatted="false">"晚上好"</string>
+  <string name="ui_51991a5d111a" formatted="false">"成功"</string>
+  <string name="ui_51994504c812" formatted="false">"(aliyun|阿里云|百炼|dashscope)"</string>
+  <string name="ui_51fcaecc7b42" formatted="false">"思考会增加耗时与费用。o 系、R1 等推理模型自带思考，无法用此开关关闭"</string>
+  <string name="ui_54af477ffc14" formatted="false">"最慢最细"</string>
+  <string name="ui_55a04b58cd2c" formatted="false">"未设置"</string>
+  <string name="ui_55f59bc2f0c3" formatted="false">"复制全部"</string>
+  <string name="ui_584bd4db5650" formatted="false">"星期三"</string>
+  <string name="ui_59c4fcb09e27" formatted="false">"昨天"</string>
+  <string name="ui_5a034fa39789" formatted="false">"改动会自动保存。API Key 仅存在本机，不会上传到第三方。"</string>
+  <string name="ui_5a87c3ba03eb" formatted="false">"正在读取更新日志"</string>
+  <string name="ui_5b6aae8c30dd" formatted="false">"流式输出"</string>
+  <string name="ui_5d071a7a421e" formatted="false">"删除所选"</string>
+  <string name="ui_5d4357a73cd4" formatted="false">"首屏提示词"</string>
+  <string name="ui_5d5815647c76" formatted="false">"收起"</string>
+  <string name="ui_5e41da81c8fb" formatted="false">"回滚到此处"</string>
+  <string name="ui_5e89305738ef" formatted="false">"助手头像"</string>
+  <string name="ui_5ea2e0cde2c8" formatted="false">"简介"</string>
+  <string name="ui_5ef29a57bcc9" formatted="false">"配色"</string>
+  <string name="ui_5f83e7f6a1ee" formatted="false">"基础"</string>
+  <string name="ui_5fba648444d4" formatted="false">"开启后背景图会透上来"</string>
+  <string name="ui_603fa1ceb202" formatted="false">"已加星标"</string>
+  <string name="ui_60e2bcad85ac" formatted="false">"导入"</string>
+  <string name="ui_633df04b9d49" formatted="false">"回答语言、格式和聊天规则"</string>
+  <string name="ui_63595e95b708" formatted="false">"未配置"</string>
+  <string name="ui_64f968b0cf1d" formatted="false">"API 配置"</string>
+  <string name="ui_65731c12ae52" formatted="false">"分组名称"</string>
+  <string name="ui_66ce64d401f5" formatted="false">"松绿"</string>
+  <string name="ui_67a246a344ae" formatted="false">"下一页"</string>
+  <string name="ui_6926f00af256" formatted="false">"暖橙"</string>
+  <string name="ui_69a34ae61a54" formatted="false">"输入与输出的 token 数"</string>
+  <string name="ui_6b26695e4dce" formatted="false">"角色"</string>
+  <string name="ui_6b6d3e87d835" formatted="false">"缓存命中"</string>
+  <string name="ui_6c14bd7f6f9e" formatted="false">"关闭"</string>
+  <string name="ui_6c3e065e11a9" formatted="false">"复制当前配置"</string>
+  <string name="ui_6cfb3364d206" formatted="false">"裁剪图片"</string>
+  <string name="ui_6d17a4cf95b4" formatted="false">"每次进入空会话时从下方列表随机抽取"</string>
+  <string name="ui_6e83ee0273ad" formatted="false">"响应体"</string>
+  <string name="ui_6e995a7133c9" formatted="false">"发一次最小请求，确认能否正常对话"</string>
+  <string name="ui_6ed04a06c7e8" formatted="false">"静蓝"</string>
+  <string name="ui_7008886ce8aa" formatted="false">"编辑并重发"</string>
+  <string name="ui_712173f5502c" formatted="false">"星期四"</string>
+  <string name="ui_73873269282e" formatted="false">"中午好"</string>
+  <string name="ui_74c6b428b737" formatted="false">"清空全部日志"</string>
+  <string name="ui_75589922ea22" formatted="false">"显示方式"</string>
+  <string name="ui_76598035e91b" formatted="false">"消息显示"</string>
+  <string name="ui_76bf3e5f1707" formatted="false">"超过 30 天的记录会在下次启动时清掉"</string>
+  <string name="ui_774d85ae0a40" formatted="false">"正在思考"</string>
+  <string name="ui_778fc8f99453" formatted="false">"全部"</string>
+  <string name="ui_77bef63c5501" formatted="false">"星期六"</string>
+  <string name="ui_78d0b3d968cc" formatted="false">"不是有效的角色卡"</string>
+  <string name="ui_7cabf2e2bdc6" formatted="false">"请求头"</string>
+  <string name="ui_7cd1a72b10ac" formatted="false">"消息信息"</string>
+  <string name="ui_7debf9cb0372" formatted="false">"设置"</string>
+  <string name="ui_7e79e0dfc05f" formatted="false">"正在获取搜索结果…"</string>
+  <string name="ui_7e9e1587a765" formatted="false">"聊天背景"</string>
+  <string name="ui_7f2600022639" formatted="false">"配色、动画、气泡、头像与背景"</string>
+  <string name="ui_7f362bad0c29" formatted="false">"提示词分组"</string>
+  <string name="ui_7f80204448ae" formatted="false">"聊天设定"</string>
+  <string name="ui_839be7010244" formatted="false">"Google 服务端搜索接地，仅 Gemini 协议可用"</string>
+  <string name="ui_84fcd70d4280" formatted="false">"清空"</string>
+  <string name="ui_877673cdd2ac" formatted="false">"对话名称"</string>
+  <string name="ui_881373050260" formatted="false">"默认提示词"</string>
+  <string name="ui_889d7ed13c7c" formatted="false">"这个对话是关于什么的"</string>
+  <string name="ui_89b4aa6364ce" formatted="false">"时间"</string>
+  <string name="ui_8af761b2b4bf" formatted="false">"重试失败"</string>
+  <string name="ui_8afa289e32a2" formatted="false">"AI 联网搜索"</string>
+  <string name="ui_8c62cbe70498" formatted="false">"每秒输出的 token 数"</string>
+  <string name="ui_8c714efbb0b7" formatted="false">"保留时长"</string>
+  <string name="ui_8cdd44e52c0e" formatted="false">"导入角色"</string>
+  <string name="ui_8d9fe7d003c0" formatted="false">"管理配置"</string>
+  <string name="ui_8de957a7b7a2" formatted="false">"未分组"</string>
+  <string name="ui_8ebe97f3d50c" formatted="false">"输入栏透明"</string>
+  <string name="ui_8f7adf702cd8" formatted="false">"逐字显示回复，部分中转服务不支持"</string>
+  <string name="ui_91b8b3886a06" formatted="false">"原生联网搜索"</string>
+  <string name="ui_94191ce210d3" formatted="false">"添加"</string>
+  <string name="ui_942adc6cf9a6" formatted="false">"无法读取更新日志"</string>
+  <string name="ui_944257fc0daf" formatted="false">"时间戳"</string>
+  <string name="ui_94fb25ffb82c" formatted="false">"石墨"</string>
+  <string name="ui_974b6e3af51a" formatted="false">"高级提示词"</string>
+  <string name="ui_9764f48bf69c" formatted="false">"删除配置"</string>
+  <string name="ui_97d8a6c05b4c" formatted="false">"分组"</string>
+  <string name="ui_97e65da38ee3" formatted="false">"显示我的头像"</string>
+  <string name="ui_97f80bd6a855" formatted="false">"超过 7 天的记录会在下次启动时清掉"</string>
+  <string name="ui_985302bd5aa3" formatted="false">"关闭后不注入角色与聊天设定，也不添加新对话开场白；已保存内容不会删除"</string>
+  <string name="ui_98859a6b7d9a" formatted="false">"外层只保留角色设定；更多提示词选项请进入高级设置"</string>
+  <string name="ui_989d1affa089" formatted="false">"版本"</string>
+  <string name="ui_98c78e0ce81c" formatted="false">"PNG 数据损坏"</string>
+  <string name="ui_98fd0cbd9c31" formatted="false">"模型"</string>
+  <string name="ui_9b0519a157ee" formatted="false">"助手"</string>
+  <string name="ui_9ba763ea3423" formatted="false">"用户"</string>
+  <string name="ui_9c45f77cba5a" formatted="false">"(bytedance|字节|火山)"</string>
+  <string name="ui_9d180a2c7855" formatted="false">"动态取色"</string>
+  <string name="ui_9e51ca47a2e9" formatted="false">"星期五"</string>
+  <string name="ui_9f61d7d38215" formatted="false">"这组配置已被删除。"</string>
+  <string name="ui_a01a8d53938f" formatted="false">"导入失败"</string>
+  <string name="ui_a075f5fc3d77" formatted="false">"Token 用量"</string>
+  <string name="ui_a0af8f7df552" formatted="false">"当前模型"</string>
+  <string name="ui_a182778a934d" formatted="false">"输出 token"</string>
+  <string name="ui_a191935bc678" formatted="false">"恢复默认"</string>
+  <string name="ui_a1c9cf32c22d" formatted="false">"背景会透上来，可用下面的强度调节"</string>
+  <string name="ui_a274f5f3a0f0" formatted="false">"输入消息"</string>
+  <string name="ui_a42184082e99" formatted="false">"删除当前配置"</string>
+  <string name="ui_a50e255aa5c0" formatted="false">"时间戳、token 用量等元信息"</string>
+  <string name="ui_a526db39fb8c" formatted="false">"请求体"</string>
+  <string name="ui_a53e89da8563" formatted="false">"关于 AfyzHub"</string>
+  <string name="ui_a5d875e627fa" formatted="false">"每次请求都会留下一条，仅存在本机"</string>
+  <string name="ui_a7da6a59e8a9" formatted="false">"助手消息无气泡时可占满宽度，代码块与表格更易读；"</string>
+  <string name="ui_a89c91c27ebe" formatted="false">"搜索对话"</string>
+  <string name="ui_a9704e1997b9" formatted="false">"耗时"</string>
+  <string name="ui_aa8c25b80c21" formatted="false">"无法打开外部浏览器"</string>
+  <string name="ui_ab34a29e9ea6" formatted="false">"压暗背景，保留画面细节"</string>
+  <string name="ui_ab79fd0a625e" formatted="false">"名称与分组"</string>
+  <string name="ui_abeb9eae8cd2" formatted="false">"留空则归入未分组"</string>
+  <string name="ui_acd8a5043158" formatted="false">"API 地址"</string>
+  <string name="ui_ad726aef01fb" formatted="false">"置顶对话"</string>
+  <string name="ui_aece71c3bd50" formatted="false">"玫红"</string>
+  <string name="ui_afd01c7bd437" formatted="false">"例如：主号、中转-便宜"</string>
+  <string name="ui_afdfbfeab7ad" formatted="false">"头像模糊"</string>
+  <string name="ui_b05b205e7d9d" formatted="false">"还没有配置。新建一组后填入 API Key 即可开始对话。"</string>
+  <string name="ui_b0868e020827" formatted="false">"顶栏透明"</string>
+  <string name="ui_b0e24833f752" formatted="false">"展开"</string>
+  <string name="ui_b1a3fede2cfc" formatted="false">"更换"</string>
+  <string name="ui_b1ceacc57301" formatted="false">"取消星标"</string>
+  <string name="ui_b24ce2da8283" formatted="false">"关闭后链接改用系统浏览器打开，且 AI 无法使用联网搜索"</string>
+  <string name="ui_b3e55858d9d4" formatted="false">"新建对话"</string>
+  <string name="ui_b41561d80765" formatted="false">"上一页"</string>
+  <string name="ui_b588c7cf23a9" formatted="false">"超过 1 天的记录会在下次启动时清掉"</string>
+  <string name="ui_b5e498077d22" formatted="false">"(internlm|书生)"</string>
+  <string name="ui_b6a188aba8f1" formatted="false">"配置载入中或已被删除"</string>
+  <string name="ui_b79005e90850" formatted="false">"无法读取文件"</string>
+  <string name="ui_b99c16ed8931" formatted="false">"应用内打开链接"</string>
+  <string name="ui_b9f0a68d2400" formatted="false">"颜色模式"</string>
+  <string name="ui_bacfe515acb9" formatted="false">"同日只显示时分，跨日带日期"</string>
+  <string name="ui_badf44811a47" formatted="false">"AfyzHub 是一个轻量的 Android AI 聊天客户端，"</string>
+  <string name="ui_bb5c52348c74" formatted="false">"只看失败"</string>
+  <string name="ui_bb6a620120e1" formatted="false">"略作思考"</string>
+  <string name="ui_bb777b5751df" formatted="false">"建好后直接进入编辑"</string>
+  <string name="ui_bcc347f5ce36" formatted="false">"思考过程"</string>
+  <string name="ui_bcf10102a080" formatted="false">"删除这条"</string>
+  <string name="ui_bd4d4ac87d76" formatted="false">"生成速度"</string>
+  <string name="ui_bd8c2ba49b52" formatted="false">"从发出请求到回复结束"</string>
+  <string name="ui_bdba71f57166" formatted="false">"当前只透出背景，开启后可看见后面的消息"</string>
+  <string name="ui_be8297a3745a" formatted="false">"显示助手头像"</string>
+  <string name="ui_bed172efc953" formatted="false">"关于"</string>
+  <string name="ui_c1671196957f" formatted="false">"性能数据"</string>
+  <string name="ui_c194fdd677d2" formatted="false">"退出多选"</string>
+  <string name="ui_c2bad11d6afd" formatted="false">"启用时作为新对话的首条助手消息；不修改已有对话"</string>
+  <string name="ui_c3b37d90812d" formatted="false">"HTTPS 证书验证失败，已阻止加载"</string>
+  <string name="ui_c40f1dcee4f7" formatted="false">"接口未返回任何模型"</string>
+  <string name="ui_c58ae677073b" formatted="false">"每次随机显示"</string>
+  <string name="ui_c5e26944beba" formatted="false">"透视强度"</string>
+  <string name="ui_c620893e29da" formatted="false">"关闭提示"</string>
+  <string name="ui_c679c1387b44" formatted="false">"非 Gemini 模型的应用内搜索（Gemini 在 API 配置中开启）"</string>
+  <string name="ui_c729b21726a4" formatted="false">"请求成功但未返回内容，请检查模型名是否正确"</string>
+  <string name="ui_c80c63617b18" formatted="false">"星期二"</string>
+  <string name="ui_c89821b90a53" formatted="false">"　未填 Key"</string>
+  <string name="ui_c9a036a6ff43" formatted="false">"(kimi|moonshot|月之暗面)"</string>
+  <string name="ui_ca819302da03" formatted="false">"无法打开此链接"</string>
+  <string name="ui_ca99aa479c5d" formatted="false">"按分组查看"</string>
+  <string name="ui_caddc83f0131" formatted="false">"显示 API Key"</string>
+  <string name="ui_cbac4df6962d" formatted="false">"最快"</string>
+  <string name="ui_cc8146872cf0" formatted="false">"不支持的角色卡版本"</string>
+  <string name="ui_cd4994e50397" formatted="false">"个性化"</string>
+  <string name="ui_cd7a81c37695" formatted="false">"可以在项目仓库的 CHANGELOG.md 中查看完整记录。"</string>
+  <string name="ui_cdd65356222b" formatted="false">"点击查看详情"</string>
+  <string name="ui_ce2680eba019" formatted="false">"拖动边框或四角调整，按住框内可整体移动"</string>
+  <string name="ui_cfb5cd4d38d3" formatted="false">"取消置顶"</string>
+  <string name="ui_d2908949f847" formatted="false">"当前铺满底部，开启后四周留出间距"</string>
+  <string name="ui_d2ccbaa699f8" formatted="false">"角色卡文件不能超过 8 MB"</string>
+  <string name="ui_d490709e1007" formatted="false">"身份、性格、背景和行为边界"</string>
+  <string name="ui_d5247a5f3dca" formatted="false">"支持 JSON、PNG 角色卡；导入为新分组，不覆盖已有内容"</string>
+  <string name="ui_d571d9c547f4" formatted="false">"越高越透。悬浮样式下露出的背景更多，调低一些就够"</string>
+  <string name="ui_d65e1a1ba803" formatted="false">"点击更换"</string>
+  <string name="ui_d7d7ce790b9a" formatted="false">"配置"</string>
+  <string name="ui_d7d97038a32a" formatted="false">"已置顶"</string>
+  <string name="ui_d923295e95ec" formatted="false">"我的头像"</string>
+  <string name="ui_d9636d4a9056" formatted="false">"星期日"</string>
+  <string name="ui_d9d4d4e7ddce" formatted="false">"请求日志"</string>
+  <string name="ui_d9eb3c32dc2d" formatted="false">"查看最近的接口请求与响应，排查失败原因"</string>
+  <string name="ui_dba6c64184ee" formatted="false">"例如：助手身份、性格、语气和行为边界"</string>
+  <string name="ui_dd07e641ca66" formatted="false">"高级设置"</string>
+  <string name="ui_dded7a48901d" formatted="false">"星期一"</string>
+  <string name="ui_dfdc59b706f1" formatted="false">"输入新的分组名"</string>
+  <string name="ui_e0b478941707" formatted="false">"诊断"</string>
+  <string name="ui_e12d30d10108" formatted="false">"在 tavily.com 注册获取; 免费额度足够日常使用"</string>
+  <string name="ui_e12e4a159572" formatted="false">"记录请求日志"</string>
+  <string name="ui_e2d53a6d3a6a" formatted="false">"重试"</string>
+  <string name="ui_e3060a504ec0" formatted="false">"  · 上次运行"</string>
+  <string name="ui_e37a7fa52194" formatted="false">"助手消息"</string>
+  <string name="ui_e40a06c88b5b" formatted="false">"关闭搜索"</string>
+  <string name="ui_e4b948f26da3" formatted="false">"角色卡过大"</string>
+  <string name="ui_e4f6b70a8317" formatted="false">"从服务端获取模型列表"</string>
+  <string name="ui_e548bb9ff768" formatted="false">"早上好"</string>
+  <string name="ui_e58371cb291e" formatted="false">"搜索引擎"</string>
+  <string name="ui_e6aa2cbd7b42" formatted="false">"使用中"</string>
+  <string name="ui_e6f6c0fc5228" formatted="false">"还没有分组。长按某个对话可以把它归入分组"</string>
+  <string name="ui_e767d34c7847" formatted="false">"发送失败"</string>
+  <string name="ui_e80349dbff4d" formatted="false">"(stepfun|阶跃)"</string>
+  <string name="ui_e928ced77864" formatted="false">"同一 API 配置可切换不同角色"</string>
+  <string name="ui_e9944630f3e4" formatted="false">"栏目透明度"</string>
+  <string name="ui_e9b1f1d755df" formatted="false">"添加简介"</string>
+  <string name="ui_ea4bd73a9632" formatted="false">"已联网搜索"</string>
+  <string name="ui_ea744bc3ff90" formatted="false">"抹掉画面细节，保留色调与明暗"</string>
+  <string name="ui_ec8760e5ee7d" formatted="false">"获取模型列表失败"</string>
+  <string name="ui_ed5c361f2952" formatted="false">"更新日志内容为空"</string>
+  <string name="ui_eff24c79566c" formatted="false">"导入角色卡"</string>
+  <string name="ui_f06f360f9706" formatted="false">"裁剪"</string>
+  <string name="ui_f0f79689a0fb" formatted="false">"空会话首屏会把这些显示为可点击的 chip，"</string>
+  <string name="ui_f124c69c1402" formatted="false">"性能数据仅对开启后产生的新消息可用，"</string>
+  <string name="ui_f16418c45919" formatted="false">"撤回"</string>
+  <string name="ui_f252230de210" formatted="false">"前天"</string>
+  <string name="ui_f2bf9a4d0b43" formatted="false">"标题、总结、简介或分组"</string>
+  <string name="ui_f3d9423a572e" formatted="false">"隐藏 API Key"</string>
+  <string name="ui_f44e0a04c577" formatted="false">"启用系统提示词"</string>
+  <string name="ui_f526c89937e1" formatted="false">"确定"</string>
+  <string name="ui_f61d73e36b81" formatted="false">"查看各版本的变更内容"</string>
+  <string name="ui_f6439d8146e5" formatted="false">"此前的历史消息不会补齐。"</string>
+  <string name="ui_f7228a388abd" formatted="false">"开场白、聊天设定和其他提示词分区"</string>
+  <string name="ui_f73eee9e85c6" formatted="false">"服务提供商"</string>
+  <string name="ui_f7b1792e175b" formatted="false">"关闭后顶栏铺主题色，会遮住背景图上部"</string>
+  <string name="ui_f824f671818d" formatted="false">"链接打开方式与联网搜索引擎"</string>
+  <string name="ui_fa199b22e631" formatted="false">"刷新模型列表"</string>
+  <string name="ui_fa4ff6b10e32" formatted="false">"新建分组"</string>
+  <string name="ui_fbe2ad892d58" formatted="false">"M月d日"</string>
+  <string name="ui_fca6f0972365" formatted="false">"所有凭证与对话仅保存在本机。"</string>
+  <string name="ui_fcfcc873ed3c" formatted="false">"危险操作"</string>
+  <string name="ui_fe238ad8bfec" formatted="false">"移动到分组"</string>
+  <string name="ui_fe4469fdb011" formatted="false">"四周留出间距，四角全圆，与页面分离"</string>
+  <string name="ui_ff08d13e6ae6" formatted="false">"适中"</string>
+  <string name="ui_ff3d35f0cdcf" formatted="false">"版本与项目链接"</string>
+  <string name="ui_ffc95cc3f495" formatted="false">"独立保存，同一 API 配置可随时切换"</string>
+</resources>

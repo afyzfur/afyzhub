@@ -236,7 +236,7 @@ fun SettingsTextFieldItem(
         if (passwordVisibleToggle) {
             Icon(
                 imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                contentDescription = if (passwordVisible) "隐藏 API Key" else "显示 API Key",
+                contentDescription = if (passwordVisible) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_f3d9423a572e) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_caddc83f0131),
                 modifier = Modifier
                     .size(28.dp)
                     .clip(AppShapeTokens.CircleButton)
@@ -595,7 +595,7 @@ fun SettingsPageHeader(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "返回",
+                    contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_11d024154013),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }

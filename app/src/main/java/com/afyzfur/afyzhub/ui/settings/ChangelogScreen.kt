@@ -48,7 +48,7 @@ fun ChangelogScreen(onNavigateBack: () -> Unit) {
                     .bufferedReader()
                     .use { it.readText() }
                 if (text.isBlank()) {
-                    ChangelogState.Failed("更新日志内容为空")
+                    ChangelogState.Failed(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ed5c361f2952))
                 } else {
                     ChangelogState.Loaded(stripFrontMatter(text))
                 }
@@ -69,7 +69,7 @@ fun ChangelogScreen(onNavigateBack: () -> Unit) {
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = "更新日志", onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_185368440e18), onNavigateBack = onNavigateBack)
 
             when (val current = state) {
                 is ChangelogState.Loading -> LoadingIndicator()
@@ -125,7 +125,7 @@ private fun ErrorBanner(reason: String) {
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(
-                    text = "无法读取更新日志",
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_942adc6cf9a6),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -138,7 +138,7 @@ private fun ErrorBanner(reason: String) {
             }
         }
         Text(
-            text = "可以在项目仓库的 CHANGELOG.md 中查看完整记录。",
+            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_cd7a81c37695),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 28.dp, vertical = 4.dp)
@@ -158,7 +158,7 @@ private fun LoadingIndicator() {
         CircularProgressIndicator()
         Spacer(Modifier.height(16.dp))
         Text(
-            text = "正在读取更新日志",
+            text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5a87c3ba03eb),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

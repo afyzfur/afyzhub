@@ -105,7 +105,7 @@ fun ConversationActionSheet(
 
             ActionRow(
                 icon = Icons.Default.KeyboardArrowUp,
-                title = if (conversation.pinned) "取消置顶" else "置顶对话",
+                title = if (conversation.pinned) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_cfb5cd4d38d3) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_ad726aef01fb),
                 onClick = {
                     onTogglePin()
                     onDismiss()
@@ -113,7 +113,7 @@ fun ConversationActionSheet(
             )
             ActionRow(
                 icon = Icons.Default.Star,
-                title = if (conversation.starred) "取消星标" else "标为星标",
+                title = if (conversation.starred) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_b1ceacc57301) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_2d69581fa470),
                 onClick = {
                     onToggleStar()
                     onDismiss()
@@ -121,17 +121,17 @@ fun ConversationActionSheet(
             )
             ActionRow(
                 icon = Icons.Default.Edit,
-                title = "重命名",
+                title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1cd80fd7a8b3),
                 onClick = { dialog = ActionDialog.Rename }
             )
             ActionRow(
                 icon = Icons.Default.Create,
-                title = if (conversation.note.isNullOrBlank()) "添加简介" else "修改简介",
+                title = if (conversation.note.isNullOrBlank()) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e9b1f1d755df) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1020e9a63924),
                 onClick = { dialog = ActionDialog.Note }
             )
             ActionRow(
                 icon = Icons.Default.List,
-                title = "移动到分组",
+                title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_fe238ad8bfec),
                 onClick = { dialog = ActionDialog.Group }
             )
 
@@ -139,7 +139,7 @@ fun ConversationActionSheet(
 
             ActionRow(
                 icon = Icons.Default.Delete,
-                title = "删除对话",
+                title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3559dc2da370),
                 destructive = true,
                 onClick = { dialog = ActionDialog.Delete }
             )
@@ -148,9 +148,9 @@ fun ConversationActionSheet(
 
     when (dialog) {
         ActionDialog.Rename -> TextInputDialog(
-            title = "重命名",
+            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_1cd80fd7a8b3),
             initial = conversation.title,
-            placeholder = "对话名称",
+            placeholder = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_877673cdd2ac),
             onConfirm = {
                 onRename(it)
                 dialog = null
@@ -160,9 +160,9 @@ fun ConversationActionSheet(
         )
 
         ActionDialog.Note -> TextInputDialog(
-            title = "简介",
+            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_5ea2e0cde2c8),
             initial = conversation.note ?: "",
-            placeholder = "这个对话是关于什么的",
+            placeholder = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_889d7ed13c7c),
             // 允许清空：简介本来就是可选的
             allowEmpty = true,
             singleLine = false,
@@ -187,7 +187,7 @@ fun ConversationActionSheet(
 
         ActionDialog.Delete -> AlertDialog(
             onDismissRequest = { dialog = null },
-            title = { Text("删除对话") },
+            title = { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3559dc2da370)) },
             text = { Text("确定要删除「${conversation.title}」吗？此操作无法撤销。") },
             confirmButton = {
                 TextButton(
@@ -197,11 +197,11 @@ fun ConversationActionSheet(
                         onDismiss()
                     }
                 ) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
+                    Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_3755f56f2f83), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { dialog = null }) { Text("取消") }
+                TextButton(onClick = { dialog = null }) { Text(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_4d0b4688c787)) }
             }
         )
 

@@ -58,9 +58,9 @@ fun ApiProfileModelsScreen(
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
-                SettingsPageHeader(title = "模型", onNavigateBack = onNavigateBack)
+                SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_98fd0cbd9c31), onNavigateBack = onNavigateBack)
                 Text(
-                    text = "这组配置已被删除。",
+                    text = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_9f61d7d38215),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(28.dp)
@@ -82,18 +82,18 @@ fun ApiProfileModelsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = "模型", onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_98fd0cbd9c31), onNavigateBack = onNavigateBack)
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                SettingsCategoryTitle("当前模型")
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_a0af8f7df552))
                 SettingsGroup {
                     SettingsTextFieldItem(
                         identityKey = profileId,
-                        title = "模型名称",
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_38719c9968ae),
                         value = profile.model,
                         onValueChange = { viewModel.updateProfile(profile.copy(model = it)) },
                         placeholder = "留空则使用 ${profile.provider.fallbackModel}"
@@ -158,7 +158,7 @@ private fun ModelFetchRow(
         )
         Spacer(Modifier.size(12.dp))
         Text(
-            text = if (hasModels) "刷新模型列表" else "从服务端获取模型列表",
+            text = if (hasModels) com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_fa199b22e631) else com.afyzfur.afyzhub.util.AppText.get(com.afyzfur.afyzhub.R.string.ui_e4f6b70a8317),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f)

@@ -32,6 +32,7 @@ class AfyzHubApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        com.afyzfur.afyzhub.util.AppText.initialize(this)
 
         val koin = startKoin {
             androidLogger(Level.ERROR)
