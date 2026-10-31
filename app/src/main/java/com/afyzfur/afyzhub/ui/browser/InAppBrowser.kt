@@ -81,6 +81,7 @@ fun InAppBrowserScreen(
 
     var currentUrl by rememberSaveable(initialUrl) { mutableStateOf(initialUrl) }
     var inputText by rememberSaveable(initialUrl) { mutableStateOf(initialUrl) }
+    var javaScriptEnabled by rememberSaveable(initialUrl) { mutableStateOf(false) }
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
     var pageTitle by rememberSaveable { mutableStateOf("") }
@@ -91,7 +92,7 @@ fun InAppBrowserScreen(
     // 避免 AndroidView 重建时把页面重置到初始地址。
     val webView = remember(context) {
         WebView(context).apply {
-            settings.javaScriptEnabled = true
+            settings.javaScriptEnabled = javaScriptEnabled
             settings.domStorageEnabled = true
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
@@ -106,6 +107,10 @@ fun InAppBrowserScreen(
             android.webkit.CookieManager.getInstance().setAcceptCookie(true)
             android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
         }
+    }
+
+    LaunchedEffect(javaScriptEnabled) {
+        webView.settings.javaScriptEnabled = javaScriptEnabled
     }
 
     // WebView 的状态同步回调：URL 变化/导航能力变化时更新 Compose 状态
@@ -222,6 +227,13 @@ fun InAppBrowserScreen(
                 }
             }
 
+            androidx.compose.material3.TextButton(onClick = {
+                javaScriptEnabled = !javaScriptEnabled
+                webView.settings.javaScriptEnabled = javaScriptEnabled
+                webView.reload()
+            }) {
+                Text(if (javaScriptEnabled) "JavaScript: ON" else "JavaScript: OFF")
+            }
             // 导航条: 网页内前进后退
             Row(
                 modifier = Modifier
