@@ -24,6 +24,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.font.FontWeight
@@ -193,6 +195,8 @@ fun ChatScreen(
     // One coordinate owns rendering AND animation. No snap/drag-coordinate handoff.
     var drawerDragX by remember { mutableFloatStateOf(-100000f) }
     var drawerOpen by remember { mutableStateOf(false) }
+    var drawerVisible by remember { mutableStateOf(false) }
+    var drawerInteractive by remember { mutableStateOf(false) }
     var drawerTargetOpen by remember { mutableStateOf(false) }
     var drawerAnimation by remember { mutableStateOf<Job?>(null) }
     val drawerFillColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -201,7 +205,9 @@ fun ChatScreen(
     fun animateDrawer(open: Boolean, after: () -> Unit = {}) {
         drawerAnimation?.cancel()
         drawerTargetOpen = open
-        drawerOpen = true // Keep the scrim mounted through the last closing frame.
+        drawerVisible = true
+        drawerOpen = open
+        drawerInteractive = open
         val start = drawerDragX.coerceIn(-drawerWidthPx, 0f)
         val end = if (open) 0f else -drawerWidthPx
         drawerAnimation = scope.launch {
@@ -210,11 +216,13 @@ fun ChatScreen(
             }
             drawerDragX = end
             drawerOpen = open
+            if (!open) drawerVisible = false
+            drawerInteractive = open
             after()
         }
     }
     // State containers update without restarting a pointer coroutine or capturing stale callbacks.
-    val drawerOpenState = rememberUpdatedState(drawerOpen)
+    val drawerOpenState = rememberUpdatedState(drawerInteractive)
     val drawerTargetState = rememberUpdatedState(drawerTargetOpen)
     val animateDrawerState = rememberUpdatedState<(Boolean) -> Unit>({ animateDrawer(it) })
     val drawerWidthState = rememberUpdatedState(drawerWidthPx)
@@ -226,7 +234,7 @@ fun ChatScreen(
     fun drawerX(): Float = drawerDragX.coerceAtLeast(-drawerWidthPx)
     fun drawerProgress(): Float =
         if (drawerWidthPx > 0f) ((drawerX() + drawerWidthPx) / drawerWidthPx).coerceIn(0f, 1f) else 0f
-    BackHandler(enabled = drawerOpen) { animateDrawer(false) }
+    BackHandler(enabled = drawerInteractive) { animateDrawer(false) }
     Box(
         Modifier
             .fillMaxSize()
@@ -237,6 +245,8 @@ fun ChatScreen(
                     drawerWidthPx = width
                     drawerDragX = if (drawerTargetOpen) 0f else -width
                     drawerOpen = drawerTargetOpen
+                    drawerVisible = drawerTargetOpen
+                    drawerInteractive = drawerTargetOpen
                 }
             }
             .onGloballyPositioned { rootScreenOrigin.value = it.positionOnScreen() }
@@ -254,6 +264,11 @@ fun ChatScreen(
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     val openAtDown = drawerOpenState.value
+                    if (!drawerTargetState.value && !openAtDown) {
+                        drawerAnimation?.cancel()
+                        drawerDragX = -drawerWidthState.value
+                        drawerVisible = false
+                    }
                     val gesture = ChatGestureState(
                         slop = slop, drawerTrigger = trigger,
                         // 主聊天页全屏横向唤出/收起；方向锁定后不与竖向键盘手势混用。
@@ -279,6 +294,8 @@ fun ChatScreen(
                                     drawerAnimation?.cancel()
                                     drawerCaptured = true
                                     drawerOpen = true
+                                    drawerVisible = true
+                                    drawerInteractive = true
                                     // 已确认横向才收键盘，不清焦点，不影响竖向连续操作。
                                     if (imeVisibleState.value) keyboardActionState.value(1)
                                 }
@@ -359,7 +376,7 @@ listState = listState,
         )
         // 只有抽屉打开时才建立遮罩交互层；关闭时不能覆盖聊天页面，
         // 否则会拦截菜单、输入框和消息点击。
-        if (drawerOpen) Box(
+        if (drawerVisible) Box(
             Modifier
                 .fillMaxSize()
                 // 在绘制阶段读取位移：每帧只重绘，不重组聊天页
@@ -382,9 +399,11 @@ listState = listState,
                         )
                     }
                 }
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { animateDrawerState.value(false) })
-                }
+                .then(
+                    if (drawerInteractive) Modifier.pointerInput(Unit) {
+                        detectTapGestures(onTap = { animateDrawerState.value(false) })
+                    } else Modifier
+                )
         )
             ModalDrawerSheet(
                 drawerShape = AppShapeTokens.Drawer,
@@ -395,7 +414,13 @@ listState = listState,
                 // 窄屏上几乎铺满，看不见背后的聊天页，也就失去了"临时
                 // 拉出一层"的意味。留出的那一截同时是关闭抽屉的点击区
                 modifier = Modifier
-                    .offset { IntOffset(drawerX().roundToInt(), 0) }
+                    // Closing visuals must not keep the sheet's clickable children in hit testing.
+                    // Place its layout off-screen immediately; translate DRAWING ONLY for the tail.
+                    .offset { IntOffset(if (drawerInteractive) drawerX().roundToInt() else -drawerWidthPx.roundToInt(), 0) }
+                    .drawWithContent {
+                        val visualOffset = if (drawerInteractive) 0f else drawerX() + drawerWidthPx
+                        translate(left = visualOffset) { this@drawWithContent.drawContent() }
+                    }
                     .fillMaxWidth(DRAWER_WIDTH_FRACTION)
             ) {
                 ConversationDrawer(

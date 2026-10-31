@@ -12,7 +12,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.key
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -90,32 +90,34 @@ fun NavGraph() {
     // StateFlow 总有值, 但为类型安全仍判空兜底
     val browserEnabled: Boolean = browserSettings?.inAppBrowserEnabled ?: true
     val uiPreferences by settingsRepo.uiPreferences.collectAsState()
-    // NavHost remembers its graph. All four callbacks must read the SAME latest state,
-    // rather than capturing Enter/ExitTransition values from different graph compositions.
-    val pageAnimation = rememberUpdatedState(uiPreferences.chatAppearance.animation)
+    // AnimatedContent remembers transforms for existing entries. Reading a new mode
+    // alone cannot clear the old alpha/offset tracks on the first pop. Recreate only
+    // the animation host, not the NavController/back stack, when the mode changes.
+    val pageAnimation = uiPreferences.chatAppearance.animation
+    key(pageAnimation) {
     NavHost(
         navController = navController,
         startDestination = Screen.Chat.route,
         enterTransition = {
-            when (pageAnimation.value) {
+            when (pageAnimation) {
                 ChatAnimation.FADE -> fadeIn(tween(320))
                 ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300))
             }
         },
         exitTransition = {
-            when (pageAnimation.value) {
+            when (pageAnimation) {
                 ChatAnimation.FADE -> fadeOut(tween(320))
                 ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300))
             }
         },
         popEnterTransition = {
-            when (pageAnimation.value) {
+            when (pageAnimation) {
                 ChatAnimation.FADE -> fadeIn(tween(320))
                 ChatAnimation.SLIDE -> slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300))
             }
         },
         popExitTransition = {
-            when (pageAnimation.value) {
+            when (pageAnimation) {
                 ChatAnimation.FADE -> fadeOut(tween(320))
                 ChatAnimation.SLIDE -> slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
             }
@@ -250,4 +252,5 @@ fun NavGraph() {
             ChangelogScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
+    } // key(pageAnimation)
 }
