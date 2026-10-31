@@ -213,10 +213,12 @@ fun ChatScreen(
             // 点击拦截吃掉后续事件，导致必须先松手才能左滑收起
             .pointerInput(drawerWidthPx, imeVisible) {
                 val edgeWidth = with(density) { 72.dp.toPx() }
+                val trigger = with(density) { 32.dp.toPx() }
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    val openAtDown = drawerOpenState.value
+                    val startX = drawerDragX
+                    val openAtDown = drawerOpenState.value || startX > -drawerWidthPx + 1f
                     val eligible = openAtDown || (!imeVisibleState.value && down.position.x <= edgeWidth)
                     if (!eligible) return@awaitEachGesture
                     var axis = 0
@@ -238,30 +240,32 @@ fun ChatScreen(
                         if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
                             axis = if (abs(totalX) > abs(totalY)) 1 else -1
                             if (axis == -1) return@awaitEachGesture
+                            if ((openAtDown && totalX >= 0f) || (!openAtDown && totalX <= 0f)) {
+                                return@awaitEachGesture
+                            }
                         }
                         if (axis != 1 || drawerWidthPx <= 0f) continue
-                        val currentX = if (drawerDragging) drawerDragX else drawerOffset.value
-                        val movingOpen = currentX < -0.5f && dx > 0f
-                        val movingClosed = currentX > -drawerWidthPx + 0.5f && dx < 0f
-                        if (!movingOpen && !movingClosed) continue
+                        if ((openAtDown && dx >= 0f) || (!openAtDown && dx <= 0f)) continue
                         dragging = true
                         change.consume()
                         drawerDragging = true
-                        drawerDragX = (currentX + dx).coerceIn(-drawerWidthPx, 0f)
+                        drawerDragX = (drawerDragX + dx).coerceIn(-drawerWidthPx, 0f)
                         drawerOpen = drawerDragX > -drawerWidthPx + 1f
                     }
                     if (dragging) {
-                        val targetOpen = drawerDragX > -drawerWidthPx * 0.5f
-                        drawerOpen = targetOpen
+                        val moved = drawerDragX - startX
+                        val settledOpen = if (openAtDown) moved > -trigger else moved >= trigger
+                        drawerOpen = settledOpen
                         scope.launch {
+                            drawerOffset.stop()
                             drawerOffset.snapTo(drawerDragX)
                             drawerDragging = false
                             drawerOffset.animateTo(
-                                if (targetOpen) 0f else -drawerWidthPx,
+                                if (settledOpen) 0f else -drawerWidthPx,
                                 animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f)
                             )
                             drawerDragX = drawerOffset.value
-                            drawerOpen = targetOpen
+                            drawerOpen = settledOpen
                         }
                     }
                 }
@@ -288,7 +292,7 @@ fun ChatScreen(
             sendPhase = sendPhase,
             error = error,
 listState = listState,
-             imeVisible = imeVisible,
+             imeVisibleState = imeVisibleState,
              drawerOpen = drawerOpen,
              focusRequestToken = focusRequestToken,
              onShowKeyboard = { focusRequestToken++ },
@@ -359,12 +363,14 @@ listState = listState,
                 }
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
-                        if (!drawerOpen) return@detectTapGestures
-                        drawerOpen = false
-                        scope.launch {
-                            drawerOffset.animateTo(-drawerWidthPx, tween(durationMillis = 150))
-                            drawerOffset.snapTo(-drawerWidthPx)
-                        }
+if (!drawerOpen) return@detectTapGestures
+                         drawerOpen = false
+                         scope.launch {
+                             drawerOffset.stop()
+                             drawerOffset.animateTo(-drawerWidthPx, tween(durationMillis = 150))
+                             drawerOffset.snapTo(-drawerWidthPx)
+                             drawerDragX = -drawerWidthPx
+                         }
                     })
                 }
         )
@@ -398,14 +404,14 @@ listState = listState,
                     currentConversationId = currentConversationId,
                     modelLabel = settings.model,
                     appearance = uiPreferences.chatAppearance,
-                    onConversationClick = { id ->
-                        hostViewModel.openConversation(id)
-                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
-                    },
-                    onNewConversation = {
-                        hostViewModel.startNewConversation()
-                        scope.launch { drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOpen = false }
-                    },
+onConversationClick = { id ->
+                         hostViewModel.openConversation(id)
+                         scope.launch { drawerOffset.stop(); drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOffset.snapTo(-drawerWidthPx); drawerDragX = -drawerWidthPx; drawerOpen = false }
+                     },
+onNewConversation = {
+                         hostViewModel.startNewConversation()
+                         scope.launch { drawerOffset.stop(); drawerOffset.animateTo(-drawerWidthPx, tween(220)); drawerOffset.snapTo(-drawerWidthPx); drawerDragX = -drawerWidthPx; drawerOpen = false }
+                     },
                     onDeleteConversation = { id ->
                         hostViewModel.deleteConversation(id)
                     },
@@ -525,7 +531,7 @@ private fun ChatContent(
     sendPhase: SendPhase,
     error: String?,
     listState: LazyListState,
-    imeVisible: Boolean,
+    imeVisibleState: androidx.compose.runtime.State<Boolean>,
     drawerOpen: Boolean,
     focusRequestToken: Int,
     onShowKeyboard: () -> Unit,
@@ -624,15 +630,17 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-.pointerInput(drawerOpen, imeVisible) {
+.pointerInput(drawerOpen) {
                          if (drawerOpen) return@pointerInput
                          val slop = viewConfiguration.touchSlop
-                         val threshold = with(density) { 72.dp.toPx() }
+                         val threshold = 72f
+                         val imeState = imeVisibleState
                          awaitEachGesture {
                              val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                              var totalY = 0f
                              var totalX = 0f
                              var axis = 0
+                             var lastAction = 0 // -1 = show, 1 = hide
                              while (true) {
                                  val event = awaitPointerEvent(PointerEventPass.Initial)
                                  val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -642,11 +650,13 @@ private fun ChatContent(
                                  if (axis == 0 && (abs(totalX) > slop || abs(totalY) > slop)) {
                                      axis = if (abs(totalY) > abs(totalX)) 1 else -1
                                  }
-                                 if (axis == 1 && totalY <= -threshold) {
-                                     if (!imeVisible) onShowKeyboard()
+                                 if (axis == 1 && totalY <= -threshold && lastAction != -1) {
+                                     if (!imeState.value) onShowKeyboard()
+                                     lastAction = -1
                                      totalY = 0f
-                                 } else if (axis == 1 && totalY >= threshold) {
-                                     if (imeVisible) onHideKeyboard()
+                                 } else if (axis == 1 && totalY >= threshold && lastAction != 1) {
+                                     if (imeState.value) onHideKeyboard()
+                                     lastAction = 1
                                      totalY = 0f
                                  }
                              }

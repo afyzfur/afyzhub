@@ -115,8 +115,10 @@ fun NavGraph() {
         startDestination = Screen.Chat.route,
         enterTransition = { pageEnter },
         exitTransition = { pageExit },
-        popEnterTransition = { pagePopEnter },
-        popExitTransition = { pagePopExit }
+        // 系统返回动画负责返回方向；禁用 NavHost 的 pop 转场，避免
+        // 系统预测返回与 Compose pop 动画同时执行造成叠加。
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ) {
         composable(Screen.Chat.route) {
             val ctx = androidx.compose.ui.platform.LocalContext.current
