@@ -249,7 +249,6 @@ fun ChatScreen(
                 Rect(0f, center - h / 2f, w, center + h / 2f)
             }
             .pointerInput(Unit) {
-                val edgeWidth = with(density) { 72.dp.toPx() }
                 val trigger = 32f
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
@@ -257,7 +256,8 @@ fun ChatScreen(
                     val openAtDown = drawerOpenState.value
                     val gesture = ChatGestureState(
                         slop = slop, drawerTrigger = trigger,
-                        drawerEligible = openAtDown || (!imeVisibleState.value && down.position.x <= edgeWidth),
+                        // 主聊天页全屏横向唤出/收起；方向锁定后不与竖向键盘手势混用。
+                        drawerEligible = true,
                         drawerInitiallyOpen = drawerTargetState.value
                     )
                     var lastScreen = down.position + rootScreenOrigin.value
@@ -279,6 +279,8 @@ fun ChatScreen(
                                     drawerAnimation?.cancel()
                                     drawerCaptured = true
                                     drawerOpen = true
+                                    // 已确认横向才收键盘，不清焦点，不影响竖向连续操作。
+                                    if (imeVisibleState.value) keyboardActionState.value(1)
                                 }
                                 // Before activation: directly follow. After threshold: elastic slide-out.
                                 if (!gesture.drawerWasActivated) {

@@ -46,6 +46,14 @@ class ChatGestureStateTest {
         assertNull(step.drawerTarget)
         assertEquals(0, step.keyboardAction)
     }
+    @Test fun fullScreenHorizontalCanOpenAndCloseWithoutLifting() {
+        // Root integration enables drawerEligible at every start position.
+        val s = state(edge = true)
+        assertEquals(true, s.move(40f, 1f).drawerTarget)
+        assertEquals(false, s.move(-40f, 0f).drawerTarget)
+        assertEquals(true, s.move(40f, 0f).drawerTarget)
+        assertEquals(0, s.move(0f, -100f).keyboardAction)
+    }
     @Test fun slopAccumulationIsNotLost() {
         val s = state()
         repeat(3) { assertEquals(0, s.move(0f, -2f).keyboardAction) }
