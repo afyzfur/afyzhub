@@ -580,10 +580,9 @@ private fun ChatContent(
             } else {
                 MaterialTheme.colorScheme.surfaceContainer
             },
-            // 键盘弹出时整体上移，使输入框始终可见。
-            // 需配合 manifest 的 windowSoftInputMode="adjustResize"，
-            // 否则窗口不重新布局，内容会被整体顶到状态栏下方
-            modifier = Modifier.imePadding(),
+            // Scaffold/TopAppBar stay stable during IME animation. The content region below
+            // consumes animated IME insets directly; no second tween or delayed height state.
+            modifier = Modifier.fillMaxSize(),
             // 底部 inset 交给输入框自己处理，使其背景能延伸到屏幕底边。
             // 若保留默认值，Scaffold 与输入框会各加一次导航栏内边距
             contentWindowInsets = WindowInsets.safeDrawing.only(
@@ -637,6 +636,9 @@ private fun ChatContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    // Read system IME insets in the layout phase, on the SAME container
+                    // that anchors the input bar and message viewport.
+                    .imePadding()
             ) {
                 Column(
                     modifier = Modifier

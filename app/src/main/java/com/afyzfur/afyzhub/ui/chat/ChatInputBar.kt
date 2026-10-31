@@ -41,6 +41,11 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +69,7 @@ import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
  * 功能行当前只放提供商标识与发送按钮。联网搜索、思考模式、附件等按钮
  * 需要对应功能落地后再加，先不放不可用的占位图标。
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChatInputBar(
     value: String,
@@ -114,13 +120,18 @@ fun ChatInputBar(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     var hasFocus by remember { mutableStateOf(false) }
+    val imeVisibleState = rememberUpdatedState(WindowInsets.isImeVisible)
     LaunchedEffect(focusRequestToken) {
         when {
             focusRequestToken > 0 -> {
+                // Let the gesture's state/layout update reach a frame before issuing IME work.
+                // A reverse hide command cancels this wait rather than flashing show then hide.
+                withFrameNanos { }
                 if (!hasFocus) {
-                    // Gaining text focus starts the text input session and requests IME itself.
+                    // Legacy String BasicTextField already shows IME when focus is acquired.
+                    // Do not issue a second show() after requestFocus().
                     focusRequester.requestFocus()
-                } else {
+                } else if (!imeVisibleState.value) {
                     keyboardController?.show()
                 }
             }
