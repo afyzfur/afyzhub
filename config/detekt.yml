@@ -41,8 +41,8 @@ complexity:
     active: false
 naming:
   active: true
+  # Compose @Composable functions intentionally use PascalCase.
   FunctionNaming:
-    active: true
-    excludes: ["**/test/**", "**/androidTest/**"]
+    active: false
   VariableNaming:
     active: true
