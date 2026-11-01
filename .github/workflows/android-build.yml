@@ -139,11 +139,17 @@ jobs:
             printf '全部版本的更新记录见 [CHANGELOG.md](%s)。\n' \
               "https://github.com/afyzfur/afyzhub/blob/main/CHANGELOG.md"
           } >> release-notes.md
-          ASSET="AfyzHub-${APP_VERSION}-${GITHUB_SHA:0:8}.apk"
-          cp "AfyzHub-${APP_VERSION}.apk" "$ASSET"
+          # Upload the canonical APK first; only after success update notes and remove stale APK assets.
+          ASSET="AfyzHub-${APP_VERSION}.apk"
           if gh release view "$APP_VERSION" >/dev/null 2>&1; then
             gh release upload "$APP_VERSION" "$ASSET" --clobber
             gh release edit "$APP_VERSION" --title "$APP_VERSION" --notes-file release-notes.md --prerelease
+            gh release view "$APP_VERSION" --json assets --jq '.assets[].name' |
+              while IFS= read -r old_asset; do
+                if [[ "$old_asset" == AfyzHub-*.apk && "$old_asset" != "$ASSET" ]]; then
+                  gh release delete-asset "$APP_VERSION" "$old_asset" --yes
+                fi
+              done
           else
             gh release create "$APP_VERSION" --title "$APP_VERSION" --notes-file release-notes.md --prerelease --target "$GITHUB_SHA" "$ASSET"
           fi
