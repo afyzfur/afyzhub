@@ -23,7 +23,7 @@ class RedactionTest {
             mapOf("Authorization" to "Bearer sk-proj-abcdefghijklmnop")
         )
 
-        val value = result["Authorization"]!!
+        val value = checkNotNull(result["Authorization"])
         assertTrue("应保留 Bearer 前缀", value.startsWith("Bearer "))
         assertFalse("不应包含完整密钥", value.contains("abcdefghijklmnop"))
         assertEquals("Bearer sk-p***", value)

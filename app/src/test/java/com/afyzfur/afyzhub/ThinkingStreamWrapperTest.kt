@@ -83,7 +83,7 @@ class ThinkingStreamWrapperTest {
         assertEquals(default, ThinkingEffort.OFF.anthropicMaxTokens(default))
         // 其余档位都必须严格大于预算，否则 Claude 直接返回 400
         listOf(ThinkingEffort.LOW, ThinkingEffort.MEDIUM, ThinkingEffort.HIGH).forEach {
-            val budget = it.tokenBudget!!
+            val budget = checkNotNull(it.tokenBudget)
             assertTrue(
                 "$it 的 max_tokens 必须大于预算 $budget",
                 it.anthropicMaxTokens(default) > budget
@@ -96,7 +96,7 @@ class ThinkingStreamWrapperTest {
         // 仅比预算多一个 token 是不够的：正文会被立刻截断
         val default = 4096
         val high = ThinkingEffort.HIGH
-        val room = high.anthropicMaxTokens(default) - high.tokenBudget!!
+        val room = high.anthropicMaxTokens(default) - checkNotNull(high.tokenBudget)
         assertEquals(default, room)
     }
 }

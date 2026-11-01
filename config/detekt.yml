@@ -2,6 +2,7 @@ build:
   maxIssues: 0
 config:
   validation: true
+  warningsAsErrors: true
 potential-bugs:
   active: true
   UnreachableCode:
@@ -13,4 +14,34 @@ potential-bugs:
   EqualsAlwaysReturnsTrueOrFalse:
     active: true
   ExplicitGarbageCollectionCall:
+    active: true
+style:
+  active: true
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: false
+  ReturnCount:
+    active: false
+  WildcardImport:
+    active: false
+  ThrowsCount:
+    active: false
+  UseCheckOrError:
+    active: true
+complexity:
+  active: true
+  LongMethod:
+    active: false
+  LongParameterList:
+    active: false
+  ComplexCondition:
+    active: false
+  TooManyFunctions:
+    active: false
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+  VariableNaming:
     active: true

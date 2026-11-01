@@ -113,6 +113,6 @@ class ModelIconTest {
         val dir = listOf(File("app/src/main/assets/icons"), File("src/main/assets/icons"))
             .firstOrNull { it.exists() }
         assertTrue("找不到图标目录", dir != null)
-        return dir!!
+        return checkNotNull(dir)
     }
 }
