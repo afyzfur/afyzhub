@@ -2,6 +2,13 @@
 
 ## v0.3.8-dev
 
+### 静态检查与测试收口
+- 清理测试源码剩余非空断言，生产与测试 Kotlin 源码均不再使用 `!!`。
+- 保留 Compose PascalCase 命名约定，不让通用 FunctionNaming 规则误报 UI API；Detekt 继续检查潜在错误、变量命名和适用的代码质量规则。
+- Manifest API 33 属性补充 targetApi 说明，继续保持 Lint `abortOnError=true`。
+- Room 迁移、单元测试、Lint、Detekt 和签名构建均通过。
+
+
 ### 维护项继续收口
 - 核对并收口静态界面文案资源化范围；动态提示、协议文本与错误上下文不做机械替换。
 - 将流式写库与逐字揭示从聊天仓库拆为独立协作者，降低核心仓库职责和后续维护风险。
