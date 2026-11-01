@@ -17,7 +17,7 @@
 | 11 文案 | 又完成一轮安全的动态展示文案资源化；业务错误、枚举、协议、正则和提示词仍保留，完整多语言仍不是本轮交付。 |
 | 12 流式写库 | 确认 16ms。改 33ms，上调步长保持追赶速度，最后完整内容仍落库。 |
 | 13 Regex | 确认循环重复构造；实际 16 个字面表达式。统一预编译，HTML 上游结构变化依然可能使搜索失效。 |
-| 14 非空断言 | 五处存在。改局部判空/已验证不变量，图片使用受条件保护的非空路径；删除全部 !!。 |
+| 14 非空断言 | 主源码与测试源码均已清理 `!!`，改用 `checkNotNull`、显式判空或断言；当前 Kotlin 源码无非空断言。 |
 | 15 死代码 | 存在。删除空 usage 分支及 rawUsageLogged 假日志，注释与 33ms 一致。 |
 | 16 Windows wrapper | 缺失。补官方 gradlew.bat，README 增加 Windows 命令。 |
 | 17 大文件 | 已拆出 ChatStreamCollector、UiSettingsStore、SearchResultParser 和 SearchEngine；剩余文件按职责继续维护，不为凑行数重写高风险逻辑。 |

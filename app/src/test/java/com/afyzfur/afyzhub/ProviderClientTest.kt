@@ -116,7 +116,7 @@ private val json = Json {
 }
 
 private fun body(transport: FakeTransport): JsonObject =
-    json.parseToJsonElement(transport.lastBody!!).jsonObject
+    json.parseToJsonElement(checkNotNull(transport.lastBody)).jsonObject
 
 class OpenAiChatClientTest {
 
@@ -153,8 +153,8 @@ class OpenAiChatClientTest {
             .textDeltas()
         assertEquals(
             true,
-            body(streaming)["stream_options"]!!
-                .jsonObject["include_usage"]!!.jsonPrimitive.content.toBoolean()
+            checkNotNull(body(streaming)["stream_options"])
+                .jsonObject.let { checkNotNull(it["include_usage"]) }.jsonPrimitive.content.toBoolean()
         )
 
         val plain = FakeTransport(
@@ -213,7 +213,7 @@ class OpenAiChatClientTest {
         val deltas = client.stream(listOf(ChatTurn("user", "hi")), settings).textDeltas()
 
         assertEquals(listOf("你", "好"), deltas)
-        assertEquals(true, body(transport)["stream"]!!.jsonPrimitive.content.toBoolean())
+        assertEquals(true, checkNotNull(body(transport)["stream"]).jsonPrimitive.content.toBoolean())
     }
 
     @Test
@@ -309,10 +309,10 @@ class AnthropicChatClientTest {
         )
 
         val payload = body(transport)
-        assertEquals("你是助手", payload["system"]!!.jsonPrimitive.content)
-        val messages = payload["messages"]!!.jsonArray
+        assertEquals("你是助手", checkNotNull(payload["system"]).jsonPrimitive.content)
+        val messages = checkNotNull(payload["messages"]).jsonArray
         assertEquals(1, messages.size)
-        assertEquals("user", messages[0].jsonObject["role"]!!.jsonPrimitive.content)
+        assertEquals("user", checkNotNull(messages[0].jsonObject["role"]).jsonPrimitive.content)
     }
 
     @Test
@@ -458,10 +458,10 @@ class GeminiChatClientTest {
             settings
         )
 
-        val contents = body(transport)["contents"]!!.jsonArray
-        assertEquals("user", contents[0].jsonObject["role"]!!.jsonPrimitive.content)
-        assertEquals("model", contents[1].jsonObject["role"]!!.jsonPrimitive.content)
-        assertEquals("user", contents[2].jsonObject["role"]!!.jsonPrimitive.content)
+        val contents = checkNotNull(body(transport)["contents"]).jsonArray
+        assertEquals("user", checkNotNull(contents[0].jsonObject["role"]).jsonPrimitive.content)
+        assertEquals("model", checkNotNull(contents[1].jsonObject["role"]).jsonPrimitive.content)
+        assertEquals("user", checkNotNull(contents[2].jsonObject["role"]).jsonPrimitive.content)
     }
 
     @Test
@@ -480,13 +480,13 @@ class GeminiChatClientTest {
         )
 
         val payload = body(transport)
-        val instruction = payload["systemInstruction"]!!.jsonObject
+        val instruction = checkNotNull(payload["systemInstruction"]).jsonObject
         assertEquals(
             "你是助手",
-            instruction["parts"]!!.jsonArray[0].jsonObject["text"]!!.jsonPrimitive.content
+            checkNotNull(instruction["parts"]).jsonArray[0].jsonObject.let { checkNotNull(it["text"]) }.jsonPrimitive.content
         )
         // system 不应重复出现在 contents 中。
-        assertEquals(1, payload["contents"]!!.jsonArray.size)
+        assertEquals(1, checkNotNull(payload["contents"]).jsonArray.size)
     }
 
     @Test

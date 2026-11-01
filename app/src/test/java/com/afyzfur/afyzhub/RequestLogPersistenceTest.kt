@@ -228,6 +228,6 @@ class RequestLogPersistenceTest {
             "落盘体积需要控制",
             (persisted.responseBody?.length ?: 0) < long.length
         )
-        assertTrue(persisted.responseBody!!.contains("已截断"))
+        assertTrue(checkNotNull(persisted.responseBody).contains("已截断"))
     }
 }

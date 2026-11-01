@@ -143,10 +143,11 @@ class ChatRepositoryImplTest {
         val sent = client.completeTurns
         assertNotNull(sent)
         // 用户1、助手1、用户2 共三条，证明多轮上下文已带上。
-        assertEquals(3, sent!!.size)
-        assertEquals("第一个问题", sent[0].content)
-        assertEquals(Constants.ROLE_ASSISTANT, sent[1].role)
-        assertEquals("第二个问题", sent[2].content)
+        val sentTurns = checkNotNull(sent)
+        assertEquals(3, sentTurns.size)
+        assertEquals("第一个问题", sentTurns[0].content)
+        assertEquals(Constants.ROLE_ASSISTANT, sentTurns[1].role)
+        assertEquals("第二个问题", sentTurns[2].content)
     }
 
     @Test
@@ -312,7 +313,7 @@ class ChatRepositoryImplTest {
 
         repeat(15) { repo.sendMessage(conversationId, "问题$it") }
 
-        val size = client.completeTurns!!.size
+        val size = checkNotNull(client.completeTurns).size
         assertTrue(size <= Constants.MAX_CONTEXT_MESSAGES)
     }
 }

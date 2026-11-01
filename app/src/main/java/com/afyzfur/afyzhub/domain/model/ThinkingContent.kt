@@ -331,30 +331,30 @@ fun joinAnswerBlocks(blocks: List<ContentBlock>): String =
  */
 fun sanitizeHistory(content: String): String {
     // 标签用 unicode 转义书写(避免源码里出现尖括号):
-    val O_WS = "\u003Cweb_search\u003E"
-    val C_WS = "\u003C/web_search\u003E"
-    val O_SR = "\u003Csources\u003E"
-    val C_SR = "\u003C/sources\u003E"
+    val webSearchOpen = "\u003Cweb_search\u003E"
+    val webSearchClose = "\u003C/web_search\u003E"
+    val sourcesOpen = "\u003Csources\u003E"
+    val sourcesClose = "\u003C/sources\u003E"
     var out = content
     // 1) 搜索标签对整对删除(连查询词): 任何残留痕迹——无论是裸查询词
     //    还是 [搜索: q] 标记——都会让模型误判上一轮的搜索状态
-    var p = out.indexOf(O_WS)
+    var p = out.indexOf(webSearchOpen)
     while (p >= 0) {
-        val e = out.indexOf(C_WS, p + O_WS.length)
+        val e = out.indexOf(webSearchClose, p + webSearchOpen.length)
         if (e < 0) break
-        out = out.substring(0, p) + out.substring(e + C_WS.length)
-        p = out.indexOf(O_WS, p + 1)
+        out = out.substring(0, p) + out.substring(e + webSearchClose.length)
+        p = out.indexOf(webSearchOpen, p + 1)
     }
     // 2) 来源块整块删除(含标题::链接)
-    p = out.indexOf(O_SR)
+    p = out.indexOf(sourcesOpen)
     while (p >= 0) {
-        val e = out.indexOf(C_SR, p + O_SR.length)
+        val e = out.indexOf(sourcesClose, p + sourcesOpen.length)
         if (e < 0) break
-        out = out.substring(0, p) + out.substring(e + C_SR.length)
-        p = out.indexOf(O_SR, p + 1)
+        out = out.substring(0, p) + out.substring(e + sourcesClose.length)
+        p = out.indexOf(sourcesOpen, p + 1)
     }
     // 3) 残段兜底: 单独的开/闭符号
-    out = out.replace(O_WS, "").replace(C_WS, "")
-    out = out.replace(O_SR, "").replace(C_SR, "")
+    out = out.replace(webSearchOpen, "").replace(webSearchClose, "")
+    out = out.replace(sourcesOpen, "").replace(sourcesClose, "")
     return out
 }

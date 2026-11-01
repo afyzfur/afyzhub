@@ -12,5 +12,5 @@ class ChatClientRegistry(
 ) {
     fun clientFor(provider: AiProvider): ChatClient =
         clients[provider]
-            ?: throw IllegalStateException("暂不支持的提供商：${provider.displayName}")
+            ?: error("暂不支持的提供商：${provider.displayName}")
 }

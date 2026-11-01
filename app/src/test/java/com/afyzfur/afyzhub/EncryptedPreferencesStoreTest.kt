@@ -42,7 +42,7 @@ class EncryptedPreferencesStoreTest {
         val key=stringPreferencesKey("api_key_openai")
         val raw=MemoryStore(preferencesOf(key to "original"))
         val failing=object : PreferenceCipher {
-            override fun encrypt(value: String): String = throw IllegalStateException("unavailable")
+            override fun encrypt(value: String): String = error("unavailable")
             override fun decrypt(value: String) = value
         }
         try { EncryptedPreferencesStore(raw,failing).updateData { it }; fail("must report failure") }

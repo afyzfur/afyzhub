@@ -53,7 +53,7 @@ class ConversationActionTest {
 
         dao.updateTitle(1, "新名")
 
-        val entity = dao.getConversationById(1)!!
+        val entity = checkNotNull(dao.getConversationById(1))
         assertEquals("新名", entity.title)
         // 这是此前的缺陷：改名会刷新时间，把会话挪进「今天」分组
         assertEquals(100, entity.updatedAt)
@@ -67,7 +67,7 @@ class ConversationActionTest {
         dao.updatePinned(1, true)
         dao.updateStarred(1, true)
 
-        val entity = dao.getConversationById(1)!!
+        val entity = checkNotNull(dao.getConversationById(1))
         assertTrue(entity.pinned)
         assertTrue(entity.starred)
         assertEquals(100, entity.updatedAt)
@@ -80,14 +80,14 @@ class ConversationActionTest {
 
         dao.updatePinned(1, true)
         dao.updateStarred(1, false)
-        assertTrue(dao.getConversationById(1)!!.pinned)
-        assertFalse(dao.getConversationById(1)!!.starred)
+        assertTrue(checkNotNull(dao.getConversationById(1)).pinned)
+        assertFalse(checkNotNull(dao.getConversationById(1)).starred)
 
         // 取消置顶不应连带清掉星标
         dao.updateStarred(1, true)
         dao.updatePinned(1, false)
-        assertFalse(dao.getConversationById(1)!!.pinned)
-        assertTrue(dao.getConversationById(1)!!.starred)
+        assertFalse(checkNotNull(dao.getConversationById(1)).pinned)
+        assertTrue(checkNotNull(dao.getConversationById(1)).starred)
     }
 
     @Test
