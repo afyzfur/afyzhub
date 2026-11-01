@@ -43,5 +43,6 @@ naming:
   active: true
   FunctionNaming:
     active: true
+    excludes: ["**/test/**", "**/androidTest/**"]
   VariableNaming:
     active: true

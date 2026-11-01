@@ -158,7 +158,7 @@ class ChatRepositoryImpl(
             onPhase(SendPhase.CONNECTING)
             val settings = settingsProvider.current()
             if (settings.apiKey.isBlank()) {
-                throw IllegalStateException("请先在设置中配置 API Key")
+                error("请先在设置中配置 API Key")
             }
             // 具体协议差异由对应 provider 的客户端处理，此处只关心对话内容。
             val client = clientRegistry.clientFor(settings.provider)
@@ -186,7 +186,7 @@ class ChatRepositoryImpl(
 
             var reply = outcome.content
             if (reply.isBlank()) {
-                throw IllegalStateException("模型返回内容为空")
+                error("模型返回内容为空")
             }
 
             // 应用层联网搜索：模型请求了搜索则执行, 把结果作为
@@ -257,7 +257,7 @@ class ChatRepositoryImpl(
                 searchUsage = mergeTokenUsage(searchUsage, secondOutcome.usage)
                 reply = if (settings.streamEnabled) secondOutcome.content else timelinePrefix + secondOutcome.content
                 if (secondOutcome.content.isBlank()) {
-                    throw IllegalStateException("模型返回内容为空")
+                    error("模型返回内容为空")
                 }
             }
             val latencyMs = System.currentTimeMillis() - startedAt
