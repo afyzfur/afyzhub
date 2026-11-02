@@ -6,7 +6,6 @@ import com.afyzfur.afyzhub.data.remote.provider.ChatClientRegistry
 import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.domain.model.ApiProfile
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -88,7 +87,6 @@ class ProfileModelsViewModel(
     val testResult: StateFlow<TestResult?> = _testResult.asStateFlow()
 
     private val _testing = MutableStateFlow(false)
-    private var testJob: Job? = null
     val testing: StateFlow<Boolean> = _testing.asStateFlow()
 
     /**
