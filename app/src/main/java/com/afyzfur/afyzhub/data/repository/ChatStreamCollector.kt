@@ -26,13 +26,6 @@ internal class ChatStreamCollector {
      */
     /** 查询词与用户问题的字符重合度(0~1)。模型的缩写查询常不是子串,
      * 例如「重庆市」vs「重庆今天天气」, 用字符重合度兜住这类情况。 */
-    private fun sharedChars(a: String, b: String): Double {
-        val setA = a.filter { !it.isWhitespace() }.toSet()
-        if (setA.isEmpty()) return 0.0
-        val setB = b.filter { !it.isWhitespace() }.toSet()
-        return setA.count { it in setB }.toDouble() / setA.size
-    }
-
     private fun mergeTokenUsage(old: TokenUsage?, next: TokenUsage?): TokenUsage? {
         if (old == null) return next
         if (next == null) return old

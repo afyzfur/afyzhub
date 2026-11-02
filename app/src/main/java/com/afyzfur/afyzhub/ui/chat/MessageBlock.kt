@@ -504,19 +504,6 @@ private fun SiteIcon(url: String, size: Dp) {
 }
 
 @Composable
-private fun EngineBadge(engine: String) {
-    val key = engine.trim().lowercase()
-    val (label, color) = when {
-        key == "baidu" || key == com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_0cc2662f5eb1) -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_304fce687a69) to androidx.compose.ui.graphics.Color(0xFF2932E1)
-        key == "google" -> "G" to androidx.compose.ui.graphics.Color(0xFF4285F4)
-        else -> "B" to androidx.compose.ui.graphics.Color(0xFF00809D)
-    }
-    Box(Modifier.size(18.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = androidx.compose.ui.graphics.Color.White)
-    }
-}
-
-@Composable
 private fun SearchBlock(
     query: String,
     sources: List<Pair<String, String>>,

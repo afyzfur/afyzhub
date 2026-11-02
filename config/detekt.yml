@@ -29,6 +29,8 @@ style:
     active: false
   UseCheckOrError:
     active: true
+  StringLiteralDuplication:
+    active: false
 complexity:
   active: true
   LongMethod:

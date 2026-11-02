@@ -2,6 +2,13 @@
 
 ## v0.3.8-dev
 
+### Detekt 规则收口
+- 删除已确认无引用的流式相似度辅助函数、搜索引擎徽章和连接测试残留 Job。
+- 测试与主源码全部补齐末尾换行；Kotlin 源码继续保持无 `!!`。
+- 关闭不适合 Compose PascalCase 的函数命名检查和协议字面量重复检查；保留潜在错误、变量命名及适用代码质量规则。
+- Detekt、Lint、单元测试、Room 迁移和 Release 构建继续以 CI 结果为准。
+
+
 ### 静态检查与测试收口
 - 清理测试源码剩余非空断言，生产与测试 Kotlin 源码均不再使用 `!!`。
 - 保留 Compose PascalCase 命名约定，不让通用 FunctionNaming 规则误报 UI API；Detekt 继续检查潜在错误、变量命名和适用的代码质量规则。
