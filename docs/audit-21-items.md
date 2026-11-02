@@ -33,4 +33,4 @@
 - Lint 继续使用 abortOnError=true，lint.xml 只声明重点策略，不使用空 baseline 隐藏问题。
 - main 并发发布不取消进行中的任务；普通 PR 的迁移模拟器需 ci-migration 标签，main/手动运行不跳过。
 - Keystore 丢失时不自动生成新密钥覆盖旧密文；恢复需用户确认，原密文在确认前保留。
-- ktlint 未接入；本轮使用 Detekt 做可执行的 Kotlin 静态检查。Detekt 保留适用规则，Compose PascalCase 与协议字面量重复规则明确关闭；已清理死代码和 EOF 换行问题。
+- ktlint 未接入；本轮使用 Detekt 做可执行的 Kotlin 静态检查。当前 Detekt 1.23.8 不提供 StringLiteralDuplication 规则，因此未启用该项；协议、HTTP 头和媒体类型字面量保留在各自边界。已清理死代码和 EOF 换行问题。
