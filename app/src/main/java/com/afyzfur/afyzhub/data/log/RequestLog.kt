@@ -1,4 +1,6 @@
 package com.afyzfur.afyzhub.data.log
+// Credential body redaction lives in RequestLogRedaction.kt.
+
 
 /**
  * 一次 HTTP 请求的记录。
