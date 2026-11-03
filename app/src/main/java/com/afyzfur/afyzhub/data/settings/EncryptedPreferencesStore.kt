@@ -83,8 +83,9 @@ internal class EncryptedPreferencesStore(
 
     /** Destructive recovery is exposed only behind a UI confirmation. */
     suspend fun resetCredentialsAfterConfirmation() {
-        // Commit the deletion first. If key reset fails afterwards, no old
-        // ciphertext remains that could become unreadable again.
+        // Reset only after explicit confirmation, but do it before deleting the
+        // old ciphertext. If key reset fails, the original data remains intact.
+        cipher.reset()
         delegate.updateData { stored ->
             val cleared = stored.toMutablePreferences()
             stored.asMap().keys.filter { sensitive(it.name) }.forEach {
@@ -92,7 +93,6 @@ internal class EncryptedPreferencesStore(
             }
             cleared
         }
-        cipher.reset()
         mutableUnavailable.value = false
     }
 }

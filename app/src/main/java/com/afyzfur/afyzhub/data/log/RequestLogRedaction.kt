@@ -15,7 +15,9 @@ private val BODY_SENSITIVE_KEYS = setOf("api_key", "apikey", "api-key", "key", "
 fun redactRequestBody(body: String?): String? {
     if (body.isNullOrBlank()) return body
     return runCatching {
-        redactJson(Json.parseToJsonElement(body)).toString()
+        val parsed = Json.parseToJsonElement(body)
+        if (parsed is JsonObject || parsed is JsonArray) redactJson(parsed).toString()
+        else "[request body redacted]"
     }.getOrElse {
         // If a body is not JSON, avoid logging it rather than guessing which text is secret.
         "[request body redacted]"
