@@ -4,6 +4,7 @@ import com.afyzfur.afyzhub.data.log.RequestLogContext
 import com.afyzfur.afyzhub.data.log.RequestLogEntry
 import com.afyzfur.afyzhub.data.log.RequestLogStore
 import com.afyzfur.afyzhub.data.log.redactHeaders
+import com.afyzfur.afyzhub.data.log.redactRequestBody
 import com.afyzfur.afyzhub.data.log.redactUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -304,7 +305,7 @@ class HttpTransport(
                 method = method,
                 url = redactUrl(url.toString()),
                 headers = redactHeaders(headers),
-                requestBody = requestBody?.take(MAX_BODY_CHARS),
+                requestBody = redactRequestBody(requestBody)?.take(MAX_BODY_CHARS),
                 statusCode = statusCode,
                 responseBody = responseBody?.take(MAX_BODY_CHARS),
                 error = error,
