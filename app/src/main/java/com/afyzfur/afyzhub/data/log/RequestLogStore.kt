@@ -1,5 +1,8 @@
 package com.afyzfur.afyzhub.data.log
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,9 +69,9 @@ class RequestLogStore(
             } else {
                 updated
             }
-            // 成功与失败都落盘。此前只落失败，重启后就查不到
-            // "刚才那几条分别用了哪个模型、各花了多久"
-            persistAll()
+        }
+        withContext(Dispatchers.IO) {
+            mutex.withLock { persistAll() }
         }
     }
 
@@ -78,8 +81,8 @@ class RequestLogStore(
      * 由应用启动时调用一次。文件损坏或解析失败时静默清空——
      * 日志读不出来不该影响应用启动，而且它本身是可再生的诊断信息。
      */
-    suspend fun restore() {
-        val file = logFile() ?: return
+    suspend fun restore() = withContext(Dispatchers.IO) {
+        val file = logFile() ?: return@withContext
         mutex.withLock {
             val restored = try {
                 if (!file.exists()) return@withLock
@@ -91,7 +94,8 @@ class RequestLogStore(
                         file.readText()
                     )
                     .map { it.toEntry(nextId.getAndIncrement()) }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 file.delete()
                 return@withLock
             }
@@ -108,16 +112,17 @@ class RequestLogStore(
      *
      * 返回删除的条数，便于界面给出反馈。
      */
-    suspend fun purgeExpired(retention: LogRetention, now: Long = System.currentTimeMillis()): Int {
-        mutex.withLock {
-            val expired = expiredLogs(_entries.value, retention, now)
-            if (expired.isEmpty()) return 0
-            val expiredIds = expired.map { it.id }.toSet()
-            _entries.value = _entries.value.filterNot { it.id in expiredIds }
-            persistAll()
-            return expired.size
+    suspend fun purgeExpired(retention: LogRetention, now: Long = System.currentTimeMillis()): Int =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val expired = expiredLogs(_entries.value, retention, now)
+                if (expired.isEmpty()) return@withLock 0
+                val expiredIds = expired.map { it.id }.toSet()
+                _entries.value = _entries.value.filterNot { it.id in expiredIds }
+                persistAll()
+                expired.size
+            }
         }
-    }
 
     /**
      * 删除指定的若干条记录。
@@ -125,15 +130,15 @@ class RequestLogStore(
      * 用于筛选后的批量删除——把当前筛选结果全部清掉是"只留下我关心的"
      * 最直接的做法，比逐条删实用。
      */
-    suspend fun remove(ids: Set<Long>) {
-        if (ids.isEmpty()) return
+    suspend fun remove(ids: Set<Long>) = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext
         mutex.withLock {
             _entries.value = _entries.value.filterNot { it.id in ids }
             persistAll()
         }
     }
 
-    suspend fun clear() {
+    suspend fun clear() = withContext(Dispatchers.IO) {
         mutex.withLock {
             _entries.value = emptyList()
             // 清空要连落盘的一起清，否则重进后又冒出来
