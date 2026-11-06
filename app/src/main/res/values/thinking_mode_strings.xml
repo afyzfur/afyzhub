@@ -2,7 +2,7 @@
 <resources>
     <string name="thinking_mode">思考模式</string>
     <string name="thinking_effort">思考程度</string>
-    <string name="thinking_effort_info">控制支持原生思考的模型所使用的思考预算。</string>
+    <string name="thinking_effort_info">思考程度决定支持原生思考模型使用的预算；档位越高，通常会投入更多时间分析复杂问题。</string>
     <string name="thinking_guidance">思考引导</string>
     <string name="thinking_guidance_hint">供不支持原生思考的模型使用提示引导</string>
 </resources>
