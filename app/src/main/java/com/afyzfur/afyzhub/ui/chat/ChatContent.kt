@@ -91,8 +91,9 @@ internal fun ChatContent(
     providerLabel: String,
     modelName: String,
     searchEngine: String,
+    thinkingEnabled: Boolean,
     thinkingEffort: ThinkingEffort,
-    onCycleThinkingEffort: () -> Unit,
+    onOpenThinkingSettings: () -> Unit,
     appearance: ChatAppearance,
     quickPrompts: List<String>,
     shufflePrompts: Boolean,
@@ -318,8 +319,9 @@ deepSeeThrough = appearance.inputBarDeepSeeThrough,
                         isLoading = isLoading,
                         statusLabel = sendPhase.label,
                         modelName = modelName,
+                        thinkingEnabled = thinkingEnabled,
                         thinkingEffort = thinkingEffort,
-                        onCycleThinkingEffort = onCycleThinkingEffort
+                        onOpenThinkingSettings = onOpenThinkingSettings
                     )
                 }
             }

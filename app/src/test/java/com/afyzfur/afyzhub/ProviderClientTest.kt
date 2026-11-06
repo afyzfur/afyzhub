@@ -10,6 +10,7 @@ import com.afyzfur.afyzhub.data.log.RequestLogContext
 import com.afyzfur.afyzhub.data.remote.provider.Transport
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.domain.model.AiProvider
+import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -244,6 +245,37 @@ class OpenAiChatClientTest {
 
         assertEquals(listOf("前", "后"), deltas)
     }
+    @Test
+    fun `thinking is sent only when enabled for a supported model`() = runTest {
+        val enabled = settings.copy(model = "o3-mini", thinkingEnabled = true)
+        val effortValues = listOf(
+            ThinkingEffort.LOW to "low",
+            ThinkingEffort.MEDIUM to "medium",
+            ThinkingEffort.HIGH to "high",
+            ThinkingEffort.XHIGH to "high",
+            ThinkingEffort.MAX to "high"
+        )
+        effortValues.forEach { (effort, expected) ->
+            val transport = FakeTransport(response = """{"choices":[{"message":{"content":"ok"}}]}""")
+            OpenAiChatClient(transport, json).complete(
+                listOf(ChatTurn("user", "hi")),
+                enabled.copy(thinkingEffort = effort)
+            )
+            assertEquals(expected, body(transport)["reasoning_effort"]?.jsonPrimitive?.content)
+        }
+
+        val disabledTransport = FakeTransport(response = """{"choices":[{"message":{"content":"ok"}}]}""")
+        OpenAiChatClient(disabledTransport, json).complete(
+            listOf(ChatTurn("user", "hi")), enabled.copy(thinkingEnabled = false)
+        )
+        assertNull(body(disabledTransport)["reasoning_effort"])
+
+        val unsupportedTransport = FakeTransport(response = """{"choices":[{"message":{"content":"ok"}}]}""")
+        OpenAiChatClient(unsupportedTransport, json).complete(
+            listOf(ChatTurn("user", "hi")), enabled.copy(model = "gpt-4o")
+        )
+        assertNull(body(unsupportedTransport)["reasoning_effort"])
+    }
 }
 
 class HttpTransportThreadingTest {
@@ -313,6 +345,29 @@ class AnthropicChatClientTest {
         val messages = checkNotNull(payload["messages"]).jsonArray
         assertEquals(1, messages.size)
         assertEquals("user", checkNotNull(messages[0].jsonObject["role"]).jsonPrimitive.content)
+    }
+
+    @Test
+    fun `thinking omits native fields when disabled and scales max tokens when enabled`() = runTest {
+        val enabled = settings.copy(thinkingEnabled = true, thinkingEffort = ThinkingEffort.MAX)
+        val onTransport = FakeTransport(response = """{"content":[{"type":"text","text":"ok"}]}""")
+        AnthropicChatClient(onTransport, json).complete(listOf(ChatTurn("user", "hi")), enabled)
+        val onBody = body(onTransport)
+        assertTrue(onBody.containsKey("thinking"))
+        assertEquals(28_672, onBody["max_tokens"]?.jsonPrimitive?.content?.toInt())
+
+        val offTransport = FakeTransport(response = """{"content":[{"type":"text","text":"ok"}]}""")
+        AnthropicChatClient(offTransport, json).complete(
+            listOf(ChatTurn("user", "hi")), enabled.copy(thinkingEnabled = false)
+        )
+        assertNull(body(offTransport)["thinking"])
+        assertEquals(Constants.DEFAULT_MAX_TOKENS, body(offTransport)["max_tokens"]?.jsonPrimitive?.content?.toInt())
+
+        val unsupportedTransport = FakeTransport(response = """{"content":[{"type":"text","text":"ok"}]}""")
+        AnthropicChatClient(unsupportedTransport, json).complete(
+            listOf(ChatTurn("user", "hi")), enabled.copy(model = "claude-3-5-sonnet")
+        )
+        assertNull(body(unsupportedTransport)["thinking"])
     }
 
     @Test
@@ -440,6 +495,31 @@ class GeminiChatClientTest {
         assertEquals("AIza-test", transport.lastHeaders["x-goog-api-key"])
         // 密钥不应出现在查询参数里，避免写入日志。
         assertNull(transport.lastQuery["key"])
+    }
+
+    @Test
+    fun `thinking budget is sent for Gemini 2.5 and zero disables it`() = runTest {
+        val enabled = settings.copy(model = "gemini-2.5-flash", thinkingEnabled = true,
+            thinkingEffort = ThinkingEffort.XHIGH)
+        val onTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
+        GeminiChatClient(onTransport, json).complete(listOf(ChatTurn("user", "hi")), enabled)
+        val onConfig = body(onTransport)["generationConfig"]!!.jsonObject["thinkingConfig"]!!.jsonObject
+        assertEquals("16384", onConfig["thinkingBudget"]!!.jsonPrimitive.content)
+        assertEquals("true", onConfig["includeThoughts"]!!.jsonPrimitive.content)
+
+        val offTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
+        GeminiChatClient(offTransport, json).complete(
+            listOf(ChatTurn("user", "hi")), enabled.copy(thinkingEnabled = false)
+        )
+        val offConfig = body(offTransport)["generationConfig"]!!.jsonObject["thinkingConfig"]!!.jsonObject
+        assertEquals("0", offConfig["thinkingBudget"]!!.jsonPrimitive.content)
+        assertEquals("false", offConfig["includeThoughts"]!!.jsonPrimitive.content)
+
+        val unsupportedTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
+        GeminiChatClient(unsupportedTransport, json).complete(
+            listOf(ChatTurn("user", "hi")), enabled.copy(model = "gemini-2.0-flash")
+        )
+        assertNull(body(unsupportedTransport)["generationConfig"])
     }
 
     @Test

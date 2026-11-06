@@ -80,9 +80,9 @@ class ThinkingStreamWrapperTest {
     fun `Anthropic 的 max tokens 在开思考时抬高到预算之上`() {
         val default = 4096
         // OFF 不改动默认值
-        assertEquals(default, ThinkingEffort.OFF.anthropicMaxTokens(default))
-        // 其余档位都必须严格大于预算，否则 Claude 直接返回 400
-        listOf(ThinkingEffort.LOW, ThinkingEffort.MEDIUM, ThinkingEffort.HIGH).forEach {
+        assertEquals(default + ThinkingEffort.LOW.tokenBudget, ThinkingEffort.LOW.anthropicMaxTokens(default))
+        // 五档都必须严格大于预算，否则 Claude 直接返回 400
+        ThinkingEffort.entries.forEach {
             val budget = checkNotNull(it.tokenBudget)
             assertTrue(
                 "$it 的 max_tokens 必须大于预算 $budget",
@@ -95,7 +95,7 @@ class ThinkingStreamWrapperTest {
     fun `抬高后的额度给正文留有空间`() {
         // 仅比预算多一个 token 是不够的：正文会被立刻截断
         val default = 4096
-        val high = ThinkingEffort.HIGH
+        val high = ThinkingEffort.XHIGH
         val room = high.anthropicMaxTokens(default) - checkNotNull(high.tokenBudget)
         assertEquals(default, room)
     }

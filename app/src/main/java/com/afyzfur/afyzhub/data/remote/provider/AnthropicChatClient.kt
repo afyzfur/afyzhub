@@ -2,6 +2,7 @@ package com.afyzfur.afyzhub.data.remote.provider
 
 import com.afyzfur.afyzhub.data.log.RequestLogContext
 import com.afyzfur.afyzhub.data.settings.AppSettings
+import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -174,7 +175,8 @@ class AnthropicChatClient(
         // 档位翻译成 token 预算。OFF 时整个字段不出现——不支持思考的
         // 模型收到这个字段会报错
         val effort = settings.thinkingEffort
-        val thinking = effort.tokenBudget?.let {
+        val supportsNativeThinking = ThinkingEffort.supportsNativeThinking(settings.provider, settings.model)
+        val thinking = effort.tokenBudget.takeIf { settings.thinkingEnabled && supportsNativeThinking }?.let {
             ThinkingConfig(type = "enabled", budgetTokens = it)
         }
 
@@ -182,7 +184,7 @@ class AnthropicChatClient(
             model = settings.model,
             messages = messages,
             system = systemPrompt,
-            maxTokens = effort.anthropicMaxTokens(Constants.DEFAULT_MAX_TOKENS),
+            maxTokens = if (thinking != null) effort.anthropicMaxTokens(Constants.DEFAULT_MAX_TOKENS) else Constants.DEFAULT_MAX_TOKENS,
             stream = stream,
             thinking = thinking
         )

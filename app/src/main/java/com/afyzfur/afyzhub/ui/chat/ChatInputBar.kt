@@ -84,10 +84,10 @@ fun ChatInputBar(
     onPickModel: () -> Unit = {},
     /** 当前模型名，用于显示模型图标 */
     modelName: String = "",
-    /** 当前思考程度 */
-    thinkingEffort: ThinkingEffort = ThinkingEffort.OFF,
-    /** 点击思考程度按钮时的回调 */
-    onCycleThinkingEffort: () -> Unit = {},
+    /** Native thinking controls. */
+    thinkingEnabled: Boolean = false,
+    thinkingEffort: ThinkingEffort = ThinkingEffort.DEFAULT,
+    onOpenThinkingSettings: () -> Unit = {},
     transparent: Boolean = false,
     /** 透视强度，0 为不透明。仅在 [transparent] 为真时生效 */
     seeThrough: Float = 0.35f,
@@ -271,11 +271,12 @@ fun ChatInputBar(
                 Spacer(Modifier.width(8.dp))
 
                 ThinkingEffortButton(
+                    enabled = !isLoading,
+                    thinkingEnabled = thinkingEnabled,
                     effort = thinkingEffort,
                     // 生成中不允许改：这次请求已经发出，改了会让人
                     // 以为对当前回复生效
-                    enabled = !isLoading,
-                    onClick = onCycleThinkingEffort
+                    onClick = onOpenThinkingSettings
                 )
 
                 Spacer(Modifier.width(8.dp))
@@ -322,11 +323,12 @@ fun ChatInputBar(
  */
 @Composable
 private fun ThinkingEffortButton(
-    effort: ThinkingEffort,
     enabled: Boolean,
+    thinkingEnabled: Boolean,
+    effort: ThinkingEffort,
     onClick: () -> Unit
 ) {
-    val active = effort.enabled
+    val active = thinkingEnabled
 
     // 底色随档位加深，而不是"开就一个色"。三档用同一颜色时，看一眼
     // 只知道开着、不知道开到哪一档，得点开面板才能确认。
@@ -339,10 +341,11 @@ private fun ThinkingEffortButton(
     // 主题配色可切换（六套色板加动态取色），写死的值在别的色板下会
     // 与整体脱节
     val depth = when (effort) {
-        ThinkingEffort.LOW -> 0f
-        ThinkingEffort.MEDIUM -> 0.18f
-        ThinkingEffort.HIGH -> 0.36f
-        else -> 0f
+        ThinkingEffort.LOW -> 0.08f
+        ThinkingEffort.MEDIUM -> 0.16f
+        ThinkingEffort.HIGH -> 0.24f
+        ThinkingEffort.XHIGH -> 0.32f
+        ThinkingEffort.MAX -> 0.40f
     }
     val activeColor = lerp(
         MaterialTheme.colorScheme.secondaryContainer,
@@ -385,7 +388,7 @@ private fun ThinkingEffortButton(
             // 既看不出当前是什么状态，点击区域也小得容易点偏
             Spacer(Modifier.width(5.dp))
             Text(
-                text = effort.label,
+                text = if (thinkingEnabled) effort.label else "思考关闭",
                 style = MaterialTheme.typography.labelMedium
             )
         }

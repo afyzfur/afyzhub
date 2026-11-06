@@ -1,8 +1,8 @@
 package com.afyzfur.afyzhub.data.remote.provider
-
-import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.data.log.RequestLogContext
 import com.afyzfur.afyzhub.data.settings.AppSettings
+import com.afyzfur.afyzhub.domain.model.ThinkingEffort
+
 import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -118,30 +118,20 @@ class GeminiChatClient(
                 )
             }
 
-        // Gemini 用 thinkingBudget 给 token 预算，并需要显式打开
-        // includeThoughts 才会把思考内容返回——只给预算的话模型会思考，
-        // 但过程完全看不到，用户只会觉得变慢了
-        //
-        // OFF 必须显式发 thinkingBudget = 0：2.5 系模型默认开思考，
-        // 整个 config 不发等于沿用默认，"关闭"永远不生效。0 是官方
-        // 文档的关闭值；-1 是动态预算，不是关闭
+        // Gemini 2.5 defaults to thinking. For supported models send an explicit
+        // budget, including zero when the master switch is off. When thinking
+        // is enabled, includeThoughts mirrors the user's choice to show it.
         val effort = settings.thinkingEffort
-        val config = when {
-            effort == ThinkingEffort.OFF ->
-                GenerationConfig(
-                    thinkingConfig = ThinkingConfig(
-                        thinkingBudget = 0,
-                        includeThoughts = false
-                    )
+        val supportsNativeThinking = ThinkingEffort.supportsNativeThinking(settings.provider, settings.model)
+        val config = if (supportsNativeThinking) {
+            GenerationConfig(
+                thinkingConfig = ThinkingConfig(
+                    thinkingBudget = if (settings.thinkingEnabled) effort.tokenBudget else 0,
+                    includeThoughts = settings.thinkingEnabled
                 )
-            effort.tokenBudget != null ->
-                GenerationConfig(
-                    thinkingConfig = ThinkingConfig(
-                        thinkingBudget = effort.tokenBudget,
-                        includeThoughts = true
-                    )
-                )
-            else -> null
+            )
+        } else {
+            null
         }
 
         return GenerateRequest(

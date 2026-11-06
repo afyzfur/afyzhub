@@ -64,29 +64,16 @@ class ChatHostViewModel(
             initialValue = ""
         )
 
-    /**
-     * 循环切换思考程度。
-     *
-     * 存进设置而非留在界面状态：切到别的会话或重启应用后，
-     * 用户预期这个选择还在。
-     */
-    fun cycleThinkingEffort() {
-        viewModelScope.launch {
-            val current = settingsRepository.settings.value.thinkingEffort
-            settingsRepository.setThinkingEffort(ThinkingEffort.next(current))
-        }
+    fun setThinkingEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setThinkingEnabled(enabled) }
     }
 
-    /**
-     * 直接设为某一档。
-     *
-     * 与 [cycleThinkingEffort] 并存：选择表里是点哪档就是哪档，
-     * 循环切换留给不想展开表的场景。
-     */
     fun setThinkingEffort(effort: ThinkingEffort) {
-        viewModelScope.launch {
-            settingsRepository.setThinkingEffort(effort)
-        }
+        viewModelScope.launch { settingsRepository.setThinkingEffort(effort) }
+    }
+
+    fun setThinkingGuidanceEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setThinkingGuidanceEnabled(enabled) }
     }
 
     /** null 表示当前是尚未落库的空白新会话 */
