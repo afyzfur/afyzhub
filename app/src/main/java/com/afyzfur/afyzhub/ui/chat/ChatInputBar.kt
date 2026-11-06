@@ -330,22 +330,18 @@ private fun ThinkingEffortButton(
 ) {
     val active = thinkingEnabled
 
-    // 底色随档位加深，而不是"开就一个色"。三档用同一颜色时，看一眼
-    // 只知道开着、不知道开到哪一档，得点开面板才能确认。
-    //
-    // 插值上限只到 0.36 而非接近 1：secondary 本身相当深，靠近它时
-    // 底色暗得压过周围的浅色控件，看着像被禁用。三档之间拉开约两成
-    // 的差距已经分得出来，同时都还留在"浅色徽章"的范围内。
+    // 五档用更明显的渐变区分；仍使用主题色插值，保证不同色板下
+    // 都保持足够的对比度与一致性。
     //
     // 用 secondaryContainer 与 secondary 之间的插值而非三个写死的颜色：
     // 主题配色可切换（六套色板加动态取色），写死的值在别的色板下会
     // 与整体脱节
     val depth = when (effort) {
-        ThinkingEffort.LOW -> 0.08f
-        ThinkingEffort.MEDIUM -> 0.16f
-        ThinkingEffort.HIGH -> 0.24f
-        ThinkingEffort.XHIGH -> 0.32f
-        ThinkingEffort.MAX -> 0.40f
+        ThinkingEffort.LOW -> 0.12f
+        ThinkingEffort.MEDIUM -> 0.28f
+        ThinkingEffort.HIGH -> 0.44f
+        ThinkingEffort.XHIGH -> 0.60f
+        ThinkingEffort.MAX -> 0.76f
     }
     val activeColor = lerp(
         MaterialTheme.colorScheme.secondaryContainer,
@@ -388,7 +384,7 @@ private fun ThinkingEffortButton(
             // 既看不出当前是什么状态，点击区域也小得容易点偏
             Spacer(Modifier.width(5.dp))
             Text(
-                text = if (thinkingEnabled) effort.label else "思考关闭",
+                text = if (thinkingEnabled) effort.id else "off",
                 style = MaterialTheme.typography.labelMedium
             )
         }

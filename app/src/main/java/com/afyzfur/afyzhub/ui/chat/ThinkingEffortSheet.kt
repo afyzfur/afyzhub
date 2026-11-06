@@ -1,6 +1,9 @@
 package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
@@ -33,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import com.afyzhub.chat.R
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.components.IconThinking
@@ -48,8 +53,10 @@ fun ThinkingEffortSheet(
     onGuidanceEnabledChange: (Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var previewEffort by remember(current) { mutableStateOf(current) }
+    var sliderPosition by remember(current) { mutableStateOf(current.ordinal.toFloat()) }
+    var effortChanged by remember(current) { mutableStateOf(false) }
     var showEffortInfo by remember { mutableStateOf(false) }
+    val selectedEffort = ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)]
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -87,42 +94,64 @@ fun ThinkingEffortSheet(
                 }
                 Spacer(Modifier.weight(1f))
                 Text(
-                    previewEffort.id,
+                    selectedEffort.id,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }
             Slider(
-                value = previewEffort.ordinal.toFloat(),
+                value = sliderPosition,
                 onValueChange = { value ->
-                    previewEffort = ThinkingEffort.entries[value.toInt().coerceIn(0, 4)]
+                    sliderPosition = value.coerceIn(0f, 4f)
+                    effortChanged = true
                 },
-                onValueChangeFinished = { onEffortChange(previewEffort) },
+                onValueChangeFinished = {
+                    if (effortChanged) {
+                        onEffortChange(ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)])
+                        effortChanged = false
+                    }
+                },
                 valueRange = 0f..4f,
-                steps = 3,
+                steps = 0,
                 enabled = thinkingEnabled,
+                colors = androidx.compose.material3.SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
+                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
-            Row(modifier = Modifier.fillMaxWidth()) {
-                ThinkingEffort.entries.forEach { effort ->
-                    Text(
-                        text = effort.id,
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val endpointInset = 14.dp
+                val centerSpan = (maxWidth - endpointInset * 2).coerceAtLeast(0.dp)
+                ThinkingEffort.entries.forEachIndexed { index, effort ->
+                    val centerX = endpointInset + centerSpan * (index / 4f)
+                    Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .offset(x = centerX - 30.dp)
+                            .width(60.dp)
                             .clickable(enabled = thinkingEnabled) {
-                                previewEffort = effort
+                                sliderPosition = index.toFloat()
+                                effortChanged = false
                                 onEffortChange(effort)
                             },
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (effort == previewEffort && thinkingEnabled) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        fontWeight = if (effort == previewEffort) FontWeight.SemiBold else FontWeight.Normal
-                    )
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = effort.id,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (effort == selectedEffort && thinkingEnabled) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            fontWeight = if (effort == selectedEffort) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(28.dp))
