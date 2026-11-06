@@ -498,7 +498,7 @@ class GeminiChatClientTest {
     }
 
     @Test
-    fun `thinking budget is sent for Gemini 2.5 and zero disables it`() = runTest {
+    fun `thinking budget is sent for Gemini 25 and zero disables it`() = runTest {
         val enabled = settings.copy(model = "gemini-2.5-flash", thinkingEnabled = true,
             thinkingEffort = ThinkingEffort.XHIGH)
         val onTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
