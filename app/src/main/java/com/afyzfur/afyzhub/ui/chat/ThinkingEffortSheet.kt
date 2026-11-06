@@ -1,9 +1,6 @@
 package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
@@ -122,36 +118,34 @@ fun ThinkingEffortSheet(
                     activeTickColor = MaterialTheme.colorScheme.onPrimary,
                     inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
             )
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val endpointInset = 14.dp
-                val centerSpan = (maxWidth - endpointInset * 2).coerceAtLeast(0.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+            ) {
                 ThinkingEffort.entries.forEachIndexed { index, effort ->
-                    val centerX = endpointInset + centerSpan * (index / 4f)
-                    Box(
+                    Text(
+                        text = effort.id,
                         modifier = Modifier
-                            .offset(x = centerX - 30.dp)
-                            .width(60.dp)
+                            .weight(1f)
                             .clickable(enabled = thinkingEnabled) {
                                 sliderPosition = index.toFloat()
                                 effortChanged = false
                                 onEffortChange(effort)
                             },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = effort.id,
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (effort == selectedEffort && thinkingEnabled) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                            fontWeight = if (effort == selectedEffort) FontWeight.Bold else FontWeight.Medium
-                        )
-                    }
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (effort == selectedEffort && thinkingEnabled) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        fontWeight = if (effort == selectedEffort) FontWeight.Bold else FontWeight.Medium
+                    )
                 }
             }
             Spacer(Modifier.height(28.dp))
