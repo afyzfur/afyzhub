@@ -306,6 +306,38 @@ class ChatRepositoryImplTest {
     }
 
     @Test
+    fun `thinking guidance only applies to enabled unsupported models`() = runTest {
+        val client = RecordingClient()
+        val settings = AppSettings(
+            provider = AiProvider.OPENAI,
+            model = "gpt-4o",
+            apiKey = "sk-test",
+            streamEnabled = false,
+            thinkingEnabled = true,
+            thinkingGuidanceEnabled = true
+        )
+        repository(client, settings).sendMessage(newConversation(), "question")
+        val system = checkNotNull(client.completeTurns).filter { it.role == Constants.ROLE_SYSTEM }
+        assertEquals(1, system.size)
+        assertTrue(system.single().content.contains("审慎分析问题"))
+
+        val nativeClient = RecordingClient()
+        repository(nativeClient, settings.copy(model = "o3-mini"))
+            .sendMessage(newConversation(), "question")
+        assertTrue(checkNotNull(nativeClient.completeTurns).none { it.role == Constants.ROLE_SYSTEM })
+
+        val disabledClient = RecordingClient()
+        repository(disabledClient, settings.copy(thinkingEnabled = false, thinkingGuidanceEnabled = false))
+            .sendMessage(newConversation(), "question")
+        assertTrue(checkNotNull(disabledClient.completeTurns).none { it.role == Constants.ROLE_SYSTEM })
+
+        val guidanceOnlyClient = RecordingClient()
+        repository(guidanceOnlyClient, settings.copy(thinkingEnabled = false))
+            .sendMessage(newConversation(), "question")
+        assertTrue(checkNotNull(guidanceOnlyClient.completeTurns).any { it.role == Constants.ROLE_SYSTEM })
+    }
+
+    @Test
     fun `上下文长度受上限约束`() = runTest {
         val client = RecordingClient()
         val repo = repository(client)

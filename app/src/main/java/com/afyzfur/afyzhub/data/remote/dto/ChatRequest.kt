@@ -19,10 +19,11 @@ data class ChatRequest(
      */
     val stream_options: StreamOptions? = null,
     /**
-     * 思考程度，取 low/medium/high。
+     * 思考程度。应用内部有五档，但不同 OpenAI 兼容服务支持的取值
+     * 不完全一致，provider 层会将高档位安全映射到受支持的值。
      *
      * 与 stream_options 同理，为 null 时会被省略——不支持思考的模型
-     * 收到这个字段可能直接报错，所以"不思考"必须是不发，而非发个最低值。
+     * 收到这个字段可能直接报错，所以关闭或不支持时必须省略该字段。
      */
     val reasoning_effort: String? = null
 )

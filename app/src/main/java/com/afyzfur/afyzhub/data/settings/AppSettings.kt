@@ -42,13 +42,12 @@ data class AppSettings(
     val baseUrl: String = AiProvider.DEFAULT.defaultBaseUrl,
     /** 是否使用流式输出，默认开启。 */
     val streamEnabled: Boolean = true,
-    /**
-     * 思考程度。全局项，不随配置组切换。
-     *
-     * 放在 AppSettings 而非 ApiProfile：它更像"这次想让模型想多久"的
-     * 临时选择，用户会频繁在输入栏切换，而不是某组配置的固定属性。
-     */
+    /** Native reasoning master switch. */
+    val thinkingEnabled: Boolean = false,
+    /** Five-step native reasoning strength, preserved while disabled. */
     val thinkingEffort: ThinkingEffort = ThinkingEffort.DEFAULT,
+    /** Prompt-based fallback for models without native reasoning support. */
+    val thinkingGuidanceEnabled: Boolean = false,
     val webSearchEnabled: Boolean = false,
     /**
      * 内置浏览器总开关。关闭时消息里的链接走系统浏览器。

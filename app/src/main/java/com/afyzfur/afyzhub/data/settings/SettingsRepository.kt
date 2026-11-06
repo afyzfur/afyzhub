@@ -69,6 +69,8 @@ class SettingsRepository(
     private val providerKey = stringPreferencesKey(Constants.KEY_PROVIDER)
     private val streamKey = booleanPreferencesKey(Constants.KEY_STREAM_ENABLED)
     private val thinkingEffortKey = stringPreferencesKey(Constants.KEY_THINKING_EFFORT)
+    private val thinkingEnabledKey = booleanPreferencesKey("thinking_enabled")
+    private val thinkingGuidanceEnabledKey = booleanPreferencesKey("thinking_guidance_enabled")
 
     private val webSearchEnabledKey = booleanPreferencesKey(Constants.KEY_WEB_SEARCH_ENABLED)
     private val inAppBrowserKey = booleanPreferencesKey(Constants.KEY_IN_APP_BROWSER)
@@ -199,7 +201,9 @@ class SettingsRepository(
                 model = active.effectiveModel,
                 baseUrl = normalizeBaseUrl(active.effectiveBaseUrl, active.provider),
                 streamEnabled = prefs[streamKey] ?: true,
+                thinkingEnabled = prefs[thinkingEnabledKey] ?: (ThinkingEffort.legacyThinkingEnabled(prefs[thinkingEffortKey]) ?: false),
                 thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey]),
+                thinkingGuidanceEnabled = prefs[thinkingGuidanceEnabledKey] ?: false,
                 webSearchEnabled = prefs[webSearchEnabledKey] ?: false,
                 geminiSearchEnabled = prefs[geminiSearchKey] ?: false,
                 inAppBrowserEnabled = prefs[inAppBrowserKey] ?: true,
@@ -218,7 +222,9 @@ class SettingsRepository(
                 model = readModel(prefs, provider),
                 baseUrl = readBaseUrl(prefs, provider),
                 streamEnabled = prefs[streamKey] ?: true,
+                thinkingEnabled = prefs[thinkingEnabledKey] ?: (ThinkingEffort.legacyThinkingEnabled(prefs[thinkingEffortKey]) ?: false),
                 thinkingEffort = ThinkingEffort.fromId(prefs[thinkingEffortKey]),
+                thinkingGuidanceEnabled = prefs[thinkingGuidanceEnabledKey] ?: false,
                 webSearchEnabled = prefs[webSearchEnabledKey] ?: false,
                 geminiSearchEnabled = prefs[geminiSearchKey] ?: false,
                 inAppBrowserEnabled = prefs[inAppBrowserKey] ?: true,
@@ -309,8 +315,16 @@ class SettingsRepository(
      * 会连带写入 Key、地址、模型——设置首页只想改开关时用 save
      * 会把界面上那份可能已过时的快照写回去。
      */
+    suspend fun setThinkingEnabled(enabled: Boolean) {
+        dataStore.edit { it[thinkingEnabledKey] = enabled }
+    }
+
     suspend fun setThinkingEffort(effort: ThinkingEffort) {
         dataStore.edit { it[thinkingEffortKey] = effort.id }
+    }
+
+    suspend fun setThinkingGuidanceEnabled(enabled: Boolean) {
+        dataStore.edit { it[thinkingGuidanceEnabledKey] = enabled }
     }
 
     suspend fun setStreamEnabled(enabled: Boolean) {

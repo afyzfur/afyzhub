@@ -1,43 +1,44 @@
 package com.afyzfur.afyzhub.ui.chat
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
+import com.afyzhub.chat.R
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
-import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
+import com.afyzfur.afyzhub.ui.components.IconThinking
 
-/**
- * 思考程度的选择表。
- *
- * 此前是点一下循环切一档。四档的循环要点三次才能从"高"回到"关"，
- * 而且切之前看不到有哪些档位——只能靠点下去才知道下一档是什么。
- * 改成横向排开一次看全，点哪档就是哪档。
- *
- * 用 LazyRow 横排而非竖排列表：四个档位是同一个维度上的强弱刻度，
- * 横向排列自然读作从左到右递增；竖排会让人以为是四个并列的选项。
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThinkingEffortSheet(
+    thinkingEnabled: Boolean,
     current: ThinkingEffort,
-    onSelect: (ThinkingEffort) -> Unit,
+    thinkingGuidanceEnabled: Boolean,
+    onThinkingEnabledChange: (Boolean) -> Unit,
+    onEffortChange: (ThinkingEffort) -> Unit,
+    onGuidanceEnabledChange: (Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
@@ -45,112 +46,51 @@ fun ThinkingEffortSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(
-            modifier = Modifier
-                .navigationBarsPadding()
-                .padding(bottom = 24.dp)
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
-            Text(
-                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3cd1d85095d0),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 24.dp)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Icon(IconThinking, contentDescription = null, modifier = Modifier.size(28.dp))
+                Spacer(Modifier.size(12.dp))
+                Text(stringResource(R.string.thinking_mode), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.weight(1f))
+                Switch(checked = thinkingEnabled, onCheckedChange = onThinkingEnabledChange)
+            }
+            Spacer(Modifier.height(24.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.thinking_effort), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.size(8.dp))
+                Icon(Icons.Default.Info, contentDescription = stringResource(R.string.thinking_effort_info), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.weight(1f))
+                Text(current.label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            }
+            Slider(
+                value = current.ordinal.toFloat(),
+                onValueChange = { value -> onEffortChange(ThinkingEffort.entries[value.roundToInt().coerceIn(0, 4)]) },
+                valueRange = 0f..4f,
+                steps = 3,
+                enabled = thinkingEnabled
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_51fcaecc7b42),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
-            Spacer(Modifier.height(16.dp))
-
-            // 两行两列铺满宽度，四档一屏全在，不需要横向滑动。
-            // 此前用 LazyRow 固定卡片宽度，第四档会被推到屏幕外，
-            // 而"有哪些档位"恰恰是这个面板要回答的问题
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.padding(horizontal = 24.dp)
-            ) {
-                ThinkingEffort.entries.chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        row.forEach { effort ->
-                            EffortCard(
-                                effort = effort,
-                                selected = effort == current,
-                                onClick = {
-                                    onSelect(effort)
-                                    onDismiss()
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                ThinkingEffort.entries.forEach { effort ->
+                    Text(
+                        effort.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (effort == current && thinkingEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (effort == current) FontWeight.SemiBold else FontWeight.Normal
+                    )
                 }
             }
+            Spacer(Modifier.height(28.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.size(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.thinking_guidance), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.thinking_guidance_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = thinkingGuidanceEnabled, onCheckedChange = onGuidanceEnabledChange)
+            }
+            Spacer(Modifier.height(24.dp))
         }
     }
-}
-
-/**
- * 单个档位的卡片。
- *
- * 卡片而非文字按钮：要同时放档名与说明，两行内容用卡片承载
- * 才有明确的点击边界。
- */
-@Composable
-private fun EffortCard(
-    effort: ThinkingEffort,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        color = if (selected) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerLowest
-        },
-        contentColor = if (selected) {
-            MaterialTheme.colorScheme.onSecondaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSurface
-        },
-        shape = AppShapeTokens.SettingsGroup,
-        border = if (selected) {
-            BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-        } else {
-            BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
-        },
-        modifier = modifier
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(vertical = 20.dp, horizontal = 8.dp)
-        ) {
-            // 不放图标。用一到三个灯泡表示强弱看着像装饰，而档名
-            // 本身（关闭/低/中/高）已经是有序的，下面那行说明也
-            // 讲清了差别，图标没有补充任何信息
-            Text(
-                text = effort.label,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = effort.hint(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-/** 一句话说明这档意味着什么，避免只有"低/中/高"让人猜。 */
-private fun ThinkingEffort.hint(): String = when (this) {
-    ThinkingEffort.OFF -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_cbac4df6962d)
-    ThinkingEffort.LOW -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bb6a620120e1)
-    ThinkingEffort.MEDIUM -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ff08d13e6ae6)
-    ThinkingEffort.HIGH -> com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_54af477ffc14)
 }

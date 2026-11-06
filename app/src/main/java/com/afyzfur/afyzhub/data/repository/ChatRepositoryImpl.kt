@@ -17,6 +17,7 @@ import com.afyzfur.afyzhub.domain.model.AiProvider
 import com.afyzfur.afyzhub.domain.model.Conversation
 import com.afyzfur.afyzhub.domain.model.ConversationItem
 import com.afyzfur.afyzhub.domain.model.Message
+import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.domain.model.SendPhase
 import com.afyzfur.afyzhub.domain.model.sanitizeHistory
 import kotlinx.coroutines.Dispatchers
@@ -471,6 +472,10 @@ class ChatRepositoryImpl(
         ) {
             WebSearchService.instruction()
         } else null
+        val thinkingGuidance = if (
+            settings.thinkingGuidanceEnabled &&
+            !ThinkingEffort.supportsNativeThinking(settings.provider, settings.model)
+        ) THINKING_GUIDANCE else null
 
         return buildList {
             if (systemPrompt.isNotEmpty()) {
@@ -478,6 +483,9 @@ class ChatRepositoryImpl(
             }
             if (searchInstruction != null) {
                 add(ChatTurn(role = "system", content = searchInstruction))
+            }
+            if (thinkingGuidance != null) {
+                add(ChatTurn(role = "system", content = thinkingGuidance))
             }
             addAll(turns)
         }
@@ -571,6 +579,7 @@ class ChatRepositoryImpl(
 
     private companion object {
         private const val BATCH_UPDATE_WINDOW_MS = 50L
+        private const val THINKING_GUIDANCE = "请在回答前审慎分析问题、检查前提并考虑重要边界情况；只输出结论与必要的简要说明，不输出隐藏的逐步思维过程。"
         /** 抽屉摘要行的字符上限，足够填满一行且留有余量 */
         const val SUMMARY_MAX_LENGTH = 60
     }

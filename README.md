@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android-green.svg)](https://www.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.21-purple.svg)](https://kotlinlang.org)
-[![Release](https://img.shields.io/badge/version-v0.3.8--dev-orange.svg)](https://github.com/afyzfur/afyzhub/releases)
+[![Release](https://img.shields.io/badge/version-v0.3.9--dev-orange.svg)](https://github.com/afyzfur/afyzhub/releases)
 
 [下载 APK](https://github.com/afyzfur/afyzhub/releases) · [更新日志](CHANGELOG.md)
 

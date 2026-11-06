@@ -325,8 +325,9 @@ fun ChatScreen(
             providerLabel = profileName,
             modelName = settings.model,
             searchEngine = settings.searchEngine,
+            thinkingEnabled = settings.thinkingEnabled,
             thinkingEffort = settings.thinkingEffort,
-            onCycleThinkingEffort = {
+            onOpenThinkingSettings = {
                 keyboardController?.hide()
                 showEffortSheet = true
             },
@@ -497,8 +498,12 @@ onSettingsClick = { animateDrawer(false) { onNavigateToSettings() } },
 
     if (showEffortSheet) {
         ThinkingEffortSheet(
+            thinkingEnabled = settings.thinkingEnabled,
             current = settings.thinkingEffort,
-            onSelect = hostViewModel::setThinkingEffort,
+            thinkingGuidanceEnabled = settings.thinkingGuidanceEnabled,
+            onThinkingEnabledChange = hostViewModel::setThinkingEnabled,
+            onEffortChange = hostViewModel::setThinkingEffort,
+            onGuidanceEnabledChange = hostViewModel::setThinkingGuidanceEnabled,
             onDismiss = { showEffortSheet = false }
         )
     }
