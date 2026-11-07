@@ -207,7 +207,10 @@ fun ThinkingEffortSheet(
                         )
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(32.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .height(32.dp)
             ) { measurables, constraints ->
                 val placeables = measurables.map { it.measure(Constraints()) }
                 val thumbInset = 10.dp.roundToPx()
