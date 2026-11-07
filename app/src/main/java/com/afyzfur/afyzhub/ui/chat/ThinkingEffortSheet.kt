@@ -163,6 +163,18 @@ private fun ThinkingEffortSelector(
     val scope = rememberCoroutineScope()
     val onEffortChangeState by rememberUpdatedState(onEffortChange)
     val selectedEffort = ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)]
+    fun commitImmediately(effort: ThinkingEffort) {
+        settleJob?.cancel()
+        settleGeneration += 1
+        isDragging = false
+        isSettling = false
+        sliderPosition = effort.ordinal.toFloat()
+        if (lastCommittedEffort != effort) {
+            lastCommittedEffort = effort
+            onEffortChangeState(effort)
+        }
+    }
+
     fun settleOn(effort: ThinkingEffort) {
         settleJob?.cancel()
         settleGeneration += 1
@@ -177,7 +189,7 @@ private fun ThinkingEffortSelector(
             animate(
                 initialValue = sliderPosition,
                 targetValue = effort.ordinal.toFloat(),
-                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing)
             ) { value, _ -> sliderPosition = value }
             sliderPosition = effort.ordinal.toFloat()
             if (settleGeneration == generation) isSettling = false
@@ -242,7 +254,7 @@ is DragInteraction.Start -> {
                     Box(
                         modifier = Modifier
                             .size(width = 56.dp, height = 36.dp)
-                            .clickable(enabled = enabled) { settleOn(effort) },
+                            .clickable(enabled = enabled) { commitImmediately(effort) },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -278,7 +290,9 @@ is DragInteraction.Start -> {
             layout(constraints.maxWidth, 36.dp.roundToPx()) {
                 placeables.forEachIndexed { index, placeable ->
                     val center = thumbInset + trackWidth * index / 4
-                    placeable.placeRelative(center - placeable.width / 2, 0)
+                    val x = (center - placeable.width / 2)
+                        .coerceIn(0, constraints.maxWidth - placeable.width)
+                    placeable.placeRelative(x, 0)
                 }
             }
         }
