@@ -6,7 +6,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -41,18 +41,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.roundToPx
 import com.afyzhub.chat.R
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.components.IconThinking
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,7 +68,6 @@ fun ThinkingEffortSheet(
     onDismiss: () -> Unit
 ) {
     var showEffortInfo by remember { mutableStateOf(false) }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -81,219 +81,179 @@ fun ThinkingEffortSheet(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Icon(IconThinking, contentDescription = null, modifier = Modifier.size(28.dp))
                 Spacer(Modifier.size(12.dp))
-                Text(
-                    stringResource(R.string.thinking_mode),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text(stringResource(R.string.thinking_mode), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.weight(1f))
                 Switch(checked = thinkingEnabled, onCheckedChange = onThinkingEnabledChange)
             }
             Spacer(Modifier.height(24.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.thinking_effort), style = MaterialTheme.typography.titleMedium)
-                IconButton(
-                    onClick = { showEffortInfo = true },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = stringResource(R.string.thinking_effort_info),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                IconButton(onClick = { showEffortInfo = true }, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Default.Info, contentDescription = stringResource(R.string.thinking_effort_info), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.weight(1f))
-                Text(
-                    current.id,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(current.id, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
-            ThinkingEffortSelector(
-                current = current,
-                enabled = thinkingEnabled,
-                onEffortChange = onEffortChange
-            )
+            ThinkingEffortSelector(current, thinkingEnabled, onEffortChange)
             Spacer(Modifier.height(28.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.size(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.thinking_guidance), style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(R.string.thinking_guidance_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text(stringResource(R.string.thinking_guidance_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(checked = thinkingGuidanceEnabled, onCheckedChange = onGuidanceEnabledChange)
             }
             Spacer(Modifier.height(24.dp))
         }
     }
-
     if (showEffortInfo) {
         AlertDialog(
             onDismissRequest = { showEffortInfo = false },
             title = { Text(stringResource(R.string.thinking_effort)) },
             text = { Text(stringResource(R.string.thinking_effort_info)) },
-            confirmButton = {
-                TextButton(onClick = { showEffortInfo = false }) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            }
+            confirmButton = { TextButton(onClick = { showEffortInfo = false }) { Text(stringResource(android.R.string.ok)) } }
         )
     }
 }
 
 @Composable
-private fun ThinkingEffortSelector(
-    current: ThinkingEffort,
-    enabled: Boolean,
-    onEffortChange: (ThinkingEffort) -> Unit
-) {
-    var sliderPosition by remember { mutableFloatStateOf(current.ordinal.toFloat()) }
+private fun ThinkingEffortSelector(current: ThinkingEffort, enabled: Boolean, onEffortChange: (ThinkingEffort) -> Unit) {
+    var position by remember { mutableFloatStateOf(current.ordinal.toFloat()) }
+    var pointerActive by remember { mutableStateOf(false) }
     var isDragging by remember { mutableStateOf(false) }
     var isSettling by remember { mutableStateOf(false) }
-    var lastCommittedEffort by remember { mutableStateOf(current) }
+    var lastCommitted by remember { mutableStateOf(current) }
+    var finishHandled by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
-    var settleJob by remember { mutableStateOf<Job?>(null) }
-    var settleGeneration by remember { mutableStateOf(0) }
+    var animationJob by remember { mutableStateOf<Job?>(null) }
+    var animationGeneration by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
-    val onEffortChangeState by rememberUpdatedState(onEffortChange)
-    val selectedEffort = ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)]
-    fun commitImmediately(effort: ThinkingEffort) {
-        settleJob?.cancel()
-        settleGeneration += 1
-        isDragging = false
-        isSettling = false
-        sliderPosition = effort.ordinal.toFloat()
-        if (lastCommittedEffort != effort) {
-            lastCommittedEffort = effort
-            onEffortChangeState(effort)
+    val onChange by rememberUpdatedState(onEffortChange)
+    val selected = ThinkingEffort.entries[position.roundToInt().coerceIn(0, 4)]
+
+    fun commit(effort: ThinkingEffort) {
+        if (lastCommitted != effort) {
+            lastCommitted = effort
+            onChange(effort)
         }
     }
 
-    fun settleOn(effort: ThinkingEffort) {
-        settleJob?.cancel()
-        settleGeneration += 1
-        val generation = settleGeneration
-        if (lastCommittedEffort != effort) {
-            lastCommittedEffort = effort
-            onEffortChangeState(effort)
-        }
+    fun tap(effort: ThinkingEffort) {
+        animationJob?.cancel()
+        animationGeneration++
+        isDragging = false
+        isSettling = false
+        finishHandled = true
+        position = effort.ordinal.toFloat()
+        commit(effort)
+    }
+
+    fun settle(effort: ThinkingEffort) {
+        if (!isDragging || finishHandled) return
+        finishHandled = true
+        animationJob?.cancel()
         isDragging = false
         isSettling = true
-        settleJob = scope.launch {
-            animate(
-                initialValue = sliderPosition,
-                targetValue = effort.ordinal.toFloat(),
-                animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing)
-            ) { value, _ -> sliderPosition = value }
-            sliderPosition = effort.ordinal.toFloat()
-            if (settleGeneration == generation) isSettling = false
+        val generation = ++animationGeneration
+        commit(effort)
+        val start = position
+        animationJob = scope.launch {
+            animate(start, effort.ordinal.toFloat(), animationSpec = tween(160, easing = FastOutSlowInEasing)) { value, _ -> position = value }
+            if (animationGeneration == generation) {
+                position = effort.ordinal.toFloat()
+                isSettling = false
+            }
         }
     }
 
     LaunchedEffect(current) {
-        lastCommittedEffort = current
-        if (!isDragging && !isSettling) sliderPosition = current.ordinal.toFloat()
+        lastCommitted = current
+        if (!isDragging && !isSettling) position = current.ordinal.toFloat()
     }
 
     LaunchedEffect(interactionSource) {
         interactionSource.interactions.collect { interaction ->
             when (interaction) {
-is DragInteraction.Start -> {
-                    settleJob?.cancel()
-                    settleGeneration += 1
+                is DragInteraction.Start -> {
+                    animationJob?.cancel()
+                    animationGeneration++
+                    pointerActive = true
                     isDragging = true
+                    finishHandled = false
                     isSettling = false
                 }
                 is DragInteraction.Stop, is DragInteraction.Cancel -> {
-                    if (isDragging) {
-                        settleOn(ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)])
-                    }
+                    pointerActive = false
+                    if (isDragging && !finishHandled) settle(ThinkingEffort.entries[position.roundToInt().coerceIn(0, 4)])
                 }
             }
         }
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Slider(
-            value = sliderPosition,
-            interactionSource = interactionSource,
-            onValueChange = { value ->
-                settleJob?.cancel()
-                isDragging = true
-                isSettling = false
-                sliderPosition = value.coerceIn(0f, 4f)
-            },
-            onValueChangeFinished = {
-                if (isDragging) {
-                    settleOn(ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)])
-                }
-            },
-            valueRange = 0f..4f,
-            steps = 0,
-            enabled = enabled,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
-                activeTickColor = MaterialTheme.colorScheme.onPrimary,
-                inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-        )
-        Layout(
-            content = {
-                ThinkingEffort.entries.forEach { effort ->
-                    Box(
-                        modifier = Modifier
-                            .size(width = 56.dp, height = 36.dp)
-                            .clickable(enabled = enabled) { commitImmediately(effort) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = effort.id.uppercase(),
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (effort == selectedEffort && enabled) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                            fontWeight = if (effort == selectedEffort) FontWeight.Bold else FontWeight.Medium
-                        )
+    Layout(
+        content = {
+            Slider(
+                value = position,
+                interactionSource = interactionSource,
+                onValueChange = { value ->
+                    if (!pointerActive && !finishHandled) {
+                        animationJob?.cancel()
+                        animationGeneration++
+                        position = value.coerceIn(0f, 4f)
+                        tap(ThinkingEffort.entries[position.roundToInt().coerceIn(0, 4)])
+                    } else {
+                        position = value.coerceIn(0f, 4f)
                     }
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .height(36.dp)
-        ) { measurables, constraints ->
-            val labelWidth = min(56.dp.roundToPx(), constraints.maxWidth / 5)
-            val childConstraints = Constraints(
-                minWidth = labelWidth,
-                maxWidth = labelWidth,
-                minHeight = constraints.maxHeight,
-                maxHeight = constraints.maxHeight
+                },
+                onValueChangeFinished = {
+                    if (isDragging && !finishHandled) {
+                        settle(ThinkingEffort.entries[position.roundToInt().coerceIn(0, 4)])
+                    }
+                },
+                valueRange = 0f..4f,
+                steps = 0,
+                enabled = enabled,
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
+                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                modifier = Modifier.layoutId("slider").fillMaxWidth()
             )
-            val placeables = measurables.map { it.measure(childConstraints) }
-            val thumbInset = 10.dp.roundToPx()
-            val trackWidth = constraints.maxWidth - thumbInset * 2
-            layout(constraints.maxWidth, 36.dp.roundToPx()) {
-                placeables.forEachIndexed { index, placeable ->
-                    val center = thumbInset + trackWidth * index / 4
-                    val x = (center - placeable.width / 2)
-                        .coerceIn(0, constraints.maxWidth - placeable.width)
-                    placeable.placeRelative(x, 0)
-                }
+            ThinkingEffort.entries.forEach { effort ->
+                Text(
+                    text = effort.id.uppercase(),
+                    modifier = Modifier.layoutId("label_${effort.ordinal}").clickable(enabled = enabled) { tap(effort) },
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (effort == selected && enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (effort == selected) FontWeight.Bold else FontWeight.Medium
+                )
+            }
+        },
+        modifier = Modifier.fillMaxWidth().height(84.dp)
+    ) { measurables, constraints ->
+        val density = this.density
+        val sliderPadding = with(density) { 12.dp.toPx() }.roundToInt()
+        val thumbInset = with(density) { 10.dp.toPx() }.roundToInt()
+        val sliderWidth = (constraints.maxWidth - sliderPadding * 2).coerceAtLeast(0)
+        val slider = measurables.first { it.layoutId == "slider" }.measure(Constraints(minWidth = sliderWidth, maxWidth = sliderWidth))
+        val labels = measurables.filter { it.layoutId.toString().startsWith("label_") }.map { measurable ->
+            val labelWidth = measurable.maxIntrinsicWidth(constraints.maxHeight)
+            measurable.measure(Constraints(minWidth = labelWidth, maxWidth = labelWidth))
+        }
+        val trackWidth = sliderWidth - thumbInset * 2
+        val labelsTop = slider.height - with(density) { 4.dp.toPx() }.roundToInt()
+        layout(constraints.maxWidth, slider.height + with(density) { 36.dp.toPx() }.roundToInt()) {
+            slider.placeRelative(sliderPadding, 0)
+            labels.forEachIndexed { index, label ->
+                val center = sliderPadding + thumbInset + trackWidth * index / 4
+                label.placeRelative(center - label.width / 2, labelsTop)
             }
         }
     }
