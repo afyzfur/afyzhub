@@ -14,7 +14,7 @@ import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.components.ModelIcon
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+
 import androidx.compose.ui.text.font.FontWeight
 
 import androidx.compose.foundation.layout.Row
@@ -355,9 +355,7 @@ private fun ThinkingEffortButton(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .widthIn(min = 112.dp)
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Icon(
                 imageVector = IconThinking,
