@@ -14,6 +14,9 @@ import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.components.ModelIcon
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.font.FontWeight
+
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -33,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -330,29 +332,8 @@ private fun ThinkingEffortButton(
 ) {
     val active = thinkingEnabled
 
-    // 五档用更明显的渐变区分；仍使用主题色插值，保证不同色板下
-    // 都保持足够的对比度与一致性。
-    //
-    // 用 secondaryContainer 与 secondary 之间的插值而非三个写死的颜色：
-    // 主题配色可切换（六套色板加动态取色），写死的值在别的色板下会
-    // 与整体脱节
-    val depth = when (effort) {
-        ThinkingEffort.LOW -> 0.12f
-        ThinkingEffort.MEDIUM -> 0.28f
-        ThinkingEffort.HIGH -> 0.44f
-        ThinkingEffort.XHIGH -> 0.60f
-        ThinkingEffort.MAX -> 0.76f
-    }
-    val activeColor = lerp(
-        MaterialTheme.colorScheme.secondaryContainer,
-        MaterialTheme.colorScheme.secondary,
-        depth
-    )
-    val activeContentColor = lerp(
-        MaterialTheme.colorScheme.onSecondaryContainer,
-        MaterialTheme.colorScheme.onSecondary,
-        depth
-    )
+    val activeColor = MaterialTheme.colorScheme.primaryContainer
+    val activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
 
     Surface(
         color = if (active) activeColor else Color.Transparent,
@@ -369,11 +350,14 @@ private fun ThinkingEffortButton(
         },
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.alpha(if (enabled) 1f else 0.5f)
+        modifier = Modifier
+            .alpha(if (enabled) 1f else 0.5f)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            modifier = Modifier
+                .widthIn(min = 112.dp)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Icon(
                 imageVector = IconThinking,
@@ -384,8 +368,11 @@ private fun ThinkingEffortButton(
             // 既看不出当前是什么状态，点击区域也小得容易点偏
             Spacer(Modifier.width(5.dp))
             Text(
-                text = if (thinkingEnabled) effort.id else "off",
-                style = MaterialTheme.typography.labelMedium
+                text = if (thinkingEnabled) effort.id.uppercase() else "OFF",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
             )
         }
     }

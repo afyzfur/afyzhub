@@ -1,16 +1,30 @@
 package com.afyzfur.afyzhub.ui.chat
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -49,10 +63,58 @@ fun ThinkingEffortSheet(
     onGuidanceEnabledChange: (Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var sliderPosition by remember(current) { mutableStateOf(current.ordinal.toFloat()) }
-    var effortChanged by remember(current) { mutableStateOf(false) }
+    var sliderPosition by remember { mutableFloatStateOf(current.ordinal.toFloat()) }
+    var isDragging by remember { mutableStateOf(false) }
+    var isSettling by remember { mutableStateOf(false) }
     var showEffortInfo by remember { mutableStateOf(false) }
+    var settleJob by remember { mutableStateOf<Job?>(null) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val scope = rememberCoroutineScope()
+
+    fun settleOn(effort: ThinkingEffort) {
+        settleJob?.cancel()
+        isDragging = false
+        isSettling = true
+        val target = effort.ordinal.toFloat()
+        val start = sliderPosition
+        onEffortChange(effort)
+        settleJob = scope.launch {
+            animate(
+                initialValue = start,
+                targetValue = target,
+                animationSpec = tween(
+                    durationMillis = 220,
+                    easing = FastOutSlowInEasing
+                )
+            ) { value, _ -> sliderPosition = value }
+            sliderPosition = target
+            isSettling = false
+        }
+    }
+
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is DragInteraction.Start -> {
+                    settleJob?.cancel()
+                    isSettling = false
+                    isDragging = true
+                }
+                is DragInteraction.Stop, is DragInteraction.Cancel -> {
+                    if (isDragging) {
+                        settleOn(ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)])
+                    }
+                }
+            }
+        }
+    }
     val selectedEffort = ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)]
+
+    LaunchedEffect(current) {
+        if (!isDragging && !isSettling) {
+            sliderPosition = current.ordinal.toFloat()
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -98,14 +160,16 @@ fun ThinkingEffortSheet(
             }
             Slider(
                 value = sliderPosition,
+                interactionSource = interactionSource,
                 onValueChange = { value ->
+                    settleJob?.cancel()
+                    isSettling = false
+                    isDragging = true
                     sliderPosition = value.coerceIn(0f, 4f)
-                    effortChanged = true
                 },
                 onValueChangeFinished = {
-                    if (effortChanged) {
-                        onEffortChange(ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)])
-                        effortChanged = false
+                    if (isDragging) {
+                        settleOn(ThinkingEffort.entries[sliderPosition.roundToInt().coerceIn(0, 4)])
                     }
                 },
                 valueRange = 0f..4f,
@@ -118,34 +182,38 @@ fun ThinkingEffortSheet(
                     activeTickColor = MaterialTheme.colorScheme.onPrimary,
                     inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
+                modifier = Modifier.fillMaxWidth()
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-            ) {
-                ThinkingEffort.entries.forEachIndexed { index, effort ->
-                    Text(
-                        text = effort.id,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(enabled = thinkingEnabled) {
-                                sliderPosition = index.toFloat()
-                                effortChanged = false
-                                onEffortChange(effort)
+            Layout(
+                content = {
+                    ThinkingEffort.entries.forEach { effort ->
+                        Text(
+                            text = effort.id,
+                            modifier = Modifier.clickable(enabled = thinkingEnabled) {
+                                settleOn(effort)
                             },
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (effort == selectedEffort && thinkingEnabled) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        fontWeight = if (effort == selectedEffort) FontWeight.Bold else FontWeight.Medium
-                    )
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (effort == selectedEffort && thinkingEnabled) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            fontWeight = if (effort == selectedEffort) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(32.dp)
+            ) { measurables, constraints ->
+                val placeables = measurables.map { it.measure(Constraints()) }
+                val thumbInset = 10.dp.roundToPx()
+                val trackWidth = constraints.maxWidth - thumbInset * 2
+                layout(constraints.maxWidth, 32.dp.roundToPx()) {
+                    placeables.forEachIndexed { index, placeable ->
+                        val center = thumbInset + trackWidth * index / 4
+                        placeable.placeRelative(center - placeable.width / 2, 0)
+                    }
                 }
             }
             Spacer(Modifier.height(28.dp))
