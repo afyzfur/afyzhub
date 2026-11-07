@@ -183,7 +183,9 @@ fun ThinkingEffortSheet(
                     activeTickColor = MaterialTheme.colorScheme.onPrimary,
                     inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
             )
             Layout(
                 content = {
