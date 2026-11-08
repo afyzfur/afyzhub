@@ -5,6 +5,9 @@ import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ripple
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -201,13 +204,14 @@ private fun ThinkingEffortSelector(current: ThinkingEffort, enabled: Boolean, on
                         animationJob?.cancel()
                         animationGeneration++
                         position = value.coerceIn(0f, 4f)
-                        tap(ThinkingEffort.entries[position.roundToInt().coerceIn(0, 4)])
                     } else {
                         position = value.coerceIn(0f, 4f)
                     }
                 },
                 onValueChangeFinished = {
-                    if (isDragging && !finishHandled) {
+                    if (!pointerActive && !finishHandled) {
+                        tap(ThinkingEffort.entries[position.roundToInt().coerceIn(0, 4)])
+                    } else if (isDragging && !finishHandled) {
                         settle(ThinkingEffort.entries[position.roundToInt().coerceIn(0, 4)])
                     }
                 },
@@ -221,12 +225,22 @@ private fun ThinkingEffortSelector(current: ThinkingEffort, enabled: Boolean, on
                     activeTickColor = MaterialTheme.colorScheme.onPrimary,
                     inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
-                modifier = Modifier.layoutId("slider").fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .layoutId("slider")
             )
             ThinkingEffort.entries.forEach { effort ->
                 Text(
                     text = effort.id.uppercase(),
-                    modifier = Modifier.layoutId("label_${effort.ordinal}").clickable(enabled = enabled) { tap(effort) },
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable(
+                            interactionSource = labelInteractions,
+                            indication = ripple(bounded = true, radius = 28.dp),
+                            enabled = enabled
+                        ) { tap(effort) }
+                        .layoutId("label_${effort.ordinal}"),
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     style = MaterialTheme.typography.labelMedium,
@@ -240,13 +254,13 @@ private fun ThinkingEffortSelector(current: ThinkingEffort, enabled: Boolean, on
         val density = this.density
         val sliderPadding = with(density) { 12.dp.toPx() }.roundToInt()
         val thumbInset = with(density) { 10.dp.toPx() }.roundToInt()
-        val sliderWidth = (constraints.maxWidth - sliderPadding * 2).coerceAtLeast(0)
+        val sliderWidth = constraints.maxWidth
         val slider = measurables.first { it.layoutId == "slider" }.measure(Constraints(minWidth = sliderWidth, maxWidth = sliderWidth))
         val labels = measurables.filter { it.layoutId.toString().startsWith("label_") }.map { measurable ->
             val labelWidth = measurable.maxIntrinsicWidth(constraints.maxHeight)
             measurable.measure(Constraints(minWidth = labelWidth, maxWidth = labelWidth))
         }
-        val trackWidth = sliderWidth - thumbInset * 2
+        val trackWidth = sliderWidth - sliderPadding * 2 - thumbInset * 2
         val labelsTop = slider.height - with(density) { 4.dp.toPx() }.roundToInt()
         layout(constraints.maxWidth, slider.height + with(density) { 36.dp.toPx() }.roundToInt()) {
             slider.placeRelative(sliderPadding, 0)
