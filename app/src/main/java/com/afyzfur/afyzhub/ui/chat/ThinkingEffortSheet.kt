@@ -131,6 +131,7 @@ private fun ThinkingEffortSelector(current: ThinkingEffort, enabled: Boolean, on
     val interactionSource = remember { MutableInteractionSource() }
     var animationJob by remember { mutableStateOf<Job?>(null) }
     var animationGeneration by remember { mutableIntStateOf(0) }
+    val labelInteractions = remember { MutableInteractionSource() }
     val scope = rememberCoroutineScope()
     val onChange by rememberUpdatedState(onEffortChange)
     val selected = ThinkingEffort.entries[position.roundToInt().coerceIn(0, 4)]
