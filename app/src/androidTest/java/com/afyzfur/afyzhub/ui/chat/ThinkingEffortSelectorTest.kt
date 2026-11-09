@@ -94,11 +94,11 @@ class ThinkingEffortSelectorTest {
             down(Offset(width * 0.1f, height / 2f))
             moveTo(Offset(width * 0.5f, height / 2f))
         }
-        compose.mainClock.advanceTimeBy(180)
+        compose.mainClock.advanceTimeBy(120)
         assertTrue("Drag should not wait for a full click tween", progress() > 1.8f)
         compose.runOnIdle { assertTrue(saved.isEmpty()) }
         track.performTouchInput { moveTo(Offset(width * 0.9f, height / 2f)) }
-        compose.mainClock.advanceTimeBy(180)
+        compose.mainClock.advanceTimeBy(120)
         assertTrue("Retargeted drag should retain motion", progress() > 3.8f)
         compose.runOnIdle { assertTrue(saved.isEmpty()) }
         track.performTouchInput { up() }
@@ -118,5 +118,25 @@ class ThinkingEffortSelectorTest {
         assertTrue(progress() in 0.2f..3.8f)
         compose.mainClock.advanceTimeBy(200)
         assertEquals(4f, progress(), 0.01f)
+    }
+
+    @Test fun continuouslyRetargetedDragDoesNotRestartFromRest() {
+        show()
+        val track = compose.onNodeWithTag("effort-track")
+        track.performTouchInput { down(Offset(width * 0.1f, height / 2f)) }
+        repeat(12) { index ->
+            track.performTouchInput {
+                moveTo(Offset(width * (0.1f + 0.8f * (index + 1) / 12f), height / 2f))
+            }
+            compose.mainClock.advanceTimeBy(16)
+        }
+        assertTrue("Continuous motion must not repeatedly restart ease-in", progress() > 2.4f)
+        compose.runOnIdle { assertTrue(saved.isEmpty()) }
+        compose.mainClock.advanceTimeBy(120)
+        assertTrue(progress() > 3.85f)
+        track.performTouchInput { up() }
+        compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
+        compose.mainClock.advanceTimeBy(200)
+        assertEquals(4f, progress(), 0.02f)
     }
 }

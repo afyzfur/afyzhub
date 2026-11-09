@@ -1,24 +1,22 @@
 package com.afyzfur.afyzhub.ui.chat
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -27,10 +25,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -46,8 +46,9 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
+import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
+import kotlinx.coroutines.flow.collectLatest
 
 /** One coordinate system: five cell centres own labels, ticks, pointer mapping and thumb. */
 @Composable
@@ -58,16 +59,23 @@ internal fun AnimatedThinkingEffortSelector(
 ) {
     val state = remember { ThinkingEffortControlState(current) }
     val onChange by rememberUpdatedState(onEffortChange)
-    val displayed = animateFloatAsState(
-        targetValue = state.target,
-        animationSpec = if (state.followingDrag) {
-            // A retargetable spring carries velocity across pointer updates instead of restarting ease-in.
-            spring(dampingRatio = 1f, stiffness = 2200f, visibilityThreshold = 0.002f)
-        } else {
-            tween(240, easing = FastOutSlowInEasing)
-        },
-        label = "thinking-effort-position"
-    )
+    val displayed = remember { Animatable(current.ordinal.toFloat()) }
+    // Observe input without subscribing the selector composition to every pointer update.
+    LaunchedEffect(state) {
+        var retainedVelocity = 0f
+        snapshotFlow { state.target to state.followingDrag }.collectLatest { (target, dragging) ->
+            displayed.animateTo(
+                target,
+                initialVelocity = if (dragging) retainedVelocity else 0f,
+                animationSpec = if (dragging) {
+                    spring(dampingRatio = 1f, stiffness = 5000f, visibilityThreshold = 0.005f)
+                } else {
+                    tween(180, easing = FastOutSlowInEasing)
+                }
+            ) { retainedVelocity = velocity }
+            retainedVelocity = 0f
+        }
+    }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val primary = MaterialTheme.colorScheme.primary
     val inactive = MaterialTheme.colorScheme.outlineVariant
@@ -80,10 +88,7 @@ internal fun AnimatedThinkingEffortSelector(
         state.choose(value, fromDrag)?.let(onChange)
     }
 
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val cellWidth = maxWidth / 5
-        val diameter = minOf(56.dp, (cellWidth - 6.dp).coerceAtLeast(0.dp))
-        Column {
+    Column(Modifier.fillMaxWidth()) {
             Canvas(
                 Modifier.fillMaxWidth().height(52.dp).testTag("effort-track")
                     .semantics {
@@ -141,7 +146,6 @@ internal fun AnimatedThinkingEffortSelector(
                 repeat(5) { index ->
                     drawCircle(primary.copy(alpha = alpha), 2.dp.toPx(), Offset(x(index.toFloat()), y))
                 }
-                drawCircle(primary.copy(alpha = 0.10f * alpha), 17.dp.toPx(), Offset(x(displayed.value), y))
                 drawCircle(primary.copy(alpha = alpha), 10.dp.toPx(), Offset(x(displayed.value), y))
                 drawCircle(onPrimary.copy(alpha = alpha), 4.dp.toPx(), Offset(x(displayed.value), y))
             }
@@ -150,10 +154,9 @@ internal fun AnimatedThinkingEffortSelector(
                     Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val interaction = remember { MutableInteractionSource() }
                         Box(
-                            Modifier.size(diameter).testTag("effort-${effort.id}")
-                                .clip(CircleShape)
-                                .background(if (state.selected == effort) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)
-                                .border(1.dp, if (state.selected == effort) primary.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), CircleShape)
+                            Modifier.fillMaxWidth().padding(horizontal = 3.dp).height(40.dp).testTag("effort-${effort.id}")
+                                .clip(AppShapeTokens.Pill)
+                                .background(if (state.selected == effort && enabled) primary.copy(alpha = 0.08f) else Color.Transparent)
                                 .clickable(
                                     interactionSource = interaction,
                                     indication = ripple(bounded = true),
@@ -168,14 +171,17 @@ internal fun AnimatedThinkingEffortSelector(
                                 maxLines = 1,
                                 softWrap = false,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontSize = if (diameter < 46.dp) 9.sp else 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = if (state.selected == effort && enabled) primary else MaterialTheme.colorScheme.onSurface
                             )
+                            if (state.selected == effort && enabled) {
+                                Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp)
+                                    .size(width = 12.dp, height = 2.dp)
+                                    .background(primary, AppShapeTokens.Pill))
+                            }
                         }
                     }
                 }
             }
-        }
     }
 }
