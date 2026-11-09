@@ -31,7 +31,7 @@ class ThinkingEffortSelectorTest {
         compose.onNodeWithTag("effort-max").performClick()
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
         assertTrue(progress() < 0.1f)
-        compose.mainClock.advanceTimeBy(210)
+        compose.mainClock.advanceTimeBy(100)
         assertTrue(progress() in 0.2f..3.8f)
         compose.mainClock.advanceTimeBy(500)
         assertEquals(4f, progress(), 0.01f)
@@ -84,6 +84,39 @@ class ThinkingEffortSelectorTest {
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
         assertTrue(progress() < 0.1f)
         compose.mainClock.advanceTimeBy(600)
+        assertEquals(4f, progress(), 0.01f)
+    }
+
+    @Test fun heldDragTracksWithinShortDelayAndDoesNotPersistUntilRelease() {
+        show()
+        val track = compose.onNodeWithTag("effort-track")
+        track.performTouchInput {
+            down(Offset(width * 0.1f, height / 2f))
+            moveTo(Offset(width * 0.5f, height / 2f))
+        }
+        compose.mainClock.advanceTimeBy(180)
+        assertTrue("Drag should not wait for a full click tween", progress() > 1.8f)
+        compose.runOnIdle { assertTrue(saved.isEmpty()) }
+        track.performTouchInput { moveTo(Offset(width * 0.9f, height / 2f)) }
+        compose.mainClock.advanceTimeBy(180)
+        assertTrue("Retargeted drag should retain motion", progress() > 3.8f)
+        compose.runOnIdle { assertTrue(saved.isEmpty()) }
+        track.performTouchInput { up() }
+        compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
+        compose.mainClock.advanceTimeBy(200)
+        assertEquals(4f, progress(), 0.02f)
+    }
+
+    @Test fun clickSettlesWithinThreeHundredMillisecondsWithoutTeleporting() {
+        show()
+        compose.onNodeWithTag("effort-track").performTouchInput {
+            click(Offset(width * 0.9f, height / 2f))
+        }
+        compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
+        assertTrue(progress() < 0.1f)
+        compose.mainClock.advanceTimeBy(100)
+        assertTrue(progress() in 0.2f..3.8f)
+        compose.mainClock.advanceTimeBy(200)
         assertEquals(4f, progress(), 0.01f)
     }
 }

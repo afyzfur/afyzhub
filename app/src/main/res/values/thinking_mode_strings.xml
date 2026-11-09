@@ -5,4 +5,6 @@
     <string name="thinking_effort_info">思考程度决定支持原生思考模型使用的预算；档位越高，通常会投入更多时间分析复杂问题。</string>
     <string name="thinking_guidance">思考引导</string>
     <string name="thinking_guidance_hint">供不支持原生思考的模型使用提示引导</string>
+    <string name="thinking_mode_subtitle">为复杂问题分配更多思考空间</string>
+    <string name="thinking_effort_short_hint">档位越高，通常需要更多时间</string>
 </resources>

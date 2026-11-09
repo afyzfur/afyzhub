@@ -41,4 +41,17 @@ class ThinkingEffortControlStateTest {
         state.cancel()
         assertEquals(1f, state.target, 0.001f)
     }
+
+    @Test fun dragReleaseKeepsSpringModeButNextClickUsesTween() {
+        val state = ThinkingEffortControlState(ThinkingEffort.LOW)
+        state.preview(2.7f)
+        assertTrue(state.followingDrag)
+        state.choose(2.7f, fromDrag = true)
+        assertTrue(state.followingDrag)
+        assertEquals(ThinkingEffort.MAX, state.choose(4f))
+        assertFalse(state.followingDrag)
+        state.preview(1f)
+        state.cancel()
+        assertFalse(state.followingDrag)
+    }
 }

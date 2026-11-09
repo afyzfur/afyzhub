@@ -13,17 +13,21 @@ internal class ThinkingEffortControlState(initial: ThinkingEffort) {
         private set
     var selected by mutableStateOf(initial)
         private set
+    var followingDrag by mutableStateOf(false)
+        private set
     private var pending: ThinkingEffort? = null
     private var interacting = false
     private var persisted = initial
 
     fun preview(value: Float) {
         interacting = true
+        followingDrag = true
         target = value.coerceIn(0f, 4f)
     }
 
-    fun choose(value: Float): ThinkingEffort? {
+    fun choose(value: Float, fromDrag: Boolean = false): ThinkingEffort? {
         interacting = false
+        followingDrag = fromDrag
         val effort = ThinkingEffort.entries[value.roundToInt().coerceIn(0, 4)]
         target = effort.ordinal.toFloat()
         selected = effort
@@ -34,6 +38,7 @@ internal class ThinkingEffortControlState(initial: ThinkingEffort) {
 
     fun cancel() {
         interacting = false
+        followingDrag = false
         target = selected.ordinal.toFloat()
     }
 
