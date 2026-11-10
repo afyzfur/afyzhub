@@ -10,6 +10,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -26,10 +29,12 @@ import org.junit.Test
 class ThinkingEffortSelectorTest {
     @get:Rule val compose = createComposeRule()
     private val saved = mutableListOf<ThinkingEffort>()
+    private var endpointPx = 0f
 
     private fun show(enabled: Boolean = true, rtl: Boolean = false) {
         compose.setContent {
             MaterialTheme {
+                endpointPx = with(LocalDensity.current) { effortEndpointInset.toPx() }
                 CompositionLocalProvider(LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
                     AnimatedThinkingEffortSelector(ThinkingEffort.LOW, enabled) { saved.add(it) }
                 }
@@ -55,7 +60,7 @@ class ThinkingEffortSelectorTest {
     @Test fun repeatedTrackTapsPersistAndDoNotTeleport() {
         show()
         val track = compose.onNodeWithTag("effort-track")
-        track.performTouchInput { click(Offset(width * 0.9f, height / 2f)) }
+        track.performTouchInput { click(Offset(width * 0.99f, height / 2f)) }
         compose.runOnIdle { assertEquals(ThinkingEffort.MAX, saved.last()) }
         assertTrue(progress() < 0.1f)
         compose.mainClock.advanceTimeBy(600)
@@ -80,7 +85,7 @@ class ThinkingEffortSelectorTest {
         val track = compose.onNodeWithTag("effort-track").fetchSemanticsNode().boundsInRoot
         ThinkingEffort.entries.forEachIndexed { index, effort ->
             val label = compose.onNodeWithTag("effort-${effort.id}").fetchSemanticsNode().boundsInRoot
-            val expected = track.left + track.width * (0.1f + 0.2f * index)
+            val expected = track.left + endpointPx + (track.width - 2f * endpointPx) * index / 4f
             assertEquals(expected, label.center.x, 1.5f)
             if (index > 0) {
                 val previous = compose.onNodeWithTag("effort-${ThinkingEffort.entries[index - 1].id}").fetchSemanticsNode().boundsInRoot
@@ -92,8 +97,8 @@ class ThinkingEffortSelectorTest {
     @Test fun dragCommitsOnceAtReleaseAndDisplayFollowsWithAnimation() {
         show()
         compose.onNodeWithTag("effort-track").performTouchInput {
-            down(Offset(width * 0.1f, height / 2f))
-            moveTo(Offset(width * 0.9f, height / 2f))
+            down(Offset(width * 0.01f, height / 2f))
+            moveTo(Offset(width * 0.99f, height / 2f))
             up()
         }
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
@@ -106,13 +111,13 @@ class ThinkingEffortSelectorTest {
         show()
         val track = compose.onNodeWithTag("effort-track")
         track.performTouchInput {
-            down(Offset(width * 0.1f, height / 2f))
+            down(Offset(width * 0.01f, height / 2f))
             moveTo(Offset(width * 0.5f, height / 2f))
         }
         compose.mainClock.advanceTimeBy(120)
         assertTrue("Drag should not wait for a full click tween", progress() > 1.8f)
         compose.runOnIdle { assertTrue(saved.isEmpty()) }
-        track.performTouchInput { moveTo(Offset(width * 0.9f, height / 2f)) }
+        track.performTouchInput { moveTo(Offset(width * 0.99f, height / 2f)) }
         compose.mainClock.advanceTimeBy(120)
         assertTrue("Retargeted drag should retain motion", progress() > 3.8f)
         compose.runOnIdle { assertTrue(saved.isEmpty()) }
@@ -125,7 +130,7 @@ class ThinkingEffortSelectorTest {
     @Test fun clickSettlesWithinThreeHundredMillisecondsWithoutTeleporting() {
         show()
         compose.onNodeWithTag("effort-track").performTouchInput {
-            click(Offset(width * 0.9f, height / 2f))
+            click(Offset(width * 0.99f, height / 2f))
         }
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
         assertTrue(progress() < 0.1f)
@@ -138,10 +143,10 @@ class ThinkingEffortSelectorTest {
     @Test fun continuouslyRetargetedDragDoesNotRestartFromRest() {
         show()
         val track = compose.onNodeWithTag("effort-track")
-        track.performTouchInput { down(Offset(width * 0.1f, height / 2f)) }
+        track.performTouchInput { down(Offset(width * 0.01f, height / 2f)) }
         repeat(12) { index ->
             track.performTouchInput {
-                moveTo(Offset(width * (0.1f + 0.8f * (index + 1) / 12f), height / 2f))
+                moveTo(Offset(endpointPx + (width - 2f * endpointPx) * (index + 1) / 12f, height / 2f))
             }
             compose.mainClock.advanceTimeBy(16)
         }
@@ -162,14 +167,14 @@ class ThinkingEffortSelectorTest {
         assertEquals("Compact track retains a 60dp touch height", 1.5f, track.height / label.height, 0.03f)
         ThinkingEffort.entries.forEachIndexed { index, effort ->
             val bounds = compose.onNodeWithTag("effort-${effort.id}").fetchSemanticsNode().boundsInRoot
-            assertEquals(track.left + track.width * (0.1f + 0.2f * index), bounds.center.x, 1.5f)
+            assertEquals(track.left + endpointPx + (track.width - 2f * endpointPx) * index / 4f, bounds.center.x, 1.5f)
         }
     }
 
     @Test fun disabledCapsuleCannotChangeSelection() {
         show(enabled = false)
         compose.onNodeWithTag("effort-track").performTouchInput {
-            click(Offset(width * 0.9f, height / 2f))
+            click(Offset(width * 0.99f, height / 2f))
         }
         compose.mainClock.advanceTimeBy(400)
         compose.runOnIdle { assertTrue(saved.isEmpty()) }
@@ -180,7 +185,7 @@ class ThinkingEffortSelectorTest {
     @Test fun rtlCapsuleMapsLeftEndpointToMaximum() {
         show(rtl = true)
         compose.onNodeWithTag("effort-track").performTouchInput {
-            click(Offset(width * 0.1f, height / 2f))
+            click(Offset(width * 0.01f, height / 2f))
         }
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
         compose.mainClock.advanceTimeBy(400)
@@ -216,7 +221,7 @@ class ThinkingEffortSelectorTest {
             val track = compose.onNodeWithTag("effort-track").assertIsDisplayed()
             // Semantics alone can exist while an ancestor clip suppresses every painted pixel.
             val image = track.captureToImage().toPixelMap()
-            val pixel = image[(image.width * 0.98f).toInt(), image.height / 2]
+            val pixel = image[image.width / 2, image.height / 6]
             assertEquals("The actual capsule must be painted, not just the dimming scrim", trackColor.red, pixel.red, 0.03f)
             assertEquals(trackColor.green, pixel.green, 0.03f)
             assertEquals(trackColor.blue, pixel.blue, 0.03f)
@@ -230,4 +235,31 @@ class ThinkingEffortSelectorTest {
             compose.onNodeWithTag("thinking-sheet").assertDoesNotExist()
         }
     }
+
+    private fun checkBrightEndpoint(dark: Boolean) {
+        compose.setContent {
+            MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+                endpointPx = with(LocalDensity.current) { effortEndpointInset.toPx() }
+                AnimatedThinkingEffortSelector(ThinkingEffort.MAX, true) {}
+            }
+        }
+        val node = compose.onNodeWithTag("effort-track")
+        val image = node.captureToImage().toPixelMap()
+        val knobX = (image.width - endpointPx).toInt()
+        val knob = image[knobX, image.height / 2]
+        val fill = image[image.width / 2 + (endpointPx / 2).toInt(), image.height / 2]
+        assertTrue("Selected thumb should be brighter than the filled track", knob.luminance() > fill.luminance())
+        // At MAX the inner fill ends 5dp from the capsule edge, not 10% of its width.
+        val edgeX = (image.width - endpointPx * 0.32f).toInt()
+        val edgeFill = image[edgeX, image.height / 2]
+        assertEquals(fill.red, edgeFill.red, 0.04f)
+        assertEquals(fill.green, edgeFill.green, 0.04f)
+        assertEquals(fill.blue, edgeFill.blue, 0.04f)
+        val track = node.fetchSemanticsNode().boundsInRoot
+        val label = compose.onNodeWithTag("effort-max").fetchSemanticsNode().boundsInRoot
+        assertEquals(track.right - endpointPx, label.center.x, 1.5f)
+    }
+
+    @Test fun darkThemeSelectedThumbIsBrightAndMaximumFillReachesEnd() { checkBrightEndpoint(true) }
+    @Test fun lightThemeSelectedThumbIsBrightAndMaximumFillReachesEnd() { checkBrightEndpoint(false) }
 }

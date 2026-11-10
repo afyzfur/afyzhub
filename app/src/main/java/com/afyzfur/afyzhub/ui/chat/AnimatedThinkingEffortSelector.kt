@@ -8,10 +8,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -29,6 +27,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -53,7 +54,10 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 
-/** One coordinate system: five cell centres own labels, ticks, pointer mapping and thumb. */
+// 5dp shell inset + 17dp inner end radius: fill reaches both ends with the same margin.
+internal val effortEndpointInset = 22.dp
+
+/** One coordinate system owns label centres, ticks, pointer mapping and thumb. */
 @Composable
 internal fun AnimatedThinkingEffortSelector(
     current: ThinkingEffort,
@@ -112,7 +116,7 @@ internal fun AnimatedThinkingEffortSelector(
     val primary = MaterialTheme.colorScheme.primary
     val inactive = MaterialTheme.colorScheme.surfaceContainerHighest
     val outline = MaterialTheme.colorScheme.outlineVariant
-    val thumb = MaterialTheme.colorScheme.surface
+    val thumb = lerp(primary, Color.White, 0.9f)
     val dot = MaterialTheme.colorScheme.onSurfaceVariant
     val onFill = MaterialTheme.colorScheme.onPrimary
     val alpha = if (enabled) 1f else 0.38f
@@ -139,8 +143,8 @@ internal fun AnimatedThinkingEffortSelector(
                         if (enabled) {
                             awaitEachGesture {
                                 val down = awaitFirstDown()
-                                val start = size.width / 10f
-                                val length = size.width * 0.8f
+                                val start = effortEndpointInset.toPx()
+                                val length = (size.width - 2f * start).coerceAtLeast(1f)
                                 fun valueAt(x: Float): Float {
                                     val logicalX = if (rtl) size.width - x else x
                                     return ((logicalX - start) / length * 4f).coerceIn(0f, 4f)
@@ -169,8 +173,8 @@ internal fun AnimatedThinkingEffortSelector(
                         }
                     }
             ) {
-                val start = size.width / 10f
-                val length = size.width * 0.8f
+                val start = effortEndpointInset.toPx()
+                val length = (size.width - 2f * start).coerceAtLeast(1f)
                 val y = size.height / 2
                 fun x(value: Float): Float {
                     val logical = start + length * value / 4f
@@ -198,12 +202,12 @@ internal fun AnimatedThinkingEffortSelector(
                 drawCircle(thumb.copy(alpha = alpha), 12.5.dp.toPx(), Offset(centre, y))
                 drawCircle(outline.copy(alpha = 0.4f * alpha), 12.5.dp.toPx(), Offset(centre, y), style = Stroke(0.5.dp.toPx()))
             }
-            Row(Modifier.fillMaxWidth()) {
+            Layout(modifier = Modifier.fillMaxWidth(), content = {
                 ThinkingEffort.entries.forEach { effort ->
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+
                         val interaction = remember { MutableInteractionSource() }
                         Box(
-                            Modifier.fillMaxWidth().padding(horizontal = 3.dp).height(40.dp).testTag("effort-${effort.id}")
+                            Modifier.height(40.dp).testTag("effort-${effort.id}")
                                 .clip(AppShapeTokens.Pill)
                                                                 .clickable(
                                     interactionSource = interaction,
@@ -219,11 +223,25 @@ internal fun AnimatedThinkingEffortSelector(
                                 maxLines = 1,
                                 softWrap = false,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (state.selected == effort && enabled) primary else MaterialTheme.colorScheme.onSurface
+                                fontWeight = if (state.selected == effort) FontWeight.Bold else FontWeight.Medium,
+                                color = if (state.selected == effort && enabled) MaterialTheme.colorScheme.onSurface
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 0.65f else 0.38f)
                             )
 
                         }
+                }
+            }) { measurables, constraints ->
+                val start = effortEndpointInset.toPx()
+                val step = (constraints.maxWidth - 2f * start) / 4f
+                val labels = measurables.mapIndexed { index, measurable ->
+                    val width = if (index == 0 || index == 4) (2f * start).toInt()
+                        else (step - 6.dp.toPx()).toInt()
+                    measurable.measure(Constraints.fixedWidth(width.coerceAtLeast(1)))
+                }
+                layout(constraints.maxWidth, labels.maxOf { it.height }) {
+                    labels.forEachIndexed { index, label ->
+                        val centre = (start + step * index).toInt()
+                        label.placeRelative(centre - label.width / 2, 0)
                     }
                 }
             }
