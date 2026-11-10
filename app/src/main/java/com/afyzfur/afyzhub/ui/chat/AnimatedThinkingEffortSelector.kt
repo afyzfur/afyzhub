@@ -1,11 +1,7 @@
 package com.afyzfur.afyzhub.ui.chat
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -16,22 +12,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -48,7 +47,11 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
-import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 
 /** One coordinate system: five cell centres own labels, ticks, pointer mapping and thumb. */
 @Composable
@@ -59,27 +62,59 @@ internal fun AnimatedThinkingEffortSelector(
 ) {
     val state = remember { ThinkingEffortControlState(current) }
     val onChange by rememberUpdatedState(onEffortChange)
-    val displayed = remember { Animatable(current.ordinal.toFloat()) }
-    // Observe input without subscribing the selector composition to every pointer update.
+    val displayed = remember { mutableFloatStateOf(current.ordinal.toFloat()) }
+    // One frame loop owns motion. Retargeting a drag never cancels/restarts a coroutine.
     LaunchedEffect(state) {
-        var retainedVelocity = 0f
-        snapshotFlow { state.target to state.followingDrag }.collectLatest { (target, dragging) ->
-            displayed.animateTo(
-                target,
-                initialVelocity = if (dragging) retainedVelocity else 0f,
-                animationSpec = if (dragging) {
-                    spring(dampingRatio = 1f, stiffness = 5000f, visibilityThreshold = 0.005f)
+        var velocity = 0f
+        while (currentCoroutineContext().isActive) {
+            snapshotFlow { state.target }.first { abs(it - displayed.floatValue) > 0.001f }
+            var previous = withFrameNanos { it }
+            var clickStart = displayed.floatValue
+            var clickTarget = state.target
+            var elapsed = 0f
+            var wasDragging = state.followingDrag
+            while (currentCoroutineContext().isActive) {
+                val now = withFrameNanos { it }
+                val dt = ((now - previous) / 1_000_000_000f).coerceIn(0f, 0.05f)
+                previous = now
+                val target = state.target
+                val dragging = state.followingDrag
+                if (dragging) {
+                    // Analytic critically damped follow; stable across refresh rates and pointer events.
+                    val omega = 85f
+                    val offset = displayed.floatValue - target
+                    val coefficient = velocity + omega * offset
+                    val decay = exp(-omega * dt)
+                    displayed.floatValue = (target + (offset + coefficient * dt) * decay).coerceIn(0f, 4f)
+                    velocity = (velocity - omega * coefficient * dt) * decay
                 } else {
-                    tween(180, easing = FastOutSlowInEasing)
+                    if (wasDragging || target != clickTarget) {
+                        clickStart = displayed.floatValue
+                        clickTarget = target
+                        elapsed = 0f
+                    }
+                    elapsed += dt
+                    val fraction = (elapsed / 0.22f).coerceIn(0f, 1f)
+                    displayed.floatValue = clickStart + (target - clickStart) * FastOutSlowInEasing.transform(fraction)
+                    velocity = 0f
                 }
-            ) { retainedVelocity = velocity }
-            retainedVelocity = 0f
+                wasDragging = dragging
+                if ((dragging && abs(displayed.floatValue - target) < 0.002f && abs(velocity) < 0.03f) ||
+                    (!dragging && elapsed >= 0.22f)) {
+                    displayed.floatValue = target
+                    velocity = 0f
+                    break
+                }
+            }
         }
     }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val primary = MaterialTheme.colorScheme.primary
-    val inactive = MaterialTheme.colorScheme.outlineVariant
-    val onPrimary = MaterialTheme.colorScheme.onPrimary
+    val inactive = MaterialTheme.colorScheme.surfaceContainerHighest
+    val outline = MaterialTheme.colorScheme.outlineVariant
+    val thumb = MaterialTheme.colorScheme.surface
+    val dot = MaterialTheme.colorScheme.onSurfaceVariant
+    val onFill = MaterialTheme.colorScheme.onPrimary
     val alpha = if (enabled) 1f else 0.38f
     LaunchedEffect(current) { state.acceptExternal(current) }
     LaunchedEffect(enabled) { if (!enabled) state.cancel() }
@@ -90,10 +125,10 @@ internal fun AnimatedThinkingEffortSelector(
 
     Column(Modifier.fillMaxWidth()) {
             Canvas(
-                Modifier.fillMaxWidth().height(52.dp).testTag("effort-track")
+                Modifier.fillMaxWidth().height(76.dp).testTag("effort-track")
                     .semantics {
                         contentDescription = "Thinking effort"
-                        progressBarRangeInfo = ProgressBarRangeInfo(displayed.value, 0f..4f, 3)
+                        progressBarRangeInfo = ProgressBarRangeInfo(displayed.floatValue, 0f..4f, 3)
                         if (!enabled) disabled()
                         setProgress { value ->
                             if (enabled) choose(value)
@@ -141,13 +176,27 @@ internal fun AnimatedThinkingEffortSelector(
                     val logical = start + length * value / 4f
                     return if (rtl) size.width - logical else logical
                 }
-                drawLine(inactive.copy(alpha = alpha), Offset(x(0f), y), Offset(x(4f), y), 6.dp.toPx(), StrokeCap.Round)
-                drawLine(primary.copy(alpha = alpha), Offset(x(0f), y), Offset(x(displayed.value), y), 6.dp.toPx(), StrokeCap.Round)
+                val outerHeight = 64.dp.toPx()
+                val top = (size.height - outerHeight) / 2f
+                val inset = 8.dp.toPx()
+                val innerHeight = outerHeight - 2f * inset
+                val radius = minOf(innerHeight / 2f, start - inset)
+                val centre = x(displayed.floatValue)
+                drawRoundRect(inactive.copy(alpha = alpha), Offset(0f, top), Size(size.width, outerHeight), CornerRadius(outerHeight / 2f))
+                drawRoundRect(outline.copy(alpha = 0.5f * alpha), Offset(0.5.dp.toPx(), top + 0.5.dp.toPx()),
+                    Size(size.width - 1.dp.toPx(), outerHeight - 1.dp.toPx()), CornerRadius(outerHeight / 2f), style = Stroke(1.dp.toPx()))
+                val fillLeft = if (rtl) centre - radius else inset
+                val fillRight = if (rtl) size.width - inset else centre + radius
+                drawRoundRect(primary.copy(alpha = alpha), Offset(fillLeft, top + inset),
+                    Size((fillRight - fillLeft).coerceAtLeast(innerHeight), innerHeight), CornerRadius(radius))
                 repeat(5) { index ->
-                    drawCircle(primary.copy(alpha = alpha), 2.dp.toPx(), Offset(x(index.toFloat()), y))
+                    val covered = index <= displayed.floatValue
+                    val tickColor = if (covered) onFill else dot
+                    drawCircle(tickColor.copy(alpha = (if (covered) 0.5f else 0.38f) * alpha), 4.dp.toPx(), Offset(x(index.toFloat()), y))
                 }
-                drawCircle(primary.copy(alpha = alpha), 10.dp.toPx(), Offset(x(displayed.value), y))
-                drawCircle(onPrimary.copy(alpha = alpha), 4.dp.toPx(), Offset(x(displayed.value), y))
+                drawCircle(Color.Black.copy(alpha = 0.08f * alpha), 18.dp.toPx(), Offset(centre, y + 1.dp.toPx()))
+                drawCircle(thumb.copy(alpha = alpha), 17.dp.toPx(), Offset(centre, y))
+                drawCircle(outline.copy(alpha = 0.4f * alpha), 17.dp.toPx(), Offset(centre, y), style = Stroke(0.5.dp.toPx()))
             }
             Row(Modifier.fillMaxWidth()) {
                 ThinkingEffort.entries.forEach { effort ->
@@ -156,8 +205,7 @@ internal fun AnimatedThinkingEffortSelector(
                         Box(
                             Modifier.fillMaxWidth().padding(horizontal = 3.dp).height(40.dp).testTag("effort-${effort.id}")
                                 .clip(AppShapeTokens.Pill)
-                                .background(if (state.selected == effort && enabled) primary.copy(alpha = 0.08f) else Color.Transparent)
-                                .clickable(
+                                                                .clickable(
                                     interactionSource = interaction,
                                     indication = ripple(bounded = true),
                                     enabled = enabled,
@@ -174,11 +222,7 @@ internal fun AnimatedThinkingEffortSelector(
                                 fontWeight = FontWeight.SemiBold,
                                 color = if (state.selected == effort && enabled) primary else MaterialTheme.colorScheme.onSurface
                             )
-                            if (state.selected == effort && enabled) {
-                                Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp)
-                                    .size(width = 12.dp, height = 2.dp)
-                                    .background(primary, AppShapeTokens.Pill))
-                            }
+
                         }
                     }
                 }

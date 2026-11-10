@@ -1,5 +1,8 @@
 package com.afyzfur.afyzhub.ui.chat
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -14,10 +17,12 @@ class ThinkingEffortSelectorTest {
     @get:Rule val compose = createComposeRule()
     private val saved = mutableListOf<ThinkingEffort>()
 
-    private fun show() {
+    private fun show(enabled: Boolean = true, rtl: Boolean = false) {
         compose.setContent {
             MaterialTheme {
-                AnimatedThinkingEffortSelector(ThinkingEffort.LOW, true) { saved.add(it) }
+                CompositionLocalProvider(LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+                    AnimatedThinkingEffortSelector(ThinkingEffort.LOW, enabled) { saved.add(it) }
+                }
             }
         }
         compose.mainClock.autoAdvance = false
@@ -138,5 +143,37 @@ class ThinkingEffortSelectorTest {
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
         compose.mainClock.advanceTimeBy(200)
         assertEquals(4f, progress(), 0.02f)
+    }
+
+    @Test fun capsuleHasLargeTouchTrackAndLabelsStayAligned() {
+        show()
+        val track = compose.onNodeWithTag("effort-track").fetchSemanticsNode().boundsInRoot
+        val label = compose.onNodeWithTag("effort-low").fetchSemanticsNode().boundsInRoot
+        assertTrue("Capsule needs more height than the old thin track", track.height > label.height * 1.5f)
+        ThinkingEffort.entries.forEachIndexed { index, effort ->
+            val bounds = compose.onNodeWithTag("effort-${effort.id}").fetchSemanticsNode().boundsInRoot
+            assertEquals(track.left + track.width * (0.1f + 0.2f * index), bounds.center.x, 1.5f)
+        }
+    }
+
+    @Test fun disabledCapsuleCannotChangeSelection() {
+        show(enabled = false)
+        compose.onNodeWithTag("effort-track").performTouchInput {
+            click(Offset(width * 0.9f, height / 2f))
+        }
+        compose.mainClock.advanceTimeBy(400)
+        compose.runOnIdle { assertTrue(saved.isEmpty()) }
+        assertEquals(0f, progress(), 0.01f)
+        compose.onNodeWithTag("effort-max").assertIsNotEnabled()
+    }
+
+    @Test fun rtlCapsuleMapsLeftEndpointToMaximum() {
+        show(rtl = true)
+        compose.onNodeWithTag("effort-track").performTouchInput {
+            click(Offset(width * 0.1f, height / 2f))
+        }
+        compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
+        compose.mainClock.advanceTimeBy(400)
+        assertEquals(4f, progress(), 0.01f)
     }
 }
