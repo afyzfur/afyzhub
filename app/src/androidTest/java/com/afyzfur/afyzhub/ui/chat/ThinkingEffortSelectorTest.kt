@@ -262,4 +262,21 @@ class ThinkingEffortSelectorTest {
 
     @Test fun darkThemeSelectedThumbIsBrightAndMaximumFillReachesEnd() { checkBrightEndpoint(true) }
     @Test fun lightThemeSelectedThumbIsBrightAndMaximumFillReachesEnd() { checkBrightEndpoint(false) }
+
+    @Test fun clickMovesEqualDistancesInEqualTimeWithoutEasing() {
+        show()
+        compose.onNodeWithTag("effort-max").performClick()
+        compose.mainClock.advanceTimeBy(32)
+        val positions = mutableListOf(progress())
+        repeat(3) {
+            compose.mainClock.advanceTimeBy(32)
+            positions.add(progress())
+        }
+        positions.zipWithNext().forEach { (from, to) ->
+            assertEquals("Linear travel must not accelerate or decelerate", 0.64f, to - from, 0.06f)
+        }
+        compose.mainClock.advanceTimeBy(300)
+        assertEquals(4f, progress(), 0.01f)
+        compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
+    }
 }

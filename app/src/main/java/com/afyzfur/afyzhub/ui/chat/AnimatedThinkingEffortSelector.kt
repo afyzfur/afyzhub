@@ -1,6 +1,5 @@
 package com.afyzfur.afyzhub.ui.chat
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -99,7 +98,7 @@ internal fun AnimatedThinkingEffortSelector(
                     }
                     elapsed += dt
                     val fraction = (elapsed / 0.20f).coerceIn(0f, 1f)
-                    displayed.floatValue = clickStart + (target - clickStart) * FastOutSlowInEasing.transform(fraction)
+                    displayed.floatValue = clickStart + (target - clickStart) * fraction
                     velocity = 0f
                 }
                 wasDragging = dragging
