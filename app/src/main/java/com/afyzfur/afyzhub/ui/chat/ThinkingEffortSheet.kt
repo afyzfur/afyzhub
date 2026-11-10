@@ -1,7 +1,6 @@
 package com.afyzfur.afyzhub.ui.chat
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,7 +55,8 @@ fun ThinkingEffortSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = sheetShape,
-        modifier = Modifier.clip(sheetShape).testTag("thinking-sheet"),
+        // Clip via Surface.shape, after the sheet translation, not around the outer layout.
+        modifier = Modifier.testTag("thinking-sheet"),
         tonalElevation = 0.dp,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {

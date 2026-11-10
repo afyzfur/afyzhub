@@ -1,5 +1,15 @@
 package com.afyzfur.afyzhub.ui.chat
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Button
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -175,5 +185,49 @@ class ThinkingEffortSelectorTest {
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
         compose.mainClock.advanceTimeBy(400)
         assertEquals(4f, progress(), 0.01f)
+    }
+
+    @Test fun openedSheetIsVisiblePaintedAndInteractiveAfterReopening() {
+        val trackColor = Color(0xFFCBD5E1)
+        compose.setContent {
+            MaterialTheme(colorScheme = lightColorScheme(surfaceContainerHighest = trackColor)) {
+                val opened = remember { mutableStateOf(false) }
+                val effort = remember { mutableStateOf(ThinkingEffort.LOW) }
+                Surface(Modifier.fillMaxSize(), color = Color.White) {
+                    Button(onClick = { opened.value = true }) { Text("Open effort") }
+                }
+                if (opened.value) {
+                    ThinkingEffortSheet(
+                        thinkingEnabled = true,
+                        current = effort.value,
+                        thinkingGuidanceEnabled = false,
+                        onThinkingEnabledChange = {},
+                        onEffortChange = { effort.value = it; saved.add(it) },
+                        onGuidanceEnabledChange = {},
+                        onDismiss = { opened.value = false }
+                    )
+                }
+            }
+        }
+        repeat(2) {
+            compose.onNodeWithText("Open effort").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag("thinking-sheet").assertIsDisplayed()
+            val track = compose.onNodeWithTag("effort-track").assertIsDisplayed()
+            // Semantics alone can exist while an ancestor clip suppresses every painted pixel.
+            val image = track.captureToImage().toPixelMap()
+            val pixel = image[(image.width * 0.98f).toInt(), image.height / 2]
+            assertEquals("The actual capsule must be painted, not just the dimming scrim", trackColor.red, pixel.red, 0.03f)
+            assertEquals(trackColor.green, pixel.green, 0.03f)
+            assertEquals(trackColor.blue, pixel.blue, 0.03f)
+            compose.onNodeWithTag("effort-max").assertIsDisplayed().performClick()
+            compose.runOnIdle { assertEquals(ThinkingEffort.MAX, saved.last()) }
+            // Swipe the real modal down so the next iteration exercises its entry animation again.
+            compose.onNodeWithTag("thinking-sheet").performTouchInput {
+                swipe(Offset(width / 2f, height * 0.04f), Offset(width / 2f, height * 0.96f), 200)
+            }
+            compose.waitForIdle()
+            compose.onNodeWithTag("thinking-sheet").assertDoesNotExist()
+        }
     }
 }
