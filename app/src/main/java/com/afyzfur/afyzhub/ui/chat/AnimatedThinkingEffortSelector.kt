@@ -68,20 +68,20 @@ internal fun AnimatedThinkingEffortSelector(
         var velocity = 0f
         while (currentCoroutineContext().isActive) {
             snapshotFlow { state.target }.first { abs(it - displayed.floatValue) > 0.001f }
-            var previous = withFrameNanos { it }
+            var previous = 0L
             var clickStart = displayed.floatValue
             var clickTarget = state.target
             var elapsed = 0f
             var wasDragging = state.followingDrag
             while (currentCoroutineContext().isActive) {
                 val now = withFrameNanos { it }
-                val dt = ((now - previous) / 1_000_000_000f).coerceIn(0f, 0.05f)
+                val dt = if (previous == 0L) 1f / 60f else ((now - previous) / 1_000_000_000f).coerceIn(0f, 0.05f)
                 previous = now
                 val target = state.target
                 val dragging = state.followingDrag
                 if (dragging) {
                     // Analytic critically damped follow; stable across refresh rates and pointer events.
-                    val omega = 85f
+                    val omega = 100f
                     val offset = displayed.floatValue - target
                     val coefficient = velocity + omega * offset
                     val decay = exp(-omega * dt)
@@ -94,13 +94,13 @@ internal fun AnimatedThinkingEffortSelector(
                         elapsed = 0f
                     }
                     elapsed += dt
-                    val fraction = (elapsed / 0.22f).coerceIn(0f, 1f)
+                    val fraction = (elapsed / 0.20f).coerceIn(0f, 1f)
                     displayed.floatValue = clickStart + (target - clickStart) * FastOutSlowInEasing.transform(fraction)
                     velocity = 0f
                 }
                 wasDragging = dragging
                 if ((dragging && abs(displayed.floatValue - target) < 0.002f && abs(velocity) < 0.03f) ||
-                    (!dragging && elapsed >= 0.22f)) {
+                    (!dragging && elapsed >= 0.20f)) {
                     displayed.floatValue = target
                     velocity = 0f
                     break
@@ -125,7 +125,7 @@ internal fun AnimatedThinkingEffortSelector(
 
     Column(Modifier.fillMaxWidth()) {
             Canvas(
-                Modifier.fillMaxWidth().height(76.dp).testTag("effort-track")
+                Modifier.fillMaxWidth().height(60.dp).testTag("effort-track")
                     .semantics {
                         contentDescription = "Thinking effort"
                         progressBarRangeInfo = ProgressBarRangeInfo(displayed.floatValue, 0f..4f, 3)
@@ -176,9 +176,9 @@ internal fun AnimatedThinkingEffortSelector(
                     val logical = start + length * value / 4f
                     return if (rtl) size.width - logical else logical
                 }
-                val outerHeight = 64.dp.toPx()
+                val outerHeight = 44.dp.toPx()
                 val top = (size.height - outerHeight) / 2f
-                val inset = 8.dp.toPx()
+                val inset = 5.dp.toPx()
                 val innerHeight = outerHeight - 2f * inset
                 val radius = minOf(innerHeight / 2f, start - inset)
                 val centre = x(displayed.floatValue)
@@ -192,11 +192,11 @@ internal fun AnimatedThinkingEffortSelector(
                 repeat(5) { index ->
                     val covered = index <= displayed.floatValue
                     val tickColor = if (covered) onFill else dot
-                    drawCircle(tickColor.copy(alpha = (if (covered) 0.5f else 0.38f) * alpha), 4.dp.toPx(), Offset(x(index.toFloat()), y))
+                    drawCircle(tickColor.copy(alpha = (if (covered) 0.5f else 0.38f) * alpha), 3.dp.toPx(), Offset(x(index.toFloat()), y))
                 }
-                drawCircle(Color.Black.copy(alpha = 0.08f * alpha), 18.dp.toPx(), Offset(centre, y + 1.dp.toPx()))
-                drawCircle(thumb.copy(alpha = alpha), 17.dp.toPx(), Offset(centre, y))
-                drawCircle(outline.copy(alpha = 0.4f * alpha), 17.dp.toPx(), Offset(centre, y), style = Stroke(0.5.dp.toPx()))
+                drawCircle(Color.Black.copy(alpha = 0.08f * alpha), 13.dp.toPx(), Offset(centre, y + 1.dp.toPx()))
+                drawCircle(thumb.copy(alpha = alpha), 12.5.dp.toPx(), Offset(centre, y))
+                drawCircle(outline.copy(alpha = 0.4f * alpha), 12.5.dp.toPx(), Offset(centre, y), style = Stroke(0.5.dp.toPx()))
             }
             Row(Modifier.fillMaxWidth()) {
                 ThinkingEffort.entries.forEach { effort ->

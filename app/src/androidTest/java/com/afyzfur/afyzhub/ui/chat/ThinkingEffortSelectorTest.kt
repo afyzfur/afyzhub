@@ -145,11 +145,11 @@ class ThinkingEffortSelectorTest {
         assertEquals(4f, progress(), 0.02f)
     }
 
-    @Test fun capsuleHasLargeTouchTrackAndLabelsStayAligned() {
+    @Test fun compactCapsuleKeepsTouchTrackAndLabelsAligned() {
         show()
         val track = compose.onNodeWithTag("effort-track").fetchSemanticsNode().boundsInRoot
         val label = compose.onNodeWithTag("effort-low").fetchSemanticsNode().boundsInRoot
-        assertTrue("Capsule needs more height than the old thin track", track.height > label.height * 1.5f)
+        assertEquals("Compact track retains a 60dp touch height", 1.5f, track.height / label.height, 0.03f)
         ThinkingEffort.entries.forEachIndexed { index, effort ->
             val bounds = compose.onNodeWithTag("effort-${effort.id}").fetchSemanticsNode().boundsInRoot
             assertEquals(track.left + track.width * (0.1f + 0.2f * index), bounds.center.x, 1.5f)

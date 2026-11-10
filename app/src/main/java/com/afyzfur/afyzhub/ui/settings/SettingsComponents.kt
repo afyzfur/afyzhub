@@ -1,5 +1,7 @@
 package com.afyzfur.afyzhub.ui.settings
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.ripple
@@ -456,8 +458,13 @@ fun <T> SettingsDropdownItem(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {
-                options.forEach { option ->
+                // Clip the content itself, not only the popup background: ripple is drawn by each row.
+                Column(Modifier.clip(MaterialTheme.shapes.extraSmall)) {
+                options.forEachIndexed { index, option ->
                     DropdownMenuItem(
+                        modifier = Modifier
+                            .testTag("settings-dropdown-option-$index")
+                            .clip(settingsDropdownOptionShape(index, options.size)),
                         text = { Text(label(option)) },
                         onClick = {
                             onSelect(option)
@@ -476,10 +483,19 @@ fun <T> SettingsDropdownItem(
                         }
                     )
                 }
+                }
             }
         }
     }
 }
+
+/** Match only the exposed ends of a menu; interior rows remain flush. */
+internal fun settingsDropdownOptionShape(index: Int, count: Int): RoundedCornerShape = RoundedCornerShape(
+    topStart = if (index == 0) 20.dp else 0.dp,
+    topEnd = if (index == 0) 20.dp else 0.dp,
+    bottomStart = if (index == count - 1) 20.dp else 0.dp,
+    bottomEnd = if (index == count - 1) 20.dp else 0.dp
+)
 
 /**
  * 单选条目。用于同一分组内的互斥选项，例如颜色模式。
