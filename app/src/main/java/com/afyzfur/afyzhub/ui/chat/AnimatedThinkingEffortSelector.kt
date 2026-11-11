@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 import kotlin.math.abs
-import kotlin.math.exp
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
@@ -68,7 +67,6 @@ internal fun AnimatedThinkingEffortSelector(
     val displayed = remember { mutableFloatStateOf(current.ordinal.toFloat()) }
     // One frame loop owns motion. Retargeting a drag never cancels/restarts a coroutine.
     LaunchedEffect(state) {
-        var velocity = 0f
         while (currentCoroutineContext().isActive) {
             snapshotFlow { state.target }.first { abs(it - displayed.floatValue) > 0.001f }
             var previous = 0L
@@ -83,13 +81,8 @@ internal fun AnimatedThinkingEffortSelector(
                 val target = state.target
                 val dragging = state.followingDrag
                 if (dragging) {
-                    // Analytic critically damped follow; stable across refresh rates and pointer events.
-                    val omega = 100f
-                    val offset = displayed.floatValue - target
-                    val coefficient = velocity + omega * offset
-                    val decay = exp(-omega * dt)
-                    displayed.floatValue = (target + (offset + coefficient * dt) * decay).coerceIn(0f, 4f)
-                    velocity = (velocity - omega * coefficient * dt) * decay
+                    // Pointer events own drag rendering; no spring or extra frame of pursuit.
+                    displayed.floatValue = target
                 } else {
                     if (wasDragging || target != clickTarget) {
                         clickStart = displayed.floatValue
@@ -99,13 +92,11 @@ internal fun AnimatedThinkingEffortSelector(
                     elapsed += dt
                     val fraction = (elapsed / 0.20f).coerceIn(0f, 1f)
                     displayed.floatValue = clickStart + (target - clickStart) * fraction
-                    velocity = 0f
                 }
                 wasDragging = dragging
-                if ((dragging && abs(displayed.floatValue - target) < 0.002f && abs(velocity) < 0.03f) ||
+                if (dragging ||
                     (!dragging && elapsed >= 0.20f)) {
                     displayed.floatValue = target
-                    velocity = 0f
                     break
                 }
             }
@@ -166,9 +157,12 @@ internal fun AnimatedThinkingEffortSelector(
                                     if (!dragged && (change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
                                         dragged = true
                                     }
-                                    if (dragged) state.preview(latest)
+                                    if (dragged) {
+                                        state.preview(latest)
+                                        displayed.floatValue = latest
+                                    }
                                 }
-                                if (released) choose(latest, fromDrag = dragged) else state.cancel()
+                                if (released) choose(latest) else state.cancel()
                             }
                         }
                     }

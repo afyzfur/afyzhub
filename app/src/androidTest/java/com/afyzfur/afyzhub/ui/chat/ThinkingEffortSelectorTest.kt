@@ -94,7 +94,7 @@ class ThinkingEffortSelectorTest {
         }
     }
 
-    @Test fun dragCommitsOnceAtReleaseAndDisplayFollowsWithAnimation() {
+    @Test fun dragCommitsOnceAtReleaseAndDisplayFollowsPointer() {
         show()
         compose.onNodeWithTag("effort-track").performTouchInput {
             down(Offset(width * 0.01f, height / 2f))
@@ -102,7 +102,7 @@ class ThinkingEffortSelectorTest {
             up()
         }
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
-        assertTrue(progress() < 0.1f)
+        assertEquals(4f, progress(), 0.01f)
         compose.mainClock.advanceTimeBy(600)
         assertEquals(4f, progress(), 0.01f)
     }
@@ -291,5 +291,24 @@ class ThinkingEffortSelectorTest {
         compose.mainClock.advanceTimeBy(300)
         assertEquals(0f, progress(), 0.01f)
         compose.runOnIdle { assertTrue(saved.isEmpty()) }
+    }
+
+    @Test fun dragTracksForwardAndReverseWithoutWaitingForAnimationFrames() {
+        show()
+        val track = compose.onNodeWithTag("effort-track")
+        track.performTouchInput { down(Offset(endpointPx, height / 2f)) }
+        listOf(1f, 2f, 3f, 4f, 3f, 1f, 0f).forEach { value ->
+            track.performTouchInput {
+                moveTo(Offset(endpointPx + (width - 2f * endpointPx) * value / 4f, height / 2f))
+            }
+            assertEquals("Dragging must follow input even with the animation clock paused", value, progress(), 0.01f)
+            compose.runOnIdle { assertTrue(saved.isEmpty()) }
+        }
+        track.performTouchInput { moveTo(Offset(endpointPx + (width - 2f * endpointPx) * 0.6f, height / 2f)) }
+        assertEquals(2.4f, progress(), 0.01f)
+        track.performTouchInput { up() }
+        compose.runOnIdle { assertEquals(listOf(ThinkingEffort.HIGH), saved) }
+        compose.mainClock.advanceTimeBy(300)
+        assertEquals(2f, progress(), 0.01f)
     }
 }
