@@ -266,14 +266,14 @@ class ThinkingEffortSelectorTest {
     @Test fun clickMovesEqualDistancesInEqualTimeWithoutEasing() {
         show()
         compose.onNodeWithTag("effort-max").performClick()
-        compose.mainClock.advanceTimeBy(32)
+        compose.mainClock.advanceTimeBy(16)
         val positions = mutableListOf(progress())
         repeat(3) {
-            compose.mainClock.advanceTimeBy(32)
+            compose.mainClock.advanceTimeBy(16)
             positions.add(progress())
         }
         positions.zipWithNext().forEach { (from, to) ->
-            assertEquals("Linear travel must not accelerate or decelerate", 0.64f, to - from, 0.06f)
+            assertEquals("Linear travel must not accelerate or decelerate", 4f * 0.016f / 0.12f, to - from, 0.06f)
         }
         compose.mainClock.advanceTimeBy(300)
         assertEquals(4f, progress(), 0.01f)
@@ -335,5 +335,21 @@ class ThinkingEffortSelectorTest {
         compose.mainClock.advanceTimeBy(64)
         assertEquals(1f, progress(), 0.01f)
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MEDIUM), saved) }
+    }
+
+    @Test fun longClickFinishesWithinOneHundredSixtyMillisecondsInBothDirections() {
+        show()
+        compose.onNodeWithTag("effort-max").performClick()
+        assertTrue(progress() < 0.1f)
+        compose.mainClock.advanceTimeBy(64)
+        assertTrue("Long click keeps visible linear travel", progress() > 0.5f && progress() < 4f)
+        compose.mainClock.advanceTimeBy(96)
+        assertEquals(4f, progress(), 0.01f)
+        compose.onNodeWithTag("effort-low").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        assertTrue(progress() > 0f && progress() < 3.5f)
+        compose.mainClock.advanceTimeBy(96)
+        assertEquals(0f, progress(), 0.01f)
+        compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX, ThinkingEffort.LOW), saved) }
     }
 }

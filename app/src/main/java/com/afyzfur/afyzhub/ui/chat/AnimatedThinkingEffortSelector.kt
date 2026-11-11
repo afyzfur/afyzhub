@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -73,7 +74,7 @@ internal fun AnimatedThinkingEffortSelector(
             var startedAt = 0L
             var clickStart = displayed.floatValue
             var clickTarget = state.target
-            var duration = (abs(clickTarget - clickStart) * 0.05f).coerceIn(0.04f, 0.20f)
+            var duration = (abs(clickTarget - clickStart) * 0.05f).coerceIn(0.04f, 0.12f)
             var wasDragging = state.followingDrag
             while (currentCoroutineContext().isActive) {
                 val now = withFrameNanos { it }
@@ -90,7 +91,7 @@ internal fun AnimatedThinkingEffortSelector(
                         clickTarget = target
                         startedAt = now
                         elapsed = 0f
-                        duration = (abs(target - clickStart) * 0.05f).coerceIn(0.04f, 0.20f)
+                        duration = (abs(target - clickStart) * 0.05f).coerceIn(0.04f, 0.12f)
                     }
                     val fraction = (elapsed / duration).coerceIn(0f, 1f)
                     displayed.floatValue = clickStart + (target - clickStart) * fraction
@@ -121,7 +122,7 @@ internal fun AnimatedThinkingEffortSelector(
 
     Column(Modifier.fillMaxWidth()) {
             Canvas(
-                Modifier.fillMaxWidth().height(60.dp).testTag("effort-track")
+                Modifier.fillMaxWidth().height(60.dp).graphicsLayer().testTag("effort-track")
                     .semantics {
                         contentDescription = "Thinking effort"
                         progressBarRangeInfo = ProgressBarRangeInfo(displayed.floatValue, 0f..4f, 3)
