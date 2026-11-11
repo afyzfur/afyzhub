@@ -311,4 +311,29 @@ class ThinkingEffortSelectorTest {
         compose.mainClock.advanceTimeBy(300)
         assertEquals(2f, progress(), 0.01f)
     }
+
+    @Test fun offCentreTapDoesNotRestartMotionOnRelease() {
+        show()
+        val track = compose.onNodeWithTag("effort-track")
+        track.performTouchInput {
+            down(Offset(endpointPx + (width - 2f * endpointPx) * 0.9f, height / 2f))
+        }
+        compose.mainClock.advanceTimeBy(160)
+        assertTrue(progress() > 2.5f)
+        track.performTouchInput { up() }
+        compose.mainClock.advanceTimeBy(80)
+        assertEquals("Release must keep the target chosen on press", 4f, progress(), 0.01f)
+        compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
+    }
+
+    @Test fun adjacentClickSettlesQuicklyWithoutTeleporting() {
+        show()
+        compose.onNodeWithTag("effort-medium").performClick()
+        assertTrue(progress() < 0.1f)
+        compose.mainClock.advanceTimeBy(32)
+        assertTrue(progress() > 0f && progress() <= 1f)
+        compose.mainClock.advanceTimeBy(64)
+        assertEquals(1f, progress(), 0.01f)
+        compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MEDIUM), saved) }
+    }
 }

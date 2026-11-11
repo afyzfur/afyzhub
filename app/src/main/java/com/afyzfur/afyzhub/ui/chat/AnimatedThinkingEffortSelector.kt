@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
+import kotlin.math.roundToInt
 import kotlin.math.abs
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.first
@@ -69,15 +70,15 @@ internal fun AnimatedThinkingEffortSelector(
     LaunchedEffect(state) {
         while (currentCoroutineContext().isActive) {
             snapshotFlow { state.target }.first { abs(it - displayed.floatValue) > 0.001f }
-            var previous = 0L
+            var startedAt = 0L
             var clickStart = displayed.floatValue
             var clickTarget = state.target
-            var elapsed = 0f
+            var duration = (abs(clickTarget - clickStart) * 0.05f).coerceIn(0.04f, 0.20f)
             var wasDragging = state.followingDrag
             while (currentCoroutineContext().isActive) {
                 val now = withFrameNanos { it }
-                val dt = if (previous == 0L) 1f / 60f else ((now - previous) / 1_000_000_000f).coerceIn(0f, 0.05f)
-                previous = now
+                if (startedAt == 0L) startedAt = now - 16_666_667L
+                var elapsed = (now - startedAt) / 1_000_000_000f
                 val target = state.target
                 val dragging = state.followingDrag
                 if (dragging) {
@@ -87,15 +88,16 @@ internal fun AnimatedThinkingEffortSelector(
                     if (wasDragging || target != clickTarget) {
                         clickStart = displayed.floatValue
                         clickTarget = target
+                        startedAt = now
                         elapsed = 0f
+                        duration = (abs(target - clickStart) * 0.05f).coerceIn(0.04f, 0.20f)
                     }
-                    elapsed += dt
-                    val fraction = (elapsed / 0.20f).coerceIn(0f, 1f)
+                    val fraction = (elapsed / duration).coerceIn(0f, 1f)
                     displayed.floatValue = clickStart + (target - clickStart) * fraction
                 }
                 wasDragging = dragging
                 if (dragging ||
-                    (!dragging && elapsed >= 0.20f)) {
+                    (!dragging && elapsed >= duration)) {
                     displayed.floatValue = target
                     break
                 }
@@ -141,7 +143,7 @@ internal fun AnimatedThinkingEffortSelector(
                                 }
                                 down.consume()
                                 var latest = valueAt(down.position.x)
-                                state.aim(latest)
+                                state.aim(latest.roundToInt().toFloat())
                                 var dragged = false
                                 var released = false
                                 while (true) {
