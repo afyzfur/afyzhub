@@ -25,6 +25,11 @@ class SettingsDropdownRippleTest {
             }
         }
         compose.onNodeWithText("System").performClick()
+        val menu = compose.onNodeWithTag("settings-dropdown-content").fetchSemanticsNode().boundsInRoot
+        val first = compose.onNodeWithTag("settings-dropdown-option-0").fetchSemanticsNode().boundsInRoot
+        val last = compose.onNodeWithTag("settings-dropdown-option-2").fetchSemanticsNode().boundsInRoot
+        assertEquals("No blank strip above first ripple", menu.top, first.top, 1f)
+        assertEquals("No blank strip below last ripple", menu.bottom, last.bottom, 1f)
         compose.onNodeWithTag("settings-dropdown-option-2").performClick()
         compose.runOnIdle { assertEquals(listOf("Dark"), selected) }
         compose.onNodeWithText("System").performClick()

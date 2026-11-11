@@ -19,6 +19,12 @@ internal class ThinkingEffortControlState(initial: ThinkingEffort) {
     private var interacting = false
     private var persisted = initial
 
+    fun aim(value: Float) {
+        interacting = true
+        followingDrag = false
+        target = value.coerceIn(0f, 4f)
+    }
+
     fun preview(value: Float) {
         interacting = true
         followingDrag = true

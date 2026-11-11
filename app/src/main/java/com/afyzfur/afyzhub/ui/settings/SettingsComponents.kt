@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.ripple
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
@@ -32,7 +33,15 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -454,12 +463,21 @@ fun <T> SettingsDropdownItem(
                     )
                 }
             }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                // Clip the content itself, not only the popup background: ripple is drawn by each row.
-                Column(Modifier.clip(MaterialTheme.shapes.extraSmall)) {
+            if (expanded) {
+                Popup(
+                    popupPositionProvider = remember { SettingsMenuPositionProvider() },
+                    onDismissRequest = { expanded = false },
+                    properties = PopupProperties(focusable = true)
+                ) {
+                Surface(
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shadowElevation = 3.dp
+                ) {
+                // No padding outside the rows: their ripples reach the menu's top and bottom.
+                Column(Modifier.width(IntrinsicSize.Max).heightIn(max = 320.dp)
+                    .clip(MaterialTheme.shapes.extraSmall).testTag("settings-dropdown-content")
+                    .verticalScroll(rememberScrollState())) {
                 options.forEachIndexed { index, option ->
                     DropdownMenuItem(
                         modifier = Modifier
@@ -484,8 +502,30 @@ fun <T> SettingsDropdownItem(
                     )
                 }
                 }
+                }
+                }
             }
         }
+    }
+}
+
+/** Anchor below the button, flip above it when needed, and stay inside the window. */
+internal class SettingsMenuPositionProvider : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize
+    ): IntOffset {
+        val x = if (layoutDirection == LayoutDirection.Ltr) anchorBounds.right - popupContentSize.width
+            else anchorBounds.left
+        val below = anchorBounds.bottom
+        val y = if (below + popupContentSize.height <= windowSize.height) below
+            else anchorBounds.top - popupContentSize.height
+        return IntOffset(
+            x.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)),
+            y.coerceIn(0, (windowSize.height - popupContentSize.height).coerceAtLeast(0))
+        )
     }
 }
 

@@ -150,6 +150,7 @@ internal fun AnimatedThinkingEffortSelector(
                                 }
                                 down.consume()
                                 var latest = valueAt(down.position.x)
+                                state.aim(latest)
                                 var dragged = false
                                 var released = false
                                 while (true) {

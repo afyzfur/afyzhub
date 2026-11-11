@@ -279,4 +279,17 @@ class ThinkingEffortSelectorTest {
         assertEquals(4f, progress(), 0.01f)
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX), saved) }
     }
+
+    @Test fun trackStartsMovingOnPressAndCancelDoesNotPersist() {
+        show()
+        val track = compose.onNodeWithTag("effort-track")
+        track.performTouchInput { down(Offset(width * 0.99f, height / 2f)) }
+        compose.mainClock.advanceTimeBy(80)
+        assertTrue("Motion begins while the finger is still down", progress() > 0.5f)
+        compose.runOnIdle { assertTrue(saved.isEmpty()) }
+        track.performTouchInput { cancel() }
+        compose.mainClock.advanceTimeBy(300)
+        assertEquals(0f, progress(), 0.01f)
+        compose.runOnIdle { assertTrue(saved.isEmpty()) }
+    }
 }
