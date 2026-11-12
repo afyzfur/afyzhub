@@ -352,4 +352,5 @@ class ThinkingEffortSelectorTest {
         assertEquals(0f, progress(), 0.01f)
         compose.runOnIdle { assertEquals(listOf(ThinkingEffort.MAX, ThinkingEffort.LOW), saved) }
     }
+
 }

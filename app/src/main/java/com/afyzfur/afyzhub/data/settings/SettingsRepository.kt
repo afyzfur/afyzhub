@@ -15,6 +15,8 @@ import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.ui.theme.ThemePalette
 import kotlinx.serialization.json.Json
 import com.afyzfur.afyzhub.util.Constants
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -108,7 +110,7 @@ class SettingsRepository(
      */
     val apiProfilesFlow: Flow<ApiProfileStore> = dataStore.data.map { prefs ->
         readProfiles(prefs)
-    }
+    }.flowOn(Dispatchers.Default)
 
     val apiProfiles: StateFlow<ApiProfileStore> = apiProfilesFlow.stateIn(
         scope = scope,
@@ -233,7 +235,7 @@ class SettingsRepository(
                 systemPrompt = prefs[systemPromptKey].orEmpty()
             )
         }
-    }
+    }.flowOn(Dispatchers.Default)
 
     /** 常驻缓存，供拦截器与传输层同步取值。 */
     val settings: StateFlow<AppSettings> = settingsFlow.stateIn(

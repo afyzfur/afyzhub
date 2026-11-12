@@ -28,7 +28,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -122,7 +121,7 @@ internal fun AnimatedThinkingEffortSelector(
 
     Column(Modifier.fillMaxWidth()) {
             Canvas(
-                Modifier.fillMaxWidth().height(60.dp).graphicsLayer().testTag("effort-track")
+                Modifier.fillMaxWidth().height(60.dp).testTag("effort-track")
                     .semantics {
                         contentDescription = "Thinking effort"
                         progressBarRangeInfo = ProgressBarRangeInfo(displayed.floatValue, 0f..4f, 3)

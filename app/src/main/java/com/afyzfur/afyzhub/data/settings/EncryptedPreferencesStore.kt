@@ -3,6 +3,9 @@ package com.afyzfur.afyzhub.data.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +52,7 @@ internal class EncryptedPreferencesStore(
         return Decoded(plain, failed)
     }
 
-    override val data: Flow<Preferences> = delegate.data.map { decoded(it).preferences }
+    override val data: Flow<Preferences> = delegate.data.map { decoded(it).preferences }.flowOn(Dispatchers.IO)
 
     override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
         val written = delegate.updateData { stored ->
@@ -78,7 +81,7 @@ internal class EncryptedPreferencesStore(
                 }
             }
         }
-        return decoded(written).preferences
+        return withContext(Dispatchers.IO) { decoded(written).preferences }
     }
 
     /** Destructive recovery is exposed only behind a UI confirmation. */

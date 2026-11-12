@@ -121,4 +121,22 @@ class EncryptedPreferencesStoreTest {
         try { EncryptedPreferencesStore(raw, cancelled).data.first(); fail("must cancel") }
         catch (_: kotlinx.coroutines.CancellationException) { assertEquals("enc:v1:value", raw.data.value[key]) }
     }
+
+    @Test fun uiCollectorNeverDecryptsOnCallerThread() = kotlinx.coroutines.runBlocking {
+        val caller = Thread.currentThread()
+        val decryptThreads = java.util.concurrent.ConcurrentLinkedQueue<Thread>()
+        val tracked = object : PreferenceCipher {
+            override fun encrypt(value: String) = "enc:v1:" + value
+            override fun decrypt(value: String): String {
+                decryptThreads.add(Thread.currentThread())
+                return value.removePrefix("enc:v1:")
+            }
+        }
+        val key = stringPreferencesKey("api_key_openai")
+        val raw = MemoryStore(preferencesOf(key to "enc:v1:secret"))
+        val store = EncryptedPreferencesStore(raw, tracked)
+        assertEquals("secret", store.data.first()[key])
+        assertTrue(decryptThreads.isNotEmpty())
+        assertTrue("A UI collector must not perform keystore work", decryptThreads.none { it === caller })
+    }
 }
