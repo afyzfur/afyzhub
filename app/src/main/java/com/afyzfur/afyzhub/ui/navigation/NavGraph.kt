@@ -13,6 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -86,9 +89,11 @@ fun NavGraph() {
         org.koin.java.KoinJavaComponent.get(
             com.afyzfur.afyzhub.data.settings.SettingsRepository::class.java
         )
-    val browserSettings by settingsRepo.settings.collectAsState()
-    // StateFlow 总有值, 但为类型安全仍判空兜底
-    val browserEnabled: Boolean = browserSettings?.inAppBrowserEnabled ?: true
+    // Only this field: unrelated saves such as thinking effort must not recompose the NavHost.
+    val browserEnabledFlow = remember(settingsRepo) {
+        settingsRepo.settings.map { it.inAppBrowserEnabled }.distinctUntilChanged()
+    }
+    val browserEnabled by browserEnabledFlow.collectAsState(initial = settingsRepo.settings.value.inAppBrowserEnabled)
     val uiPreferences by settingsRepo.uiPreferences.collectAsState()
     // AnimatedContent remembers transforms for existing entries. Reading a new mode
     // alone cannot clear the old alpha/offset tracks on the first pop. Recreate only

@@ -139,4 +139,26 @@ class EncryptedPreferencesStoreTest {
         assertTrue(decryptThreads.isNotEmpty())
         assertTrue("A UI collector must not perform keystore work", decryptThreads.none { it === caller })
     }
+
+    @Test fun eachStoredSnapshotIsDecryptedOnceAcrossReadsAndUnrelatedEdits() = runTest {
+        var decrypts = 0
+        val counting = object : PreferenceCipher {
+            override fun encrypt(value: String) = "enc:v1:" + value.reversed()
+            override fun decrypt(value: String): String {
+                decrypts++
+                return value.removePrefix("enc:v1:").reversed()
+            }
+        }
+        val key = stringPreferencesKey("api_profiles")
+        val effort = stringPreferencesKey("thinking_effort")
+        val raw = MemoryStore(preferencesOf(key to "enc:v1:terces"))
+        val store = EncryptedPreferencesStore(raw, counting)
+        repeat(3) { assertEquals("secret", store.data.first()[key]) }
+        assertEquals("Repeated reads of one snapshot decrypt once", 1, decrypts)
+        store.edit { it[effort] = "max" }
+        assertEquals("Unchanged ciphertext is kept", "enc:v1:terces", raw.data.value[key])
+        assertEquals("secret", store.data.first()[key])
+        assertEquals("max", store.data.first()[effort])
+        assertEquals("An unrelated edit decrypts only the new snapshot", 2, decrypts)
+    }
 }

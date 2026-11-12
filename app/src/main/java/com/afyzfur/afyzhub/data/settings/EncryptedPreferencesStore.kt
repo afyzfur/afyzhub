@@ -34,7 +34,16 @@ internal class EncryptedPreferencesStore(
 
     private data class Decoded(val preferences: Preferences, val failed: Boolean)
 
+    // Every collector maps the same emission; keystore work runs once per stored snapshot.
+    @Volatile private var lastDecoded: Pair<Preferences, Decoded>? = null
+
     private fun decoded(prefs: Preferences): Decoded {
+        lastDecoded?.let { (source, result) ->
+            if (source == prefs) {
+                mutableUnavailable.value = result.failed
+                return result
+            }
+        }
         var failed = false
         val plain = prefs.toMutablePreferences()
         prefs.asMap().forEach { (key, value) ->
@@ -49,7 +58,9 @@ internal class EncryptedPreferencesStore(
             }
         }
         mutableUnavailable.value = failed
-        return Decoded(plain, failed)
+        val result = Decoded(plain, failed)
+        lastDecoded = prefs to result
+        return result
     }
 
     override val data: Flow<Preferences> = delegate.data.map { decoded(it).preferences }.flowOn(Dispatchers.IO)
@@ -74,7 +85,7 @@ internal class EncryptedPreferencesStore(
                         if (value is String && sensitive(key.name)) {
                             val old = stored[stringPreferencesKey(key.name)]
                             this[stringPreferencesKey(key.name)] =
-                                if (old?.startsWith("enc:v1:") == true && cipher.decrypt(old) == value) old
+                                if (old?.startsWith("enc:v1:") == true && before.preferences[stringPreferencesKey(key.name)] == value) old
                                 else cipher.encrypt(value)
                         }
                     }
@@ -89,6 +100,7 @@ internal class EncryptedPreferencesStore(
         // Reset only after explicit confirmation, but do it before deleting the
         // old ciphertext. If key reset fails, the original data remains intact.
         cipher.reset()
+        lastDecoded = null
         delegate.updateData { stored ->
             val cleared = stored.toMutablePreferences()
             stored.asMap().keys.filter { sensitive(it.name) }.forEach {
