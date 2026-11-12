@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +54,8 @@ fun SettingsHomeScreen(
     onNavigateToRequestLog: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToBrowser: () -> Unit,
+    onNavigateToMemory: () -> Unit = {},
+    memoryViewModel: MemoryViewModel = koinViewModel(),
     uiPreferencesViewModel: UiPreferencesViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel(),
     apiProfilesViewModel: ApiProfilesViewModel = koinViewModel()
@@ -64,6 +67,7 @@ fun SettingsHomeScreen(
     val activeProfile = profileStore.active
     val streamEnabled by settingsViewModel.streamEnabled.collectAsState()
     val webSearchEnabled by settingsViewModel.webSearchEnabled.collectAsState()
+    val memory by memoryViewModel.state.collectAsState()
 
 
     Surface(
@@ -126,6 +130,16 @@ fun SettingsHomeScreen(
                             com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.items_count, prefs.quickPrompts.size)
                         },
                         onClick = onNavigateToQuickPrompts
+                    )
+                    SettingsNavItem(
+                        icon = androidx.compose.material.icons.Icons.Default.Psychology,
+                        title = androidx.compose.ui.res.stringResource(com.afyzhub.chat.R.string.memory_title),
+                        subtitle = if (memory.enabled) {
+                            androidx.compose.ui.res.stringResource(com.afyzhub.chat.R.string.memory_subtitle_on, memory.items.size)
+                        } else {
+                            androidx.compose.ui.res.stringResource(com.afyzhub.chat.R.string.memory_subtitle_off)
+                        },
+                        onClick = onNavigateToMemory
                     )
                 }
 

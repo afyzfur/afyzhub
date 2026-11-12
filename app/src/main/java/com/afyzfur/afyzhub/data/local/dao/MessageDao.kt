@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.afyzfur.afyzhub.data.local.entity.MessageEntity
+import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -129,4 +130,11 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
     suspend fun deleteMessagesByConversationId(conversationId: Long)
+
+    /** 记忆总结按 id 增量读取：id 自增，不受消息时间戳跨设备或校时的影响。 */
+    @Query("SELECT * FROM messages WHERE id > :afterId AND status = '${Constants.STATUS_SUCCESS}' ORDER BY id ASC LIMIT :limit")
+    suspend fun getMessagesAfter(afterId: Long, limit: Int): List<MessageEntity>
+
+    @Query("SELECT MIN(id) FROM messages WHERE status = '${Constants.STATUS_SENDING}'")
+    suspend fun getFirstPendingId(): Long?
 }

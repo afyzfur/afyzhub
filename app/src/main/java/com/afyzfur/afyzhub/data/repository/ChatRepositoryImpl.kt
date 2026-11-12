@@ -9,6 +9,7 @@ import com.afyzfur.afyzhub.data.remote.provider.ChatClientRegistry
 import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
 import com.afyzfur.afyzhub.data.remote.provider.CompletionResult
 import com.afyzfur.afyzhub.data.remote.provider.StreamEvent
+import com.afyzfur.afyzhub.data.memory.MemoryProvider
 import com.afyzfur.afyzhub.data.remote.provider.WebSearchService
 import com.afyzfur.afyzhub.data.remote.provider.TokenUsage
 import com.afyzfur.afyzhub.data.settings.AppSettings
@@ -44,7 +45,8 @@ class ChatRepositoryImpl(
     private val messageDao: MessageDao,
     private val clientRegistry: ChatClientRegistry,
     private val settingsProvider: SettingsProvider,
-    private val webSearchService: WebSearchService
+    private val webSearchService: WebSearchService,
+    private val memoryProvider: MemoryProvider = MemoryProvider.NONE
 ) : ChatRepository {
     private val streamCollector = ChatStreamCollector()
 
@@ -477,9 +479,13 @@ class ChatRepositoryImpl(
             !ThinkingEffort.supportsNativeThinking(settings.provider, settings.model)
         ) THINKING_GUIDANCE else null
 
+        val memory = memoryProvider.memoryPrompt()
         return buildList {
             if (systemPrompt.isNotEmpty()) {
                 add(ChatTurn(role = "system", content = "【最高优先级角色设定】\n必须始终按照以下角色设定与用户交流；不要自称“AI助手”、语言模型或聊天机器人，不要主动介绍默认身份，除非用户明确询问系统实现。\n\n" + systemPrompt))
+            }
+            if (memory != null) {
+                add(ChatTurn(role = "system", content = memory))
             }
             if (searchInstruction != null) {
                 add(ChatTurn(role = "system", content = searchInstruction))

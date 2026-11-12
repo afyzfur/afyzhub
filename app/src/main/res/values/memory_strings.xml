@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_title">记忆</string>
+    <string name="memory_subtitle_on">已开启 · %1$d 条记忆</string>
+    <string name="memory_subtitle_off">未开启</string>
+    <string name="memory_hero_title">长期记忆</string>
+    <string name="memory_hero_body">开启后，会从你的对话中总结关于你的信息，并在之后的所有对话中参考。只有新增的对话会发送给当前配置的模型。</string>
+    <string name="memory_status_running">正在整理对话…</string>
+    <string name="memory_status_never">尚未整理</string>
+    <string name="memory_status_last">上次整理：%1$s</string>
+    <string name="memory_status_off">记忆已关闭，现有记忆不会用于对话</string>
+    <string name="memory_summarize_now">立即整理</string>
+    <string name="memory_summarizing">整理中</string>
+    <string name="memory_section_settings">设置</string>
+    <string name="memory_enabled">启用记忆</string>
+    <string name="memory_enabled_hint">总结对话，并在之后的对话中使用</string>
+    <string name="memory_frequency">自动整理</string>
+    <string name="memory_frequency_app_open">每次打开应用</string>
+    <string name="memory_frequency_daily">每天</string>
+    <string name="memory_frequency_weekly">每周</string>
+    <string name="memory_frequency_memory_screen">进入记忆页面时</string>
+    <string name="memory_section_items">已保存的记忆（%1$d）</string>
+    <string name="memory_empty">还没有记忆。开启后进行几次对话，或手动添加一条。</string>
+    <string name="memory_source_manual">手动添加</string>
+    <string name="memory_source_auto">自动总结</string>
+    <string name="memory_add">添加记忆</string>
+    <string name="memory_add_hint">例如：我更喜欢简洁的回答</string>
+    <string name="memory_edit">编辑记忆</string>
+    <string name="memory_edit_hint">编辑后，这条记忆会作为手动记忆保留，自动整理不会改写它。</string>
+    <string name="memory_delete">删除记忆</string>
+    <string name="memory_clear">清空全部记忆</string>
+    <string name="memory_clear_title">清空记忆？</string>
+    <string name="memory_clear_confirm">将删除全部 %1$d 条记忆，此操作无法撤销。已经整理过的对话不会重新总结。</string>
+    <string name="memory_clear_action">清空</string>
+    <string name="memory_save">保存</string>
+    <string name="memory_cancel">取消</string>
+    <string name="memory_error_no_api">尚未配置 API，无法整理记忆</string>
+    <string name="memory_error_request">整理失败，请检查网络或 API 配置</string>
+    <string name="memory_error_format">模型返回的格式无法识别，下次会重新整理</string>
+</resources>

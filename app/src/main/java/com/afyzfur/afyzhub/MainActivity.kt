@@ -31,29 +31,42 @@ class MainActivity : ComponentActivity() {
      */
     private val settingsRepository: SettingsRepository by inject()
 
+    private val memoryRepository: com.afyzfur.afyzhub.data.memory.MemoryRepository by inject()
+
+    override fun onStart() {
+        super.onStart()
+        // Only new messages are sent, so frequent foreground checks cost nothing without new chats.
+        memoryRepository.onTrigger(com.afyzfur.afyzhub.domain.model.MemoryTrigger.APP_OPEN)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        requestHighestRefreshRate()
+    }
+
+    /**
+     * 请求当前分辨率下屏幕支持的最高刷新率。省电模式、温控等系统限制仍会生效，
+     * 动画按实际帧时间推进，在被限制为 60Hz 时时长不变。
+     */
+    @Suppress("DEPRECATION")
+    private fun requestHighestRefreshRate() {
+        val display = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay) ?: return
+        val toSpec = { mode: android.view.Display.Mode ->
+            com.afyzfur.afyzhub.util.DisplayModeSpec(mode.modeId, mode.physicalWidth, mode.physicalHeight, mode.refreshRate)
+        }
+        val best = com.afyzfur.afyzhub.util.highestRefreshMode(toSpec(display.mode), display.supportedModes.map(toSpec)) ?: return
+        val attributes = window.attributes
+        if (attributes.preferredDisplayModeId == best.id) return
+        window.attributes = attributes.apply {
+            preferredDisplayModeId = best.id
+            preferredRefreshRate = best.refreshRate
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // 按设备显示器支持的最高档位请求 60/90/120Hz。
-        // 这是窗口偏好，不绕过省电模式、系统刷新率限制或温控策略。
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val display = display
-            val supported = display?.supportedModes.orEmpty()
-            val maxSupported = supported.maxOfOrNull { it.refreshRate } ?: 60f
-            val targetRefreshRate = when {
-                maxSupported >= 120f -> 120f
-                maxSupported >= 90f -> 90f
-                else -> 60f
-            }
-            val targetMode = supported
-                .filter { it.refreshRate >= targetRefreshRate - 0.5f }
-                .maxByOrNull { it.refreshRate }
-            window.attributes = window.attributes.apply {
-                preferredRefreshRate = targetRefreshRate
-                if (targetMode != null) preferredDisplayModeId = targetMode.modeId
-            }
-        }
-
+        requestHighestRefreshRate()
         setContent {
             val prefs by settingsRepository.uiPreferences.collectAsState()
 

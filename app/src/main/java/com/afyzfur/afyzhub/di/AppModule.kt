@@ -19,7 +19,9 @@ import org.koin.dsl.module
 val appModule = module {
 
     // Repository：conversationDao, messageDao, clientRegistry, settingsProvider, webSearchService
-    single<ChatRepository> { ChatRepositoryImpl(get(), get(), get(), get(), get()) }
+    single<ChatRepository> { ChatRepositoryImpl(get(), get(), get(), get(), get(), get<com.afyzfur.afyzhub.data.memory.MemoryRepository>()) }
+    single { com.afyzfur.afyzhub.data.memory.MemoryRepository(get(), get(), get(), get(), get()) }
+    viewModel { com.afyzfur.afyzhub.ui.settings.MemoryViewModel(get()) }
     // 应用层网络搜索: 复用 Transport, 无新增依赖
     single { com.afyzfur.afyzhub.data.remote.provider.WebSearchService(get()) }
 

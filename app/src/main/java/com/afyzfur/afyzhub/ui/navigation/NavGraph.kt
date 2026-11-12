@@ -75,6 +75,7 @@ sealed class Screen(val route: String) {
     object BrowserSettings : Screen("settings/browser")
     object QuickPromptsSettings : Screen("settings/quick_prompts")
     object RequestLog : Screen("settings/request_log")
+    object MemorySettings : Screen("settings/memory")
     object AboutSettings : Screen("settings/about")
     object Changelog : Screen("settings/changelog")
 }
@@ -173,8 +174,15 @@ fun NavGraph() {
                 },
                 onNavigateToBrowser = {
                     navController.navigate(Screen.BrowserSettings.route)
+                },
+                onNavigateToMemory = {
+                    navController.navigate(Screen.MemorySettings.route)
                 }
             )
+        }
+
+        composable(Screen.MemorySettings.route) {
+            com.afyzfur.afyzhub.ui.settings.MemoryScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.ApiProfiles.route) {

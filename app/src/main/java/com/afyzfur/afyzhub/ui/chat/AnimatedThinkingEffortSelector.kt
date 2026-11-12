@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
@@ -63,6 +64,7 @@ internal fun AnimatedThinkingEffortSelector(
     enabled: Boolean,
     onEffortChange: (ThinkingEffort) -> Unit
 ) {
+    val view = LocalView.current
     val state = remember { ThinkingEffortControlState(current) }
     val onChange by rememberUpdatedState(onEffortChange)
     val displayed = remember { mutableFloatStateOf(current.ordinal.toFloat()) }
@@ -77,7 +79,7 @@ internal fun AnimatedThinkingEffortSelector(
             var wasDragging = state.followingDrag
             while (currentCoroutineContext().isActive) {
                 val now = withFrameNanos { it }
-                if (startedAt == 0L) startedAt = now - 16_666_667L
+                if (startedAt == 0L) startedAt = now - frameIntervalNanos(view)
                 var elapsed = (now - startedAt) / 1_000_000_000f
                 val target = state.target
                 val dragging = state.followingDrag
@@ -242,4 +244,10 @@ internal fun AnimatedThinkingEffortSelector(
                 }
             }
     }
+}
+
+/** Read when motion starts: battery saver can switch the display between 120Hz and 60Hz at runtime. */
+private fun frameIntervalNanos(view: android.view.View): Long {
+    val rate = view.display?.refreshRate?.takeIf { it >= 1f } ?: 60f
+    return (1_000_000_000f / rate).toLong()
 }

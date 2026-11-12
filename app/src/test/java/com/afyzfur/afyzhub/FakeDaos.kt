@@ -27,6 +27,11 @@ class FakeMessageDao : MessageDao {
         state.value = state.value.filterNot { it.conversationId == conversationId }
     }
 
+    override suspend fun getMessagesAfter(afterId: Long, limit: Int): List<MessageEntity> =
+        state.value.filter { it.id > afterId && it.status == com.afyzfur.afyzhub.util.Constants.STATUS_SUCCESS }
+            .sortedBy { it.id }.take(limit)
+    override suspend fun getFirstPendingId(): Long? =
+        state.value.filter { it.status == com.afyzfur.afyzhub.util.Constants.STATUS_SENDING }.minOfOrNull { it.id }
     override fun getMessagesByConversationId(conversationId: Long): Flow<List<MessageEntity>> =
         state.map { list -> list.filter { it.conversationId == conversationId } }
 
