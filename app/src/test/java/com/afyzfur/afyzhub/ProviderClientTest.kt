@@ -604,3 +604,68 @@ class GeminiChatClientTest {
         assertEquals(listOf("gemini-1.5-pro", "gemini-2.0-flash"), models)
     }
 }
+
+
+class CacheUsageRegressionTest {
+    private val settings = AppSettings(apiKey = "test", model = "test")
+    private val turns = listOf(ChatTurn("user", "hello"))
+
+    @Test fun openAiStreamMergesFallbackEvenWhenDtoUsageExists() = runTest {
+        val client = OpenAiChatClient(FakeTransport(sseLines = listOf(
+            """{"choices":[],"usage":{"prompt_tokens":1000,"completion_tokens":10,"input_tokens_details":{"cached_tokens":800}}}""",
+            """{"choices":[],"usage":{"completion_tokens":20}}"""
+        )), json)
+        val usage = checkNotNull(client.stream(turns, settings).finishedUsage())
+        assertEquals(1000, usage.promptTokens)
+        assertEquals(800, usage.cachedTokens)
+        assertEquals(20, usage.completionTokens)
+    }
+
+    @Test fun openAiNonStreamAndStringCountsAreAccepted() = runTest {
+        val client = OpenAiChatClient(FakeTransport(response =
+            """{"choices":[{"message":{"role":"assistant","content":"ok"}}],"usage":{"prompt_tokens":1000,"completion_tokens":20,"cache_read_input_tokens":"700"}}"""
+        ), json)
+        assertEquals(700, client.complete(turns, settings).usage?.cachedTokens)
+    }
+
+    @Test fun cacheOnlyChunkIsNotLost() = runTest {
+        val client = OpenAiChatClient(FakeTransport(sseLines = listOf(
+            """{"usage":{"cache_read_input_tokens":500}}""",
+            """{"usage":{"prompt_tokens":800,"completion_tokens":20}}"""
+        )), json)
+        assertEquals(500, client.stream(turns, settings).finishedUsage()?.cachedTokens)
+    }
+
+    @Test fun anthropicMergesDeltaCacheAndIncludesReadAndWriteInInputTotal() = runTest {
+        val client = AnthropicChatClient(FakeTransport(sseLines = listOf(
+            """{"type":"message_start","message":{"usage":{"input_tokens":100,"cache_creation_input_tokens":200,"cache_read_input_tokens":0}}}""",
+            """{"type":"message_delta","usage":{"input_tokens":100,"cache_creation_input_tokens":200,"cache_read_input_tokens":700,"output_tokens":20}}"""
+        )), json)
+        val usage = checkNotNull(client.stream(turns, settings.copy(provider = AiProvider.ANTHROPIC)).finishedUsage())
+        assertEquals(1000, usage.promptTokens)
+        assertEquals(700, usage.cachedTokens)
+        assertEquals(20, usage.completionTokens)
+    }
+
+    @Test fun geminiKeepsCacheWhenFinalUsageOmitsIt() = runTest {
+        val client = GeminiChatClient(FakeTransport(sseLines = listOf(
+            """{"usageMetadata":{"promptTokenCount":1000,"cachedContentTokenCount":700,"candidatesTokenCount":1}}""",
+            """{"usageMetadata":{"promptTokenCount":1000,"candidatesTokenCount":20}}"""
+        )), json)
+        val usage = checkNotNull(client.stream(turns, settings.copy(provider = AiProvider.GEMINI)).finishedUsage())
+        assertEquals(700, usage.cachedTokens)
+        assertEquals(20, usage.completionTokens)
+    }
+
+    @Test fun knownZeroDiffersFromAbsentAndCreationIsNotACacheHit() {
+        fun parse(text: String) = com.afyzfur.afyzhub.data.remote.provider.parseTokenUsage(text, json)
+        assertEquals(0, parse("""{"usage":{"prompt_tokens":100,"prompt_tokens_details":{"cached_tokens":0}}}""")?.cachedTokens)
+        assertNull(parse("""{"usage":{"prompt_tokens":100,"details":{"cache_creation_tokens":80,"cache_cost":20}}}""")?.cachedTokens)
+        assertEquals(70, parse("""{"usage":{"prompt_tokens":100,"prompt_cache_hit_tokens":0,"input_tokens_details":{"cached_tokens":70}}}""")?.cachedTokens)
+        assertNull(parse("""{"usage":{"prompt_tokens":100,"prompt_tokens_details":null}}""")?.cachedTokens)
+        assertNull(parse("not-json"))
+        assertEquals("cache: 0 (hit: 0%)", com.afyzfur.afyzhub.ui.chat.cacheUsageText(0, 100))
+        assertEquals("cache: n/a", com.afyzfur.afyzhub.ui.chat.cacheUsageText(null, 100))
+        assertEquals("cache: 1000000000 (hit: 50%)", com.afyzfur.afyzhub.ui.chat.cacheUsageText(1000000000, 2000000000))
+    }
+}

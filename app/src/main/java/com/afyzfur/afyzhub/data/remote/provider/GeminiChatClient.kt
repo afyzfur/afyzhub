@@ -44,7 +44,7 @@ class GeminiChatClient(
                 .takeIf { it.isNotEmpty() }
                 ?.let { "<think>$it</think>" + response.extractText() }
                 ?: response.extractText(),
-            usage = response.usageMetadata?.toTokenUsage()
+            usage = parseTokenUsage(text, json)
         )
     }
 
@@ -65,10 +65,8 @@ class GeminiChatClient(
                 model = settings.model
             )
         ).collect { payload ->
+            usage = mergeTokenUsage(usage, parseTokenUsage(payload, json))
             val response = parseResponse(payload) ?: return@collect
-            // Gemini 每个 chunk 都可能带 usageMetadata，且为累计值，
-            // 因此直接覆盖，最后一个即为最终结果
-            response.usageMetadata?.toTokenUsage()?.let { usage = it }
             // 同一个 chunk 里思考与正文不会混在一起，按先思考后正文的
             // 顺序处理即可
             val reasoning = wrapper.onThinking(response.extractThinking())

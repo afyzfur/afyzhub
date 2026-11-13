@@ -52,6 +52,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -71,22 +75,28 @@ import androidx.compose.ui.viewinterop.AndroidView
 @Composable
 fun InAppBrowserScreen(
     initialUrl: String,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    searchEngineOverride: String? = null
 ) {
     val context = LocalContext.current
     val savedWebState = rememberSaveable(initialUrl, saver = Saver<Bundle, Bundle>(save = { it }, restore = { it })) { Bundle() }
-    val browserSettings: com.afyzfur.afyzhub.data.settings.SettingsRepository = org.koin.java.KoinJavaComponent.get(com.afyzfur.afyzhub.data.settings.SettingsRepository::class.java)
-    val searchSettings by browserSettings.settings.collectAsState()
+    val searchEngine = if (searchEngineOverride != null) searchEngineOverride else {
+        val repository: com.afyzfur.afyzhub.data.settings.SettingsRepository = org.koin.java.KoinJavaComponent.get(com.afyzfur.afyzhub.data.settings.SettingsRepository::class.java)
+        val settings by repository.settings.collectAsState()
+        settings?.searchEngine ?: "bing"
+    }
+    val keyboard = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var currentUrl by rememberSaveable(initialUrl) { mutableStateOf(initialUrl) }
     var inputText by rememberSaveable(initialUrl) { mutableStateOf(initialUrl) }
-    var javaScriptEnabled by rememberSaveable(initialUrl) { mutableStateOf(false) }
+    var javaScriptEnabled by rememberSaveable(initialUrl) { mutableStateOf(true) }
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
     var pageTitle by rememberSaveable { mutableStateOf("") }
     var progress by remember { mutableStateOf(0) }
     var loadError by remember { mutableStateOf<String?>(null) }
+    var addressFocused by remember { mutableStateOf(false) }
 
     // 保留同一页面中的 WebView 实例；工厂里不再无条件重载 URL，
     // 避免 AndroidView 重建时把页面重置到初始地址。
@@ -116,7 +126,7 @@ fun InAppBrowserScreen(
     // WebView 的状态同步回调：URL 变化/导航能力变化时更新 Compose 状态
     fun syncState(view: WebView) {
         currentUrl = view.url ?: currentUrl
-        inputText = currentUrl
+        if (!addressFocused) inputText = currentUrl
         canGoBack = view.canGoBack()
         canGoForward = view.canGoForward()
     }
@@ -124,40 +134,33 @@ fun InAppBrowserScreen(
     fun load(url: String) {
         val raw = url.trim()
         if (raw.isEmpty()) return
-        val target = when {
-            raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true) -> raw
-            raw.contains(' ') || !raw.contains('.') -> when (searchSettings?.searchEngine) {
-                "google" -> "https://www.google.com/search?q=${Uri.encode(raw)}"
-                "bing" -> "https://www.bing.com/search?q=${Uri.encode(raw)}"
-                else -> "https://www.baidu.com/s?wd=${Uri.encode(raw)}"
-            }
-            else -> "https://$raw" // 裸域名默认 https
+        val target = browserTarget(raw, searchEngine)
+        if (target == null) {
+            loadError = context.getString(com.afyzhub.chat.R.string.browser_invalid_address)
+            return
         }
+        keyboard?.hide()
         loadError = null
         progress = 0
         inputText = target
         webView.loadUrl(target)
     }
 
-    LaunchedEffect(webView, initialUrl) {
-        val normalizedInitial = initialUrl.trim().let {
-            if (it.startsWith("http://", true) || it.startsWith("https://", true)) it else "https://$it"
-        }
-        if (webView.url == null && webView.originalUrl == null) {
-            if (webView.restoreState(savedWebState) == null) webView.loadUrl(currentUrl.ifBlank { normalizedInitial })
-            syncState(webView)
-        }
-    }
-
+    // Lifecycle observers may be replaced without destroying the retained WebView.
     DisposableEffect(webView, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) webView.saveState(savedWebState)
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> webView.onResume()
+                Lifecycle.Event.ON_PAUSE -> { webView.saveState(savedWebState); webView.onPause() }
+                else -> Unit
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    DisposableEffect(webView) {
         onDispose {
             webView.saveState(savedWebState)
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            // 页面退出时释放 WebView，避免 Activity/Context 被长期持有。
             webView.stopLoading()
             webView.webChromeClient = null
             webView.webViewClient = WebViewClient()
@@ -208,8 +211,10 @@ fun InAppBrowserScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp)
+                        .testTag("browser-address")
+                        .onFocusChanged { addressFocused = it.isFocused }
                 )
-                IconButton(onClick = { webView.reload() }) {
+                IconButton(onClick = { loadError = null; webView.reload() }) {
                     Icon(Icons.Default.Refresh, contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_38108eaa1d32))
                 }
                 IconButton(
@@ -232,7 +237,7 @@ fun InAppBrowserScreen(
                 webView.settings.javaScriptEnabled = javaScriptEnabled
                 webView.reload()
             }) {
-                Text(if (javaScriptEnabled) "JavaScript: ON" else "JavaScript: OFF")
+                Text(stringResource(if (javaScriptEnabled) com.afyzhub.chat.R.string.browser_javascript_on else com.afyzhub.chat.R.string.browser_javascript_off))
             }
             // 导航条: 网页内前进后退
             Row(
@@ -291,15 +296,27 @@ fun InAppBrowserScreen(
                         }
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                                if (!request.isForMainFrame) return false
                                 val uri = request.url
                                 val scheme = uri.scheme?.lowercase()
                                 if (scheme == "http" || scheme == "https") return false
+                                if (!request.hasGesture() || scheme !in listOf("mailto", "tel", "sms", "geo")) return true
                                 return try {
                                     context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                                     true
                                 } catch (_: Exception) {
                                     loadError = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ca819302da03)
                                     true
+                                }
+                            }
+                            override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+                                super.doUpdateVisitedHistory(view, url, isReload)
+                                syncState(view)
+                            }
+                            override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: android.webkit.WebResourceResponse) {
+                                if (request.isForMainFrame) {
+                                    loadError = "HTTP ${errorResponse.statusCode}"
+                                    progress = 100
                                 }
                             }
                             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
@@ -327,11 +344,9 @@ fun InAppBrowserScreen(
                                 progress = 100
                             }
                         }
+                        if (restoreState(savedWebState) == null) load(currentUrl)
+                        syncState(this)
                     }
-                },
-                update = { view ->
-                    // Navigation callbacks are authoritative; never reload from Compose state here.
-                    if (view.url != null && view.url != currentUrl) syncState(view)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

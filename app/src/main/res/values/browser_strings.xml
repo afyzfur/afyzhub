@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_invalid_address">请输入有效的网址或搜索内容</string>
+    <string name="browser_javascript_on">JavaScript：已开启</string>
+    <string name="browser_javascript_off">JavaScript：已关闭</string>
+</resources>

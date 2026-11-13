@@ -89,23 +89,8 @@ internal fun buildMetaParts(
         }
     }
 
-    // 缓存命中: 显示命中数与占输入 token 的百分比。
-    // 两者都有才显示, 命中数为 0 或提供商未返回时不显示。
-    // 只要有输入 token 数据就展示缓存行(命中为 0 也显示), 让用户
-    // 能看到该功能在工作; 完全没有 usage 时才省略。
     if (options.showTokenUsage && !message.isFromUser) {
-        val input = message.promptTokens
-        val cached = message.cachedTokens
-        // 所有助手消息都显示缓存状态；不同服务商没有该字段时显示 n/a，
-        // 不再因为协议字段差异而让这一行消失。
-        if (cached != null && input != null && input > 0) {
-            val pct = (cached * 100 + input / 2) / input
-            parts += "cache: $cached (hit: $pct%)"
-        } else if (cached != null) {
-            parts += "cache: $cached"
-        } else {
-            parts += "cache: n/a"
-        }
+        parts += cacheUsageText(message.cachedTokens, message.promptTokens)
     }
     if (options.showSpeed) {
         message.tokensPerSecond?.let {

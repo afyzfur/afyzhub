@@ -2,7 +2,6 @@ package com.afyzfur.afyzhub.data.remote.provider
 
 import com.afyzfur.afyzhub.data.remote.dto.ChatRequest
 import com.afyzfur.afyzhub.data.remote.dto.ChatResponse
-import com.afyzfur.afyzhub.data.remote.dto.cachedTokens
 import com.afyzfur.afyzhub.data.remote.dto.ChatStreamChunk
 import com.afyzfur.afyzhub.data.remote.dto.RequestMessage
 import com.afyzfur.afyzhub.data.remote.dto.StreamOptions
@@ -13,10 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.JsonObject
 
 /**
  * OpenAI 及兼容其协议的服务（多数中转服务）。
@@ -41,12 +37,8 @@ class OpenAiChatClient(
                 model = settings.model
             )
         )
-        val response = json.decodeFromString(ChatResponse.serializer(), text)
-        val dtoUsage = response.usage?.let {
-            TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
-        }
-        // 与流式同源的双保险: DTO 缺字段时从原始响应体提取
-        val finalUsage = mergeUsageNullable(dtoUsage, extractUsageManually(text))
+        val response = json.decodeFromJsonElement(ChatResponse.serializer(), contentObject(text))
+        val finalUsage = parseTokenUsage(text, json)
         return CompletionResult(
             // 用 contentWithThinking 而非 content：思考走独立字段的模型
             // 需要拼成 think 标签，否则思考过程会丢失
@@ -75,10 +67,7 @@ class OpenAiChatClient(
             // 双路径: DTO 能解就用 DTO, 解不出再从 JsonElement 里按多套
             // 字段名(DepthSeek/OpenAI/Anthropic)找, 提高对中转服务的兼容性
             val chunk = parseChunk(payload)
-            val dtoUsage = (chunk?.usage ?: chunk?.usageMetadata)?.let {
-                TokenUsage(it.prompt_tokens, it.completion_tokens, it.cachedTokens)
-            }
-            val extracted = dtoUsage ?: extractUsageManually(payload)
+            val extracted = parseTokenUsage(payload, json)
             if (extracted != null) {
                 usage = mergeUsage(usage, extracted)
 
@@ -156,65 +145,15 @@ class OpenAiChatClient(
         "Authorization" to "Bearer ${settings.apiKey}"
     )
 
-    /**
-     * 手动从 chunk 原始 JSON 里提取 usage。
-     *
-     * DTO 之外的第二道防线: 不同服务商把缓存命中放在不同字段
-     * (DeepSeek 顶层 / OpenAI 嵌套 / Anthropic 风格), DTO 漏掉哪个
-     * 字段名时这里仍能取到。
-     */
-    private fun mergeUsageNullable(a: TokenUsage?, b: TokenUsage?): TokenUsage? = when {
-        a == null -> b
-        b == null -> a
-        else -> TokenUsage(
-            promptTokens = maxOf(a.promptTokens, b.promptTokens),
-            completionTokens = maxOf(a.completionTokens, b.completionTokens),
-            cachedTokens = listOfNotNull(a.cachedTokens, b.cachedTokens).maxOrNull()
-        )
-    }
-    private fun extractUsageManually(payload: String): TokenUsage? = try {
-        val obj = json.parseToJsonElement(payload).jsonObject
-        val u = (obj["usage"] ?: obj["usage_metadata"] ?: obj["usageMetadata"])?.jsonObject ?: return null
-        // 数值容错: 部分中转把数字序列化成字符串("123"), intOrNull 对
-        // 字符串原语返回 null, 补一路 content 转换
-        fun num(e: kotlinx.serialization.json.JsonElement?): Int? =
-            e?.jsonPrimitive?.intOrNull ?: e?.jsonPrimitive?.contentOrNull?.trim()?.toIntOrNull()
-        val prompt = num(u["prompt_tokens"]) ?: num(u["input_tokens"])
-        val completion = num(u["completion_tokens"]) ?: num(u["output_tokens"])
-        // 嵌套字段两套命名: OpenAI 的 prompt_tokens_details 与
-        // OpenRouter 的 details
-        // OpenRouter 的 native_tokens_* 格式也认
-        val details = u["prompt_tokens_details"]?.jsonObject 
-            ?: u["details"]?.jsonObject
-            ?: u["native_tokens_prompt"]?.jsonObject
-        val hit = num(u["prompt_cache_hit_tokens"])
-        val miss = num(u["prompt_cache_miss_tokens"])
-        // 暴力通配: 各家中转命名五花八门, 逐一尝试所有可能的 cache 字段
-        val cached = hit
-            ?: num(details?.get("cached_tokens"))
-            ?: num(u["cache_read_input_tokens"])
-            ?: num(u["cached_tokens"])  // 有的放顶层
-            ?: num(u["cache_tokens"])
-            ?: num(u["cache_hit_tokens"])
-            ?: num(u["prompt_cache_tokens"])
-            ?: num(details?.get("cache_read_tokens"))
-            ?: num(details?.get("cached_input_tokens"))
-            // 只回报 miss 的: 反推命中数
-            ?: miss?.let { m -> prompt?.let { p -> (p - m).takeIf { v -> v > 0 } } }
-            // 最后尝试从 details 里找任何带 cache 的数字字段
-            ?: details?.entries?.firstOrNull { 
-                it.key.contains("cache", ignoreCase = true) && num(it.value) != null 
-            }?.let { num(it.value) }
-        if (prompt == null && completion == null) null
-        else TokenUsage(prompt ?: 0, completion ?: 0, cached)
-    } catch (e: Exception) {
-        ParseDiagnostics.failed("OpenAiChatClient", e)
-        null
+    /** Decode text independently: a malformed or string-valued usage field must not discard content. */
+    private fun contentObject(payload: String): JsonObject {
+        val root = json.parseToJsonElement(payload) as JsonObject
+        return JsonObject(root.filterKeys { it !in listOf("usage", "usage_metadata", "usageMetadata") })
     }
 
     /** 单个数据块解析失败不应中断整段回复，返回 null 表示跳过。 */
     private fun parseChunk(payload: String): ChatStreamChunk? = try {
-        json.decodeFromString(ChatStreamChunk.serializer(), payload)
+        json.decodeFromJsonElement(ChatStreamChunk.serializer(), contentObject(payload))
     } catch (e: Exception) {
         ParseDiagnostics.failed("OpenAiChatClient", e)
         null

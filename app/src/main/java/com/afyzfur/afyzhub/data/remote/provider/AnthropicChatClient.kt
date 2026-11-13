@@ -41,9 +41,7 @@ class AnthropicChatClient(
         val response = json.decodeFromString(MessagesResponse.serializer(), text)
         return CompletionResult(
             content = response.extractText(),
-            usage = response.usage?.let {
-                TokenUsage(it.input, it.output, it.cacheReadTokens.takeIf { c -> c > 0 })
-            }
+            usage = parseTokenUsage(text, json, anthropic = true)
         )
     }
 
@@ -55,9 +53,7 @@ class AnthropicChatClient(
 
         // Claude 把 usage 拆到两个事件里：message_start 给输入 token，
         // message_delta 给输出 token。需要跨事件累积后在结束时合并
-        var inputTokens: Int? = null
-        var cacheReadTokens = 0
-        var outputTokens: Int? = null
+        var usage: TokenUsage? = null
 
         // Claude 把思考和正文推在不同的 delta 类型里，需要折回内嵌标签
         val wrapper = ThinkingStreamWrapper()
@@ -72,6 +68,7 @@ class AnthropicChatClient(
                 model = settings.model
             )
         ).collect { payload ->
+            usage = mergeTokenUsage(usage, parseTokenUsage(payload, json, anthropic = true))
             val event = parseEvent(payload) ?: return@collect
             when (event.type) {
                 "content_block_delta" -> {
@@ -89,15 +86,6 @@ class AnthropicChatClient(
                     if (piece.isNotEmpty()) emit(StreamEvent.TextDelta(piece))
                 }
 
-                "message_start" ->
-                    event.message?.usage?.let {
-                        inputTokens = it.input
-                        if (it.cacheReadTokens > 0) cacheReadTokens = it.cacheReadTokens
-                    }
-
-                "message_delta" ->
-                    event.usage?.let { outputTokens = it.output }
-
                 // 部分中转服务把 Claude 请求转成 OpenAI 协议后转发，
                 // 返回的 SSE 因而是 OpenAI 格式（无 type 字段，正文在
                 // choices[].delta.content）。不兼容会导致整段回复丢失
@@ -113,10 +101,7 @@ class AnthropicChatClient(
                         else -> ""
                     }
                     if (piece.isNotEmpty()) emit(StreamEvent.TextDelta(piece))
-                    event.usage?.let {
-                        inputTokens = it.input
-                        outputTokens = it.output
-                    }
+
                 }
             }
         }
@@ -126,11 +111,6 @@ class AnthropicChatClient(
         wrapper.finish().takeIf { it.isNotEmpty() }
             ?.let { emit(StreamEvent.TextDelta(it)) }
 
-        val usage = if (inputTokens != null || outputTokens != null) {
-            TokenUsage(inputTokens ?: 0, outputTokens ?: 0, cacheReadTokens.takeIf { c -> c > 0 })
-        } else {
-            null
-        }
         emit(StreamEvent.Finished(usage))
     }
 

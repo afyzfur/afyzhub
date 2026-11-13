@@ -42,10 +42,11 @@ fun MessageInfoDialog(
                 message.promptTokens?.let { InfoRow(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_0f2097438931), "$it") }
                 message.completionTokens?.let { InfoRow(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a182778a934d), "$it") }
                 message.latencyMs?.let { InfoRow(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_a9704e1997b9), formatLatency(it)) }
-                message.cachedTokens?.takeIf { it > 0 }?.let {
-                    val pct = message.promptTokens?.takeIf { p -> p > 0 }
-                        ?.let { p -> (it * 100 + p / 2) / p }
-                    InfoRow(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6b6d3e87d835), if (pct != null) "$it ($pct%)" else "$it")
+                if (!message.isFromUser) {
+                    InfoRow(
+                        com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_6b6d3e87d835),
+                        cacheUsageText(message.cachedTokens, message.promptTokens).removePrefix("cache: ")
+                    )
                 }
             }
         }
