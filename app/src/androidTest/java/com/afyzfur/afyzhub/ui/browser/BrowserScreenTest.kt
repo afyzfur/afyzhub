@@ -32,7 +32,19 @@ class BrowserScreenTest {
             web = checkNotNull(findWebView(compose.activity.window.decorView))
             assertTrue(web.settings.javaScriptEnabled)
             web.stopLoading()
-            web.loadDataWithBaseURL("https://example.test/", "<html><script>document.title='Script ready';</script><body>Local test</body></html>", "text/html", "UTF-8", null)
+            val original = web.webViewClient
+            web.webViewClient = object : android.webkit.WebViewClient() {
+                override fun shouldInterceptRequest(view: WebView, request: android.webkit.WebResourceRequest): android.webkit.WebResourceResponse? {
+                    if (request.url.host != "example.test") return super.shouldInterceptRequest(view, request)
+                    val html = "<html><script>document.title='Script ready';</script><body>Local test</body></html>"
+                    return android.webkit.WebResourceResponse("text/html", "UTF-8", java.io.ByteArrayInputStream(html.toByteArray()))
+                }
+                override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) = original.onPageStarted(view, url, favicon)
+                override fun onPageFinished(view: WebView, url: String?) = original.onPageFinished(view, url)
+                override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) = original.doUpdateVisitedHistory(view, url, isReload)
+            }
+            // A document URL establishes a real origin and history for pushState.
+            web.loadUrl("https://example.test/")
         }
         var ready = false
         compose.waitUntil(10_000) {
