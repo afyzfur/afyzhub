@@ -59,8 +59,21 @@ class BrowserScreenTest {
             navigated
         }
         compose.onNodeWithTag("browser-address").assertTextContains("draft.example")
-        compose.runOnIdle { web.goBack() }
+        // Script-created entries without user activation can be skipped by WebView.goBack().
+        compose.runOnIdle { web.evaluateJavascript("history.back()", null) }
         var returned = false
+        compose.waitUntil(10_000) {
+            compose.runOnUiThread { returned = web.url == "https://example.test/" }
+            returned
+        }
+        compose.runOnIdle { web.loadUrl("https://example.test/second") }
+        var secondLoaded = false
+        compose.waitUntil(10_000) {
+            compose.runOnUiThread { secondLoaded = web.url?.endsWith("/second") == true && web.progress == 100 }
+            secondLoaded
+        }
+        compose.runOnIdle { web.goBack() }
+        returned = false
         compose.waitUntil(10_000) {
             compose.runOnUiThread { returned = web.url == "https://example.test/" }
             returned
