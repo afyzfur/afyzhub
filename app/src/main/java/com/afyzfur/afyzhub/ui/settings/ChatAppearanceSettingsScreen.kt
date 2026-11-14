@@ -286,7 +286,7 @@ fun AppearanceSectionSettingsScreen(
                         // 模糊对两侧头像统一生效：分开设两个值，界面上
                         // 要多两个滑块，而想让两侧模糊程度不同的需求罕见
                         SettingsItemDivider()
-                        PercentSlider(
+                        AppearancePercentSlider(
                             title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_afdfbfeab7ad),
                             value = appearance.avatarBlur,
                             hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3ae10b7249db),
@@ -344,7 +344,7 @@ fun AppearanceSectionSettingsScreen(
                         // 以为调了有用，而那个值此刻并不参与渲染
                         if (appearance.backgroundEffect.usesDim) {
                             SettingsItemDivider()
-                            PercentSlider(
+                            AppearancePercentSlider(
                                 title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4e83125c4a66),
                                 value = appearance.backgroundDim,
                                 hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ab34a29e9ea6),
@@ -354,7 +354,7 @@ fun AppearanceSectionSettingsScreen(
                         }
                         if (appearance.backgroundEffect.usesBlur) {
                             SettingsItemDivider()
-                            PercentSlider(
+                            AppearancePercentSlider(
                                 title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_47d168d38775),
                                 value = appearance.backgroundBlur,
                                 hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_ea744bc3ff90),
@@ -411,7 +411,7 @@ fun AppearanceSectionSettingsScreen(
                     // 任何变化，留在界面上只会让人以为没生效
                     if (appearance.transparentInputBar) {
                         SettingsItemDivider()
-                        PercentSlider(
+                        AppearancePercentSlider(
                             title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_c5e26944beba),
                             value = appearance.inputBarSeeThrough,
                             hint = if (appearance.inputBarDeepSeeThrough) {
@@ -626,7 +626,7 @@ private fun BackgroundPreview(
  * 与其复制一遍不如把标题与说明抽成参数。
  */
 @Composable
-internal fun PercentSlider(
+internal fun AppearancePercentSlider(
     title: String,
     value: Float,
     hint: String,

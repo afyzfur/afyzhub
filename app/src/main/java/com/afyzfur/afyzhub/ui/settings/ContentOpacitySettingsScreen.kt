@@ -101,22 +101,22 @@ internal fun ContentOpacitySettingsContent(
                     Column(Modifier.weight(1f).fillMaxWidth().testTag("opacity-controls").verticalScroll(rememberScrollState())) {
                         SettingsGroup {
                             Box(Modifier.testTag("opacity-slider-search")) {
-                                PercentSlider(stringResource(R.string.opacity_search), stored.searchOpacity,
+                                AppearancePercentSlider(stringResource(R.string.opacity_search), stored.searchOpacity,
                                     stringResource(R.string.opacity_hint), onSearchChange, onPreview = { search = it })
                             }
                             SettingsItemDivider()
                             Box(Modifier.testTag("opacity-slider-thinking")) {
-                                PercentSlider(stringResource(R.string.opacity_thinking), stored.thinkingOpacity,
+                                AppearancePercentSlider(stringResource(R.string.opacity_thinking), stored.thinkingOpacity,
                                     stringResource(R.string.opacity_hint), onThinkingChange, onPreview = { thinking = it })
                             }
                             SettingsItemDivider()
                             Box(Modifier.testTag("opacity-slider-body")) {
-                                PercentSlider(stringResource(R.string.opacity_body), stored.bodyOpacity,
+                                AppearancePercentSlider(stringResource(R.string.opacity_body), stored.bodyOpacity,
                                     stringResource(R.string.opacity_hint), onBodyChange, onPreview = { body = it })
                             }
                             SettingsItemDivider()
                             Box(Modifier.testTag("opacity-slider-info")) {
-                                PercentSlider(stringResource(R.string.opacity_info), stored.infoOpacity,
+                                AppearancePercentSlider(stringResource(R.string.opacity_info), stored.infoOpacity,
                                     stringResource(R.string.opacity_hint), onInfoChange, onPreview = { info = it })
                             }
                         }
