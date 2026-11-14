@@ -26,4 +26,10 @@
   <string name="logs_delete_filtered_confirm">将删除当前筛出的 %1$s 条记录，其余保留。无法恢复。</string>
   <string name="selection_count">已选 %1$s 项</string>
   <string name="items_count">%1$s 条</string>
+    <string name="opacity_category">内容透明度</string>
+    <string name="opacity_search">搜索信息</string>
+    <string name="opacity_thinking">思考内容</string>
+    <string name="opacity_body">正文气泡</string>
+    <string name="opacity_info">时间与信息</string>
+    <string name="opacity_hint">调低后背景更明显；文字保持清晰</string>
 </resources>

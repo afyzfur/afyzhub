@@ -92,7 +92,9 @@ class WebSearchService(
         if (apiKey.isNullOrBlank()) {
             return searchBing(query, maxResults)
         }
-        val body = Json { encodeDefaults = true }.encodeToString(TavilyRequest(apiKey, query, maxResults.coerceIn(1, 20)))
+        val body = Json { encodeDefaults = true }.encodeToString(
+            TavilyRequest(apiKey, query, maxResults.coerceIn(1, 20))
+        )
         val resp = transport.postForText(
             baseUrl = "https://api.tavily.com",
             path = "/search",
@@ -101,9 +103,7 @@ class WebSearchService(
             logContext = RequestLogContext(provider = "web-search", model = "tavily")
         )
         val parsed = filterSearchResults(query, parseTavily(resp, maxResults))
-        if (parsed.isNotEmpty()) return parsed
-        // Tavily 也空(额度用尽/网络问题): 回退 Bing, 不让搜索彻底失败
-        return searchBing(query, maxResults)
+        return parsed
     }
 
     private suspend fun searchBing(query: String, maxResults: Int): List<Result> {

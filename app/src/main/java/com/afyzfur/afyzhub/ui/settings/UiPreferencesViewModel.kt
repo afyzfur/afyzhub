@@ -91,6 +91,11 @@ class UiPreferencesViewModel(
     fun setAvatarBlur(value: Float) {
         viewModelScope.launch { repository.setAvatarBlur(value) }
     }
+    fun setSearchOpacity(value: Float) { viewModelScope.launch { repository.setSearchOpacity(value) } }
+    fun setThinkingOpacity(value: Float) { viewModelScope.launch { repository.setThinkingOpacity(value) } }
+    fun setBodyOpacity(value: Float) { viewModelScope.launch { repository.setBodyOpacity(value) } }
+    fun setInfoOpacity(value: Float) { viewModelScope.launch { repository.setInfoOpacity(value) } }
+
 
     fun setInputBarSeeThrough(value: Float) {
         viewModelScope.launch { repository.setInputBarSeeThrough(value) }

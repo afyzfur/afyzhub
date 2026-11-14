@@ -59,6 +59,10 @@ internal class UiSettingsStore(private val dataStore: DataStore<Preferences>, sc
     private val backgroundEffectKey = stringPreferencesKey(Constants.KEY_BACKGROUND_EFFECT)
     private val backgroundBlurKey = floatPreferencesKey(Constants.KEY_BACKGROUND_BLUR)
     private val avatarBlurKey = floatPreferencesKey(Constants.KEY_AVATAR_BLUR)
+    private val searchOpacityKey = floatPreferencesKey("chat_search_opacity")
+    private val thinkingOpacityKey = floatPreferencesKey("chat_thinking_opacity")
+    private val bodyOpacityKey = floatPreferencesKey("chat_body_opacity")
+    private val infoOpacityKey = floatPreferencesKey("chat_info_opacity")
     private val inputBarSeeThroughKey =
         floatPreferencesKey(Constants.KEY_INPUT_BAR_SEE_THROUGH)
     private val inputBarFloatingKey =
@@ -113,6 +117,10 @@ internal class UiSettingsStore(private val dataStore: DataStore<Preferences>, sc
                 backgroundEffect = ChatBackgroundEffect.fromId(prefs[backgroundEffectKey]),
                 backgroundBlur = prefs[backgroundBlurKey] ?: 0.4f,
                 avatarBlur = prefs[avatarBlurKey] ?: 0f,
+                searchOpacity = (prefs[searchOpacityKey] ?: 1f).coerceIn(0f, 1f),
+                thinkingOpacity = (prefs[thinkingOpacityKey] ?: 1f).coerceIn(0f, 1f),
+                bodyOpacity = (prefs[bodyOpacityKey] ?: 1f).coerceIn(0f, 1f),
+                infoOpacity = (prefs[infoOpacityKey] ?: 1f).coerceIn(0f, 1f),
                 imageVersion = prefs[imageVersionKey] ?: 0L
             )
         )
@@ -197,6 +205,11 @@ internal class UiSettingsStore(private val dataStore: DataStore<Preferences>, sc
     override suspend fun setAvatarBlur(value: Float) {
         dataStore.edit { it[avatarBlurKey] = value.coerceIn(0f, 1f) }
     }
+    override suspend fun setSearchOpacity(value: Float) { dataStore.edit { it[searchOpacityKey] = value.coerceIn(0f, 1f) } }
+    override suspend fun setThinkingOpacity(value: Float) { dataStore.edit { it[thinkingOpacityKey] = value.coerceIn(0f, 1f) } }
+    override suspend fun setBodyOpacity(value: Float) { dataStore.edit { it[bodyOpacityKey] = value.coerceIn(0f, 1f) } }
+    override suspend fun setInfoOpacity(value: Float) { dataStore.edit { it[infoOpacityKey] = value.coerceIn(0f, 1f) } }
+
 
     /**
      * 解析头像模式。

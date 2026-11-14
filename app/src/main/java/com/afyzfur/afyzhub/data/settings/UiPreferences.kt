@@ -283,6 +283,10 @@ data class ChatAppearance(
      * 有人想用一张画面复杂的图当头像，又不希望它盖过消息内容。
      */
     val avatarBlur: Float = 0f,
+    val searchOpacity: Float = 1f,
+    val thinkingOpacity: Float = 1f,
+    val bodyOpacity: Float = 1f,
+    val infoOpacity: Float = 1f,
     /**
      * 图片内容的版本号，每次保存图片递增。
      *

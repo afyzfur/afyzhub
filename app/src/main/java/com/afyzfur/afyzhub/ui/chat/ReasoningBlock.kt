@@ -45,6 +45,7 @@ fun ReasoningBlock(
     reasoning: String,
     thinking: Boolean,
     bubbleStyle: BubbleStyle = BubbleStyle.BUBBLE,
+    opacity: Float = 1f,
     modifier: Modifier = Modifier
 ) {
     // null 表示未手动干预，跟随 thinking 自动展开或收起
@@ -61,7 +62,7 @@ fun ReasoningBlock(
         color = if (bubbleStyle == BubbleStyle.PLAIN) {
             androidx.compose.ui.graphics.Color.Transparent
         } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
+            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = opacity.coerceIn(0f, 1f))
         },
         shape = if (bubbleStyle == BubbleStyle.PLAIN) {
             RectangleShape

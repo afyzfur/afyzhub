@@ -98,6 +98,10 @@ internal fun ChatContent(
     quickPrompts: List<String>,
     shufflePrompts: Boolean,
     displayOptions: MessageDisplayOptions,
+    searchOpacity: Float = 1f,
+    thinkingOpacity: Float = 1f,
+    bodyOpacity: Float = 1f,
+    infoOpacity: Float = 1f,
     messages: List<Message>,
     isLoading: Boolean,
     sendPhase: SendPhase,
@@ -237,7 +241,11 @@ internal fun ChatContent(
                                 searchEngine = searchEngine,
                                 onRetry = { onRetry(message.id) },
                                 onLongPress = { onLongPress(message) },
-                                onLinkClick = onOpenBrowser
+                                onLinkClick = onOpenBrowser,
+                                searchOpacity = searchOpacity,
+                                thinkingOpacity = thinkingOpacity,
+                                bodyOpacity = bodyOpacity,
+                                infoOpacity = infoOpacity
                             )
                         }
                         // 零占位的滚动锚点。animateScrollToItem(index) 是把

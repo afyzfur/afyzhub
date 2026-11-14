@@ -107,6 +107,10 @@ fun ChatAppearanceSettingsScreen(
     var blurOverride by remember { mutableStateOf<Float?>(null) }
     var avatarBlurOverride by remember { mutableStateOf<Float?>(null) }
     var inputSeeThroughOverride by remember { mutableStateOf<Float?>(null) }
+    var searchOpacityOverride by remember { mutableStateOf<Float?>(null) }
+    var thinkingOpacityOverride by remember { mutableStateOf<Float?>(null) }
+    var bodyOpacityOverride by remember { mutableStateOf<Float?>(null) }
+    var infoOpacityOverride by remember { mutableStateOf<Float?>(null) }
 
     // 传给预览的副本。只替换正在拖的那一项，其余仍取落盘值——
     // 一次只可能拖一个滑块，但三个覆盖值各自独立更简单，
@@ -115,7 +119,11 @@ fun ChatAppearanceSettingsScreen(
         backgroundDim = dimOverride ?: stored.backgroundDim,
         backgroundBlur = blurOverride ?: stored.backgroundBlur,
         avatarBlur = avatarBlurOverride ?: stored.avatarBlur,
-        inputBarSeeThrough = inputSeeThroughOverride ?: stored.inputBarSeeThrough
+        inputBarSeeThrough = inputSeeThroughOverride ?: stored.inputBarSeeThrough,
+        searchOpacity = searchOpacityOverride ?: stored.searchOpacity,
+        thinkingOpacity = thinkingOpacityOverride ?: stored.thinkingOpacity,
+        bodyOpacity = bodyOpacityOverride ?: stored.bodyOpacity,
+        infoOpacity = infoOpacityOverride ?: stored.infoOpacity
     )
     val imageError by viewModel.imageError.collectAsState()
 
@@ -421,11 +429,21 @@ fun ChatAppearanceSettingsScreen(
                     }
                 }
 
+                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_category))
+                SettingsGroup {
+                    PercentSlider(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_search), value = appearance.searchOpacity, hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_hint), onChange = viewModel::setSearchOpacity, onPreview = { searchOpacityOverride = it })
+                    SettingsItemDivider()
+                    PercentSlider(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_thinking), value = appearance.thinkingOpacity, hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_hint), onChange = viewModel::setThinkingOpacity, onPreview = { thinkingOpacityOverride = it })
+                    SettingsItemDivider()
+                    PercentSlider(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_body), value = appearance.bodyOpacity, hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_hint), onChange = viewModel::setBodyOpacity, onPreview = { bodyOpacityOverride = it })
+                    SettingsItemDivider()
+                    PercentSlider(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_info), value = appearance.infoOpacity, hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_hint), onChange = viewModel::setInfoOpacity, onPreview = { infoOpacityOverride = it })
+                }
                 Spacer(Modifier.height(24.dp))
             }
         }
     }
-    // 裁剪对话框。三张图共用一个，用 cropTarget 区分裁的是哪张
+    // 裁剪对话框.三张图共用一个，用 cropTarget 区分裁的是哪张
     cropTarget?.let { purpose ->
         val path = when (purpose) {
             ImageStore.Purpose.USER_AVATAR -> appearance.userAvatarPath

@@ -94,7 +94,11 @@ fun MessageBlock(
     onRetry: () -> Unit = {},
     onLongPress: () -> Unit = {},
     /** 链接点击: 导航到应用内浏览器 */
-    onLinkClick: ((String) -> Unit)? = null
+    onLinkClick: ((String) -> Unit)? = null,
+    searchOpacity: Float = 1f,
+    thinkingOpacity: Float = 1f,
+    bodyOpacity: Float = 1f,
+    infoOpacity: Float = 1f
 ) {
     val fromUser = message.isFromUser
     val style = if (fromUser) appearance.userBubble else appearance.assistantBubble
@@ -150,7 +154,11 @@ fun MessageBlock(
                     fromUser = fromUser,
                     searchEngine = searchEngine,
                     onLongPress = onLongPress,
-                    onLinkClick = onLinkClick
+                    onLinkClick = onLinkClick,
+                    searchOpacity = searchOpacity,
+                    thinkingOpacity = thinkingOpacity,
+                    bodyOpacity = bodyOpacity,
+                    infoOpacity = infoOpacity
                 )
             }
 
@@ -160,7 +168,8 @@ fun MessageBlock(
                     message = message,
                     options = displayOptions,
                     modifier = Modifier.padding(top = 8.dp),
-                    contrastBackground = appearance.hasBackgroundImage
+                    contrastBackground = appearance.hasBackgroundImage,
+                    opacity = infoOpacity
                 )
             }
         }
@@ -192,7 +201,10 @@ private fun MessageBody(
     searchEngine: String,
     onLongPress: () -> Unit,
     onLinkClick: ((String) -> Unit)? = null,
-    renderSegments: Boolean = true
+    renderSegments: Boolean = true,
+    searchOpacity: Float = 1f,
+    thinkingOpacity: Float = 1f,
+    bodyOpacity: Float = 1f
 ) {
     // 只有助手回复会带思考标签，用户消息不必解析。
     // remember 以内容为键：流式输出时每个增量都会重组，
@@ -222,9 +234,9 @@ private fun MessageBody(
                 text = message.content,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (style == BubbleStyle.BUBBLE) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
+                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = bodyOpacity)
                 } else {
-                    MaterialTheme.colorScheme.onSurface
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = bodyOpacity)
                 }
             )
         } else {
@@ -232,9 +244,9 @@ private fun MessageBody(
                 // 用剥掉标签后的正文，否则 <think> 会原样显示
                 text = answerText,
                 color = if (style == BubbleStyle.BUBBLE) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = bodyOpacity)
                 } else {
-                    MaterialTheme.colorScheme.onSurface
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = bodyOpacity)
                 },
                 onLinkClick = onLinkClick,
                 // 链接文本内部的 pointerInput 会消费指针事件,
@@ -275,9 +287,9 @@ private fun MessageBody(
         contentBlocks.forEachIndexed { index, block ->
             if (index > 0) Spacer(Modifier.size(8.dp))
             when (block) {
-                is ContentBlock.Think -> ReasoningBlock(reasoning = block.text, thinking = block.ongoing, bubbleStyle = style, modifier = Modifier.padding(bottom = 6.dp))
-                is ContentBlock.Search -> SearchBlock(query = block.query, sources = searchSources, searchEngine = searchEngine, onLinkClick = onLinkClick, modifier = Modifier.padding(bottom = 6.dp))
-                is ContentBlock.Answer -> MessageBody(message = message.copy(content = block.text), style = style, fromUser = false, searchEngine = searchEngine, onLongPress = onLongPress, onLinkClick = onLinkClick, renderSegments = false)
+                is ContentBlock.Think -> ReasoningBlock(reasoning = block.text, thinking = block.ongoing, bubbleStyle = style, opacity = thinkingOpacity, modifier = Modifier.padding(bottom = 6.dp))
+                is ContentBlock.Search -> SearchBlock(query = block.query, sources = searchSources, searchEngine = searchEngine, opacity = searchOpacity, onLinkClick = onLinkClick, modifier = Modifier.padding(bottom = 6.dp))
+                is ContentBlock.Answer -> MessageBody(message = message.copy(content = block.text), style = style, fromUser = false, searchEngine = searchEngine, onLongPress = onLongPress, onLinkClick = onLinkClick, renderSegments = false, bodyOpacity = bodyOpacity)
             }
         }
         return
@@ -294,9 +306,9 @@ private fun MessageBody(
     when (style) {
         BubbleStyle.BUBBLE -> Surface(
             color = if (fromUser) {
-                MaterialTheme.colorScheme.primaryContainer
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = bodyOpacity)
             } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh
+                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = bodyOpacity)
             },
             // 两侧形状一致，来源方向由对齐与底色区分
             shape = if (fromUser) {
@@ -511,6 +523,7 @@ private fun SearchBlock(
     sources: List<Pair<String, String>>,
     searchEngine: String = "bing",
     modifier: Modifier = Modifier,
+    opacity: Float = 1f,
     onLinkClick: ((String) -> Unit)? = null
 ) {
     // DeepSeek 风格: 收起一行(favicon+标题+查询词), 展开为来源列表。
