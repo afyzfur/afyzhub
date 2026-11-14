@@ -52,6 +52,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -109,6 +110,10 @@ fun AppearanceSectionSettingsScreen(
     var blurOverride by remember { mutableStateOf<Float?>(null) }
     var avatarBlurOverride by remember { mutableStateOf<Float?>(null) }
     var inputSeeThroughOverride by remember { mutableStateOf<Float?>(null) }
+    var topBarOverride by remember { mutableStateOf<Boolean?>(null) }
+    var inputTransparentOverride by remember { mutableStateOf<Boolean?>(null) }
+    var inputDeepOverride by remember { mutableStateOf<Boolean?>(null) }
+    var inputFloatingOverride by remember { mutableStateOf<Boolean?>(null) }
 
     // 传给预览的副本。只替换正在拖的那一项，其余仍取落盘值——
     // 一次只可能拖一个滑块，但三个覆盖值各自独立更简单，
@@ -117,8 +122,24 @@ fun AppearanceSectionSettingsScreen(
         backgroundDim = dimOverride ?: stored.backgroundDim,
         backgroundBlur = blurOverride ?: stored.backgroundBlur,
         avatarBlur = avatarBlurOverride ?: stored.avatarBlur,
-        inputBarSeeThrough = inputSeeThroughOverride ?: stored.inputBarSeeThrough
+        inputBarSeeThrough = inputSeeThroughOverride ?: stored.inputBarSeeThrough,
+        transparentTopBar = topBarOverride ?: stored.transparentTopBar,
+        transparentInputBar = inputTransparentOverride ?: stored.transparentInputBar,
+        inputBarDeepSeeThrough = inputDeepOverride ?: stored.inputBarDeepSeeThrough,
+        inputBarFloating = inputFloatingOverride ?: stored.inputBarFloating
     )
+    LaunchedEffect(stored.transparentTopBar, topBarOverride) {
+        if (topBarOverride == stored.transparentTopBar) topBarOverride = null
+    }
+    LaunchedEffect(stored.transparentInputBar, inputTransparentOverride) {
+        if (inputTransparentOverride == stored.transparentInputBar) inputTransparentOverride = null
+    }
+    LaunchedEffect(stored.inputBarDeepSeeThrough, inputDeepOverride) {
+        if (inputDeepOverride == stored.inputBarDeepSeeThrough) inputDeepOverride = null
+    }
+    LaunchedEffect(stored.inputBarFloating, inputFloatingOverride) {
+        if (inputFloatingOverride == stored.inputBarFloating) inputFloatingOverride = null
+    }
     val imageError by viewModel.imageError.collectAsState()
 
     // 用 GetContent 而非 OpenDocument：只需一次性读取内容用于复制，
@@ -148,6 +169,10 @@ fun AppearanceSectionSettingsScreen(
                 .statusBarsPadding()
         ) {
             SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(section.titleRes), onNavigateBack = onNavigateBack)
+
+            if (section == AppearanceSection.AVATARS || section == AppearanceSection.INPUT) {
+                AppearanceLivePreview(section = section, appearance = appearance, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            }
 
             // 加载失败时提示原因。放在页面顶部而非弹窗：
             // 弹窗会打断操作，而这里的失败通常需要用户换一张图重试
@@ -247,14 +272,14 @@ fun AppearanceSectionSettingsScreen(
                             title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_97e65da38ee3),
                             subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3fe82e0db94c),
                             checked = appearance.showUserAvatar,
-                            onCheckedChange = viewModel::setShowUserAvatar
+                            onCheckedChange = { viewModel.setShowUserAvatar(it) }
                         )
                         SettingsSwitchItem(
                             icon = Icons.Default.Face,
                             title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_be8297a3745a),
                             subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_0a8d775194af),
                             checked = appearance.showAssistantAvatar,
-                            onCheckedChange = viewModel::setShowAssistantAvatar
+                            onCheckedChange = { viewModel.setShowAssistantAvatar(it) }
                         )
                     }
                 }
@@ -288,7 +313,7 @@ fun AppearanceSectionSettingsScreen(
                         SettingsItemDivider()
                         AppearancePercentSlider(
                             title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_afdfbfeab7ad),
-                            value = appearance.avatarBlur,
+                            value = stored.avatarBlur,
                             hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3ae10b7249db),
                             onChange = viewModel::setAvatarBlur,
                             onPreview = { avatarBlurOverride = it }
@@ -377,7 +402,7 @@ fun AppearanceSectionSettingsScreen(
                         title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_b0868e020827),
                         subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_f7b1792e175b),
                         checked = appearance.transparentTopBar,
-                        onCheckedChange = viewModel::setTransparentTopBar
+                        onCheckedChange = { topBarOverride = it; viewModel.setTransparentTopBar(it) }
                     )
                     SettingsSwitchItem(
                         icon = Icons.Default.KeyboardArrowDown,
@@ -388,7 +413,7 @@ fun AppearanceSectionSettingsScreen(
                             com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5fba648444d4)
                         },
                         checked = appearance.transparentInputBar,
-                        onCheckedChange = viewModel::setTransparentInputBar
+                        onCheckedChange = { inputTransparentOverride = it; viewModel.setTransparentInputBar(it) }
                     )
                     // 样式与透明无关，始终可选：悬浮式在不透明时也
                     // 是一种不同的观感
@@ -404,7 +429,7 @@ fun AppearanceSectionSettingsScreen(
                             com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_d2908949f847)
                         },
                         checked = appearance.inputBarFloating,
-                        onCheckedChange = viewModel::setInputBarFloating,
+                        onCheckedChange = { inputFloatingOverride = it; viewModel.setInputBarFloating(it) },
                         enabled = appearance.inputBarDeepSeeThrough
                     )
                     // 强度只在透明开启时显示：关着的时候调它看不出
@@ -413,7 +438,7 @@ fun AppearanceSectionSettingsScreen(
                         SettingsItemDivider()
                         AppearancePercentSlider(
                             title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_c5e26944beba),
-                            value = appearance.inputBarSeeThrough,
+                            value = stored.inputBarSeeThrough,
                             hint = if (appearance.inputBarDeepSeeThrough) {
                                 com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_284480e6290c)
                             } else {
@@ -432,7 +457,7 @@ fun AppearanceSectionSettingsScreen(
                                 com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bdba71f57166)
                             },
                             checked = appearance.inputBarDeepSeeThrough,
-                            onCheckedChange = viewModel::setInputBarDeepSeeThrough
+                            onCheckedChange = { inputDeepOverride = it; viewModel.setInputBarDeepSeeThrough(it) }
                         )
                     }
                 }
@@ -682,6 +707,7 @@ internal fun AppearancePercentSlider(
             )
         }
         Slider(
+            modifier = Modifier.testTag("appearance-slider-$title"),
             value = shown,
             onValueChange = {
                 // 拖动期间只更新本地状态并向上报，不写磁盘。

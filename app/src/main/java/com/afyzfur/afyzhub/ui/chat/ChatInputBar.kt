@@ -116,6 +116,8 @@ fun ChatInputBar(
      */
     onBodyHeightChange: (Dp) -> Unit = {},
     focusRequestToken: Int = 0,
+    previewOnly: Boolean = false,
+    applyWindowInsets: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -123,7 +125,8 @@ fun ChatInputBar(
     val keyboardController = LocalSoftwareKeyboardController.current
     var hasFocus by remember { mutableStateOf(false) }
     val imeVisibleState = rememberUpdatedState(WindowInsets.isImeVisible)
-    LaunchedEffect(focusRequestToken) {
+    LaunchedEffect(focusRequestToken, previewOnly) {
+        if (previewOnly) return@LaunchedEffect
         when {
             focusRequestToken > 0 -> {
                 // Let the gesture's state/layout update reach a frame before issuing IME work.
@@ -187,7 +190,7 @@ fun ChatInputBar(
             .then(
                 if (floating) {
                     Modifier
-                        .navigationBarsPadding()
+                        .then(if (applyWindowInsets) Modifier.navigationBarsPadding() else Modifier)
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 } else {
                     Modifier
@@ -207,7 +210,7 @@ fun ChatInputBar(
                 .onSizeChanged { size ->
                     onBodyHeightChange(with(density) { size.height.toDp() })
                 }
-                .then(if (floating) Modifier else Modifier.navigationBarsPadding())
+                .then(if (floating || !applyWindowInsets) Modifier else Modifier.navigationBarsPadding())
         ) {
 
             // 上层：文本输入。用 BasicTextField 而非 TextField，
@@ -215,7 +218,7 @@ fun ChatInputBar(
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
-                enabled = !isLoading,
+                enabled = !isLoading && !previewOnly,
                 textStyle = LocalTextStyle.current.merge(
                     MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface
@@ -264,7 +267,7 @@ fun ChatInputBar(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(AppShapeTokens.CircleButton)
-                        .clickable(enabled = !isLoading, onClick = onPickModel)
+                        .clickable(enabled = !isLoading && !previewOnly, onClick = onPickModel)
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     ModelIcon(modelName = modelName, size = 18.dp)
@@ -273,7 +276,7 @@ fun ChatInputBar(
                 Spacer(Modifier.width(8.dp))
 
                 ThinkingEffortButton(
-                    enabled = !isLoading,
+                    enabled = !isLoading && !previewOnly,
                     thinkingEnabled = thinkingEnabled,
                     effort = thinkingEffort,
                     // 生成中不允许改：这次请求已经发出，改了会让人
@@ -304,7 +307,7 @@ fun ChatInputBar(
                 // 发送键因此偏离左侧那一行
                 Spacer(modifier = Modifier.weight(1f))
                 SendButton(
-                    canSend = canSend,
+                    canSend = canSend && !previewOnly,
                     isLoading = isLoading,
                     onSend = onSend,
                     onStop = onStop

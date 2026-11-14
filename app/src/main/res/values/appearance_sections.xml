@@ -19,4 +19,9 @@
     <string name="appearance_preview_answer">这是正文预览，文字保持清晰。</string>
     <string name="appearance_preview_adjust">调节底色</string>
     <string name="appearance_preview_background_hint">使用当前聊天背景；未设置图片时显示示例渐变</string>
+    <string name="appearance_preview_user_message">这是你的消息预览</string>
+    <string name="appearance_preview_title">聊天预览</string>
+    <string name="appearance_preview_subtitle">当前模型与配置</string>
+    <string name="appearance_preview_input">在这里输入消息…</string>
+    <string name="appearance_preview_live_hint">修改设置立即预览，滑杆松手后保存</string>
 </resources>
