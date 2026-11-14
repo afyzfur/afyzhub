@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.*
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
@@ -72,7 +73,7 @@ class PersonalizationTest {
         val kinds = listOf("search", "thinking", "body", "info")
         for ((index, kind) in kinds.withIndex()) {
             compose.onNodeWithTag("opacity-slider-$kind").performScrollTo()
-            val slider = compose.onNode(hasSetProgressAction() and hasAnyAncestor(hasTestTag("opacity-slider-$kind")))
+            val slider = compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.SetProgress) and hasAnyAncestor(hasTestTag("opacity-slider-$kind")))
             slider.performTouchInput {
                 down(Offset(width * 0.85f, height / 2f))
                 moveTo(Offset(width * 0.3f, height / 2f), 100)
