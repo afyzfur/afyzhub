@@ -229,7 +229,6 @@ class ChatRepositoryImpl(
                 // 搜索到的页面以 sources 块附在回复后: UI 解析渲染
                 // 为可展开的来源列表, 二轮请求里模型也能看到自己"查过什么"
                 val noRelevantResults = results.isEmpty()
-                val noRelevantResults = results.isEmpty()
                 val sourcesBlock = if (results.isEmpty()) "" else "\n" +
                     SEARCH_SOURCES_OPEN + "\n" +
                     results.joinToString("\n") { it.title.replace('\n', ' ') + " :: " + it.url } +
