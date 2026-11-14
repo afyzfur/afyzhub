@@ -16,7 +16,9 @@ internal fun isSearchResultRelevant(query: String, title: String, snippet: Strin
             .replace(Regex("(今天|今日|明天|明日|后天|本周|这周|现在|实时|当前|最新).*$"), "")
             .removeSuffix("的")
         if (location.length >= 2 && location.any { it in '\u4e00'..'\u9fff' }) {
-            return result.contains(location)
+            val isWeatherQuery = weatherTerms.any { normalizedQuery.contains(it) }
+            val hasWeatherSignal = weatherTerms.any { result.contains(it) }
+            return result.contains(location) && (!isWeatherQuery || hasWeatherSignal)
         }
         return false
     }
@@ -31,6 +33,9 @@ internal fun filterSearchResults(query: String, results: List<Result>): List<Res
 /** Keep the actual search event, not speculative prose emitted before the model asked to search. */
 internal fun searchTimelinePrefix(reply: String): String {
     val open = Regex("<web_search\\b[^>]*>", RegexOption.IGNORE_CASE).find(reply) ?: return ""
+    val prefix = reply.substring(0, open.range.first)
+    val safePrefix = if (prefix.contains("<think>", ignoreCase = true) || prefix.contains("</think>", ignoreCase = true)) prefix else ""
+
     val close = Regex("</web_search\\s*>", RegexOption.IGNORE_CASE).find(reply, open.range.last + 1) ?: return ""
-    return reply.substring(0, close.range.last + 1).trim()
+    return (safePrefix + reply.substring(open.range.first, close.range.last + 1)).trim()
 }

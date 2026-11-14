@@ -58,12 +58,11 @@ class ChatGestureStateTest {
         val s = state()
         repeat(3) { assertEquals(0, s.move(0f, -2f).keyboardAction) }
         assertEquals(-1, s.move(0f, -67f).keyboardAction)
+    }
     @Test fun keyboardShowRequiresListAtBottomAtGestureStart() {
         val awayFromBottom = ChatGestureState(8f, 32f, 144f, drawerEligible = true, drawerInitiallyOpen = false, keyboardCanShow = false)
         assertEquals(0, awayFromBottom.move(0f, -200f).keyboardAction)
         val atBottom = ChatGestureState(8f, 32f, 144f, drawerEligible = true, drawerInitiallyOpen = false, keyboardCanShow = true)
         assertEquals(-1, atBottom.move(0f, -145f).keyboardAction)
     }
-    }
-
 }

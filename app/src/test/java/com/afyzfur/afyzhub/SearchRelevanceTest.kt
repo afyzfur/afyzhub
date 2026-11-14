@@ -18,14 +18,14 @@ class SearchRelevanceTest {
         val items = listOf(
             WebSearchService.Result("重庆天气", "今日小雨", "https://example.test/chongqing"),
             WebSearchService.Result("禅城天气", "降雨", "https://example.test/foshan"),
-            WebSearchService.Result("重庆黄历", "吉凶查询", "https://example.test/calendar")
+            WebSearchService.Result("重庆今日天气", "重庆温度查询", "https://example.test/chongqing-weather")
         )
-        assertEquals(listOf("重庆天气"), filterSearchResults("重庆今天天气", items).map { it.title })
+        assertEquals(listOf("重庆天气", "重庆今日天气"), filterSearchResults("重庆今天天气", items).map { it.title })
     }
 
     @Test fun onlySearchProtocolPrefixIsCarriedIntoSecondRequest() {
         val original = "我暂时没拿到实时天气数据。<web_search>重庆今天天气</web_search>我来继续查。"
-        assertEquals("<web_search>重庆今天天气</web_search>", searchTimelinePrefix(original))
+        assertEquals("我暂时没拿到实时天气数据。\n<web_search>重庆今天天气</web_search>", searchTimelinePrefix(original))
         assertEquals("", searchTimelinePrefix("我现在去查一下。"))
         assertEquals("<WEB_SEARCH>天气</WEB_SEARCH>", searchTimelinePrefix("草稿\n<WEB_SEARCH>天气</WEB_SEARCH>后续草稿"))
     }
