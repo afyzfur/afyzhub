@@ -68,7 +68,7 @@ class MemoryScreenTest {
         show(MemorySnapshot(loaded = true, enabled = false))
         compose.onNodeWithTag("memory-summarize").assertIsNotEnabled()
         compose.onNodeWithText(text(R.string.memory_empty)).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.memory_status_off)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.memory_status_off)).performScrollTo().assertIsDisplayed()
     }
 
     @Test fun runningAndErrorStatesAreVisible() {

@@ -244,16 +244,17 @@ private fun MemoryHero(state: MemorySnapshot, run: MemoryRunState, onSummarize: 
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.weight(1f).testTag("memory-status")
                 )
-                Button(
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(
                     onClick = onSummarize,
                     enabled = state.enabled && !run.running,
-                    modifier = Modifier.testTag("memory-summarize")
+                    modifier = Modifier.fillMaxWidth().testTag("memory-summarize")
                 ) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(if (run.running) R.string.memory_summarizing else R.string.memory_summarize_now))
                 }
-            }
             run.error?.let {
                 Spacer(Modifier.height(8.dp))
                 Text(

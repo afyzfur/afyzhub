@@ -25,6 +25,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -51,6 +54,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.onFocusChanged
@@ -183,9 +188,12 @@ fun InAppBrowserScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding()
         ) {
             // 顶栏: 返回 + 地址输入 + 外部打开
             Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 2.dp)
@@ -210,26 +218,11 @@ fun InAppBrowserScreen(
                     ),
                     modifier = Modifier
                         .weight(1f)
-                        .height(56.dp)
+                        .heightIn(min = 56.dp)
                         .testTag("browser-address")
                         .onFocusChanged { addressFocused = it.isFocused }
                 )
-                IconButton(onClick = { loadError = null; webView.reload() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_38108eaa1d32))
-                }
-                IconButton(
-                    onClick = {
-                        runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(currentUrl)))
-                        }.onFailure { loadError = it.message ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_aa8c25b80c21) }
-                    }
-                ) {
-                    Text(
-                        text = "↗",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+
             }
 
             androidx.compose.material3.TextButton(onClick = {
@@ -257,13 +250,29 @@ fun InAppBrowserScreen(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_320ffeefca2c))
                 }
-                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { loadError = null; webView.reload() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_38108eaa1d32))
+                }
+                IconButton(
+                    onClick = {
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(currentUrl)))
+                        }.onFailure { loadError = it.message ?: com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_aa8c25b80c21) }
+                    }
+                ) {
+                    Text(
+                        text = "↗",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 Text(
                     text = if (progress < 100) "$progress%" else pageTitle,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    modifier = Modifier.padding(end = 12.dp, top = 12.dp)
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(end = 12.dp, top = 12.dp)
                 )
             }
 

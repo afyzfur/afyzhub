@@ -565,7 +565,8 @@ class ChatRepositoryImpl(
         model = model,
         promptTokens = promptTokens,
         completionTokens = completionTokens,
-        latencyMs = latencyMs
+        latencyMs = latencyMs,
+        cachedTokens = cachedTokens
     )
 
     private fun MessageEntity.toDomain() = Message(

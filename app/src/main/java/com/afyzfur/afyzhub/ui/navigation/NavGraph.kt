@@ -224,8 +224,9 @@ fun NavGraph() {
         }
 
         composable(Screen.Browser.route) { entry ->
-            val raw = entry.arguments?.getString("url").orEmpty()
-            val url = android.net.Uri.decode(raw)
+            // Navigation already decodes String route arguments. A second decode corrupts encoded
+            // query values, redirects and paths (e.g. %26 becomes a different query parameter).
+            val url = entry.arguments?.getString("url").orEmpty()
             InAppBrowserScreen(
                 initialUrl = url,
                 onNavigateBack = { navController.popBackStack() }

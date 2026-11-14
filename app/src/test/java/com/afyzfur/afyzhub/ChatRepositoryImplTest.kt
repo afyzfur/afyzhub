@@ -12,6 +12,7 @@ import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsProvider
 import com.afyzfur.afyzhub.domain.model.AiProvider
 import com.afyzfur.afyzhub.util.Constants
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
@@ -348,4 +349,26 @@ class ChatRepositoryImplTest {
         val size = checkNotNull(client.completeTurns).size
         assertTrue(size <= Constants.MAX_CONTEXT_MESSAGES)
     }
+    @Test
+    fun cacheSurvivesPersistenceObservationAndUndoInBothRequestModes() = runTest {
+        for (stream in listOf(false, true)) {
+            val usage = TokenUsage(1000, 20, 800)
+            val client = RecordingClient(reply = "answer", chunks = listOf("answer"), usage = usage)
+            val repo = repository(client, AppSettings(apiKey = "test", streamEnabled = stream))
+            val conversationId = newConversation()
+            val result = checkNotNull(repo.sendMessage(conversationId, "hello").getOrNull())
+            assertEquals(800, result.cachedTokens)
+            val observed = repo.getMessagesByConversationId(conversationId).first()
+            val assistant = observed.single { it.role == Constants.ROLE_ASSISTANT }
+            assertEquals(800, assistant.cachedTokens)
+            val removed = repo.rollbackTo(assistant.id)
+            repo.restoreMessages(removed)
+            val restored = repo.getMessagesByConversationId(conversationId).first()
+                .single { it.id == assistant.id }
+            assertEquals(800, restored.cachedTokens)
+            assertEquals(1000, restored.promptTokens)
+            assertEquals(20, restored.completionTokens)
+        }
+    }
+
 }
