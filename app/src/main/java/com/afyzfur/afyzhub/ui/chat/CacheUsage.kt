@@ -1,8 +1,8 @@
 package com.afyzfur.afyzhub.ui.chat
 
-/** null is unreported; zero is an explicit cache miss. */
+/** null means the provider did not report cache use; zero means it explicitly reported a miss. */
 internal fun cacheUsageText(cached: Int?, input: Int?): String {
-    if (cached == null) return "cache: n/a"
+    if (cached == null) return "cache: not reported by provider"
     val percentage = input?.takeIf { it > 0 }?.let { (cached.toLong() * 100 + it / 2) / it }
     return if (percentage != null) "cache: $cached (hit: $percentage%)" else "cache: $cached"
 }

@@ -223,7 +223,7 @@ internal fun ChatContent(
                             start = 16.dp,
                             end = 16.dp,
                             top = 12.dp,
-                            bottom = if (deep) 12.dp + inputBarHeight else 12.dp
+                            bottom = if (deep) inputBarHeight + 24.dp else 24.dp
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)

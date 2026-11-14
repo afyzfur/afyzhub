@@ -11,6 +11,8 @@ import com.afyzfur.afyzhub.data.remote.provider.CompletionResult
 import com.afyzfur.afyzhub.data.remote.provider.StreamEvent
 import com.afyzfur.afyzhub.data.memory.MemoryProvider
 import com.afyzfur.afyzhub.data.remote.provider.WebSearchService
+import com.afyzfur.afyzhub.data.remote.provider.filterSearchResults
+import com.afyzfur.afyzhub.data.remote.provider.searchTimelinePrefix
 import com.afyzfur.afyzhub.data.remote.provider.TokenUsage
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsProvider
@@ -182,7 +184,14 @@ class ChatRepositoryImpl(
                     )
                 )
                 assistantId = placeholderId
-                streamCollector.collect(client, turns, settings, messageDao, placeholderId, onPhase)
+                // When application search is enabled, buffer the first model response until we know
+                // whether it is a search request. Otherwise speculative text can reach the chat before
+                // the actual search-backed answer and cannot be retracted from the visible stream.
+                if (settings.webSearchEnabled && settings.provider != AiProvider.GEMINI) {
+                    client.complete(turns, settings)
+                } else {
+                    streamCollector.collect(client, turns, settings, messageDao, placeholderId, onPhase)
+                }
             } else {
                 client.complete(turns, settings)
             }
@@ -212,12 +221,15 @@ class ChatRepositoryImpl(
                 settings.provider != AiProvider.GEMINI
             ) {
                 onPhase(SendPhase.SEARCHING)
-                val results = webSearchService.search(searchQuery, engineId = settings.searchEngine, tavilyApiKey = settings.tavilyApiKey)
+                val rawResults = webSearchService.search(searchQuery, engineId = settings.searchEngine, tavilyApiKey = settings.tavilyApiKey)
+                val results = filterSearchResults(searchQuery, rawResults)
                 // 结果已拿到，进入读取整理阶段；结果为空时直接跳过
                 // BROWSING，让模型按无结果路径兜底回答
                 if (results.isNotEmpty()) onPhase(SendPhase.BROWSING)
                 // 搜索到的页面以 sources 块附在回复后: UI 解析渲染
                 // 为可展开的来源列表, 二轮请求里模型也能看到自己"查过什么"
+                val noRelevantResults = results.isEmpty()
+                val noRelevantResults = results.isEmpty()
                 val sourcesBlock = if (results.isEmpty()) "" else "\n" +
                     SEARCH_SOURCES_OPEN + "\n" +
                     results.joinToString("\n") { it.title.replace('\n', ' ') + " :: " + it.url } +
@@ -225,7 +237,8 @@ class ChatRepositoryImpl(
                 // 用户原始问题: 搜索查询词可能比问题窄(模型缩写), 回答必须
                 // 覆盖完整需求。从上下文取最后一条 user 轮, retry 路径同样有效。
                 val originalQuestion = turns.lastOrNull { it.role == "user" }?.content ?: searchQuery
-                                val searchedTurns = turns + listOf(
+                val searchEvent = searchTimelinePrefix(reply)
+                val searchedTurns = turns + listOf(
                     // 第二轮请求的 assistant 历史: 保留第一轮原始内容(含搜索
                     // 标签, 代表"我已发起这次搜索"), 并在末尾追加占位说明,
                     // 让模型明确知道搜索已执行、现在该基于结果回答。
@@ -233,7 +246,7 @@ class ChatRepositoryImpl(
                     // 没搜成而在二轮再发一次搜索(重复搜索的根源)。
                     ChatTurn(
                         role = "assistant",
-                        content = reply + "\n（以上为我本轮已输出的内容：已发起网络搜索并停止输出，等待系统返回搜索结果后继续回答。）" + sourcesBlock
+                        content = searchEvent + sourcesBlock
                     ),
 
                     ChatTurn(
@@ -244,14 +257,20 @@ class ChatRepositoryImpl(
                         content = "以下是「" + searchQuery + "」的搜索结果：\n\n" +
                             WebSearchService.formatResults(results) +
                             "\n\n用户的原始问题是：「" + originalQuestion + "」。" +
-                            "请结合搜索结果与原始问题，用中文直接给出完整的正文回答；" +
-                            "搜索结果可能只覆盖了问题的一部分，不足的部分可用你的知识补充。" +
+                            if (noRelevantResults) {
+                                "搜索结果没有找到与所查询地点/问题相关的资料。请明确说明未找到可靠信息；" +
+                                    "不要用已有知识补写实时天气、温度或降雨，也不要猜测。"
+                            } else {
+                                "仅依据下列与查询相关的搜索结果，结合用户原始问题，用中文回答。" +
+                                    "资料没有明确提供的实时信息必须说明未能确认，不得根据旧知识推测。"
+                            } +
                             "不要罗列链接、标题或网址列表（来源已由界面单独展示）；" +
                             "也不要再输出任何搜索标签，搜索已完成。"
                     )
                 )
                 // Preserve the emitted timeline exactly once across the request boundary.
-                val timelinePrefix = reply + sourcesBlock + "\n"
+                val timelinePrefix = searchEvent + sourcesBlock + "\n"
+                assistantId?.let { messageDao.updateContent(it, timelinePrefix) }
                 val secondOutcome = if (settings.streamEnabled) {
                     streamCollector.collect(client, searchedTurns, settings, messageDao, requireNotNull(assistantId) { "Assistant placeholder must exist before streaming" }, onPhase, timelinePrefix)
                 } else {

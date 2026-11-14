@@ -15,6 +15,8 @@ import com.afyzfur.afyzhub.util.Constants
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -371,4 +373,33 @@ class ChatRepositoryImplTest {
         }
     }
 
+    @Test
+    fun advancedSearchBuffersFirstPassAndDoesNotRepeatSpeculativeDraft() = runTest {
+        val client = object : ChatClient {
+            val requests = mutableListOf<List<ChatTurn>>()
+            val streamRequests = mutableListOf<List<ChatTurn>>()
+            override suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): CompletionResult {
+                requests += turns
+                return CompletionResult("我暂时没有实时天气数据。<web_search>重庆今天天气</web_search>")
+            }
+            override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> {
+                streamRequests += turns
+                return flowOf(StreamEvent.TextDelta("搜索结果没有提供温度，无法确认。"), StreamEvent.Finished())
+            }
+            override suspend fun listModels(settings: AppSettings): List<String> = emptyList()
+        }
+        val settings = AppSettings(apiKey = "sk", model = "gpt-4o", streamEnabled = true, webSearchEnabled = true)
+        val repo = ChatRepositoryImpl(
+            conversationDao, messageDao, ChatClientRegistry(mapOf(settings.provider to client)), FixedSettings(settings),
+            com.afyzfur.afyzhub.data.remote.provider.WebSearchService(NoopTransport)
+        )
+        val sent = checkNotNull(repo.sendMessage(newConversation(), "我查一下重庆今天的天气").getOrNull())
+        assertFalse(sent.content.contains("我暂时没有实时天气数据"))
+        assertTrue(sent.content.contains("<web_search>重庆今天天气</web_search>"))
+        assertTrue(client.streamRequests.single().last().content.contains("用户的原始问题"))
+        assertTrue(client.streamRequests.single().last().content.contains("不要用已有知识补写实时天气"))
+        assertEquals("First pass is buffered rather than streamed", 1, client.requests.size)
+        assertEquals("Second pass streams once", 1, client.streamRequests.size)
+        assertEquals(1, Regex("<web_search>").findAll(sent.content).count())
+    }
 }

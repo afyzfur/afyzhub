@@ -8,7 +8,8 @@ internal class ChatGestureState(
     private val drawerTrigger: Float,
     private val keyboardTrigger: Float = 72f,
     private val drawerEligible: Boolean,
-    drawerInitiallyOpen: Boolean
+    drawerInitiallyOpen: Boolean,
+    private val keyboardCanShow: Boolean = true
 ) {
     // 0 undecided, 1 horizontal drawer, 2 vertical keyboard, 3 ignored horizontal
     var axis: Int = 0
@@ -61,7 +62,7 @@ internal class ChatGestureState(
         if (axis == 2) {
             keyboardDistance = directionalDistance(keyboardDistance, keyboardDelta)
             val action = when {
-                keyboardDistance <= -keyboardTrigger && lastKeyboardAction != -1 -> -1
+                keyboardCanShow && keyboardDistance <= -keyboardTrigger && lastKeyboardAction != -1 -> -1
                 keyboardDistance >= keyboardTrigger && lastKeyboardAction != 1 -> 1
                 else -> 0
             }
