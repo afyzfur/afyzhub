@@ -25,7 +25,7 @@ class SearchRelevanceTest {
 
     @Test fun onlySearchProtocolPrefixIsCarriedIntoSecondRequest() {
         val original = "我暂时没拿到实时天气数据。<web_search>重庆今天天气</web_search>我来继续查。"
-        assertEquals("我暂时没拿到实时天气数据。\n<web_search>重庆今天天气</web_search>", searchTimelinePrefix(original))
+        assertEquals("<web_search>重庆今天天气</web_search>", searchTimelinePrefix(original))
         assertEquals("", searchTimelinePrefix("我现在去查一下。"))
         assertEquals("<WEB_SEARCH>天气</WEB_SEARCH>", searchTimelinePrefix("草稿\n<WEB_SEARCH>天气</WEB_SEARCH>后续草稿"))
     }
