@@ -159,7 +159,8 @@ fun MessageBlock(
                 MessageMetaRow(
                     message = message,
                     options = displayOptions,
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 8.dp),
+                    contrastBackground = appearance.hasBackgroundImage
                 )
             }
         }
@@ -271,7 +272,8 @@ private fun MessageBody(
     // 思考/搜索块按出现顺序独立成栏, 与正式回答是并列关系。
     // 两次思考+一次搜索 = 三个条, 段落先后与模型实际行为一致
     if (!fromUser && renderSegments) {
-        contentBlocks.forEach { block ->
+        contentBlocks.forEachIndexed { index, block ->
+            if (index > 0) Spacer(Modifier.size(8.dp))
             when (block) {
                 is ContentBlock.Think -> ReasoningBlock(reasoning = block.text, thinking = block.ongoing, bubbleStyle = style, modifier = Modifier.padding(bottom = 6.dp))
                 is ContentBlock.Search -> SearchBlock(query = block.query, sources = searchSources, searchEngine = searchEngine, onLinkClick = onLinkClick, modifier = Modifier.padding(bottom = 6.dp))

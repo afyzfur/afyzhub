@@ -381,11 +381,14 @@ class ChatRepositoryImplTest {
             val streamRequests = mutableListOf<List<ChatTurn>>()
             override suspend fun complete(turns: List<ChatTurn>, settings: AppSettings): CompletionResult {
                 requests += turns
-                return CompletionResult("我暂时没有实时天气数据。<web_search>重庆今天天气</web_search>")
+                error("Streaming search must keep the stream API")
             }
             override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> {
                 streamRequests += turns
-                return flowOf(StreamEvent.TextDelta("搜索结果没有提供温度，无法确认。"), StreamEvent.Finished())
+                val content = if (streamRequests.size == 1) {
+                    "我暂时没有实时天气数据。<web_search>重庆今天天气</web_search>我猜是晴天。"
+                } else "搜索结果没有提供温度，无法确认。"
+                return flowOf(StreamEvent.TextDelta(content), StreamEvent.Finished())
             }
             override suspend fun listModels(settings: AppSettings): List<String> = emptyList()
         }
@@ -397,10 +400,57 @@ class ChatRepositoryImplTest {
         val sent = checkNotNull(repo.sendMessage(newConversation(), "我查一下重庆今天的天气").getOrNull())
         assertFalse(sent.content.contains("我暂时没有实时天气数据"))
         assertTrue(sent.content.contains("<web_search>重庆今天天气</web_search>"))
-        assertTrue(client.streamRequests.single().last().content.contains("用户的原始问题"))
-        assertTrue(client.streamRequests.single().last().content.contains("不要用已有知识补写实时天气"))
-        assertEquals("First pass is buffered rather than streamed", 1, client.requests.size)
-        assertEquals("Second pass streams once", 1, client.streamRequests.size)
+        assertTrue(client.streamRequests.last().last().content.contains("用户的原始问题"))
+        assertTrue(client.streamRequests.last().last().content.contains("不要用已有知识补写实时天气"))
+        assertEquals("Keep stream protocol", 0, client.requests.size)
+        assertEquals("One planning pass and one grounded answer", 2, client.streamRequests.size)
         assertEquals(1, Regex("<web_search>").findAll(sent.content).count())
     }
+    @Test
+    fun tavilyResultsReachAnswerOnFirstSendForBothModes() = runTest {
+        for (stream in listOf(false, true)) {
+            val requests = mutableListOf<List<ChatTurn>>()
+            val draft = "先说无法查到。<web_search>重庆今日天气</web_search>再猜晴天。"
+            val client = object : ChatClient {
+                private fun answer(turns: List<ChatTurn>): String {
+                    requests += turns
+                    if (requests.size == 1) return draft
+                    val evidence = turns.last().content
+                    assertTrue(evidence.contains("重庆今日小雨 13—17℃"))
+                    assertTrue(evidence.contains("用户的原始问题"))
+                    assertTrue(evidence.contains("不得根据旧知识推测"))
+                    assertTrue(evidence.contains("检索日期"))
+                    assertFalse(evidence.contains("佛山"))
+                    assertFalse(turns[turns.lastIndex - 1].content.contains("先说无法查到"))
+                    return "重庆今日小雨，13—17℃。"
+                }
+                override suspend fun complete(turns: List<ChatTurn>, settings: AppSettings) = CompletionResult(answer(turns))
+                override fun stream(turns: List<ChatTurn>, settings: AppSettings): Flow<StreamEvent> =
+                    flowOf(StreamEvent.TextDelta(answer(turns)), StreamEvent.Finished(TokenUsage(1000, 20, 600)))
+                override suspend fun listModels(settings: AppSettings): List<String> = emptyList()
+            }
+            var searches = 0
+            val transport = object : com.afyzfur.afyzhub.data.remote.provider.Transport by NoopTransport {
+                override suspend fun postForText(baseUrl: String, path: String, headers: Map<String, String>, body: String, query: Map<String, String>, logContext: com.afyzfur.afyzhub.data.log.RequestLogContext): String {
+                    searches++
+                    val parsed = kotlinx.serialization.json.Json.parseToJsonElement(body) as kotlinx.serialization.json.JsonObject
+                    assertEquals("\"advanced\"", parsed["search_depth"].toString())
+                    assertEquals("\"重庆今日天气\"", parsed["query"].toString())
+                    return """{"results":[{"title":"重庆天气预报","url":"https://weather.test/cq","content":"重庆今日小雨 13—17℃"},{"title":"佛山天气预报","url":"https://weather.test/fs","content":"佛山今日晴天"}]}"""
+                }
+            }
+            val settings = AppSettings(apiKey = "sk", streamEnabled = stream, webSearchEnabled = true, searchEngine = "tavily", tavilyApiKey = "test")
+            val repo = ChatRepositoryImpl(conversationDao, messageDao, ChatClientRegistry(mapOf(settings.provider to client)), FixedSettings(settings), com.afyzfur.afyzhub.data.remote.provider.WebSearchService(transport))
+            val result = checkNotNull(repo.sendMessage(newConversation(), "重庆今天天气怎么样").getOrNull())
+            assertEquals(1, searches)
+            assertEquals(2, requests.size)
+            assertEquals(1, Regex("<web_search>").findAll(result.content).count())
+            assertEquals(1, Regex("重庆今日小雨，13—17℃。").findAll(result.content).count())
+            assertFalse(result.content.contains("先说无法查到"))
+            assertFalse(result.content.contains("再猜晴天"))
+            assertTrue(result.content.contains("https://weather.test/cq"))
+            assertFalse(result.content.contains("https://weather.test/fs"))
+        }
+    }
+
 }

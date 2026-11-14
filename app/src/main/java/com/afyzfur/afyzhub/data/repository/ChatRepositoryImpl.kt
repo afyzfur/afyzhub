@@ -188,7 +188,15 @@ class ChatRepositoryImpl(
                 // whether it is a search request. Otherwise speculative text can reach the chat before
                 // the actual search-backed answer and cannot be retracted from the visible stream.
                 if (settings.webSearchEnabled && settings.provider != AiProvider.GEMINI) {
-                    client.complete(turns, settings)
+                    val buffered = StringBuilder()
+                    var usage: TokenUsage? = null
+                    client.stream(turns, settings).collect { event ->
+                        when (event) {
+                            is StreamEvent.TextDelta -> buffered.append(event.delta)
+                            is StreamEvent.Finished -> usage = mergeTokenUsage(usage, event.usage)
+                        }
+                    }
+                    CompletionResult(buffered.toString(), usage)
                 } else {
                     streamCollector.collect(client, turns, settings, messageDao, placeholderId, onPhase)
                 }
@@ -205,17 +213,7 @@ class ChatRepositoryImpl(
             // 补充上下文再次请求, 用新回复替换。Gemini 走原生
             // grounding, 不会输出搜索标签, 此块自然跳过
             var searchUsage = mergeTokenUsage(outcome.usage, null)
-            var searchQuery = WebSearchService.extractQuery(reply)
-            // 查询词补全: 模型常把问题缩写(「重庆的天气」→「重庆市」)。
-            // 若查询词是用户问题的子串且明显更短, 直接用用户问题搜索,
-            // 一次搜索覆盖完整需求。
-            if (searchQuery != null) {
-                val userQ = turns.lastOrNull { it.role == "user" }?.content?.trim()
-                if (userQ != null && userQ.length > searchQuery.length &&
-                    (userQ.contains(searchQuery) || sharedChars(searchQuery, userQ) >= 0.6)) {
-                    searchQuery = userQ
-                }
-            }
+            val searchQuery = WebSearchService.extractQuery(reply)
             if (searchQuery != null &&
                 settings.webSearchEnabled &&
                 settings.provider != AiProvider.GEMINI
@@ -253,16 +251,17 @@ class ChatRepositoryImpl(
                         // 带上用户原始问题: 搜索查询词可能比问题窄(模型缩写),
                         // 回答必须覆盖完整需求而不只是查询词。
                         // 用户问题从上下文取(最后一条 user 轮), retry 路径同样有效。
-                        content = "以下是「" + searchQuery + "」的搜索结果：\n\n" +
+                        content = "检索日期：" + java.time.LocalDate.now().toString() + "（设备时区 " + java.time.ZoneId.systemDefault().id + "）。\n" +
+                            "以下是「" + searchQuery + "」的搜索结果：\n\n" +
                             WebSearchService.formatResults(results) +
                             "\n\n用户的原始问题是：「" + originalQuestion + "」。" +
-                            if (noRelevantResults) {
+                            (if (noRelevantResults) {
                                 "搜索结果没有找到与所查询地点/问题相关的资料。请明确说明未找到可靠信息；" +
                                     "不要用已有知识补写实时天气、温度或降雨，也不要猜测。"
                             } else {
                                 "仅依据下列与查询相关的搜索结果，结合用户原始问题，用中文回答。" +
                                     "资料没有明确提供的实时信息必须说明未能确认，不得根据旧知识推测。"
-                            } +
+                            }) +
                             "不要罗列链接、标题或网址列表（来源已由界面单独展示）；" +
                             "也不要再输出任何搜索标签，搜索已完成。"
                     )
@@ -490,7 +489,9 @@ class ChatRepositoryImpl(
             settings.webSearchEnabled &&
             settings.provider != AiProvider.GEMINI
         ) {
-            WebSearchService.instruction()
+            "当前设备日期：" + java.time.LocalDate.now().toString() +
+                "，时区：" + java.time.ZoneId.systemDefault().id + "。今天/明天按此日期理解；搜索资料需核对日期。\n" +
+                WebSearchService.instruction()
         } else null
         val thinkingGuidance = if (
             settings.thinkingGuidanceEnabled &&

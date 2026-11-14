@@ -665,7 +665,7 @@ class CacheUsageRegressionTest {
         assertNull(parse("""{"usage":{"prompt_tokens":100,"prompt_tokens_details":null}}""")?.cachedTokens)
         assertNull(parse("not-json"))
         assertEquals("cache: 0 (hit: 0%)", com.afyzfur.afyzhub.ui.chat.cacheUsageText(0, 100))
-        assertEquals("cache: not reported by provider", com.afyzfur.afyzhub.ui.chat.cacheUsageText(null, 100))
+        assertEquals("cache: 未获取统计", com.afyzfur.afyzhub.ui.chat.cacheUsageText(null, 100))
         assertEquals("cache: 1000000000 (hit: 50%)", com.afyzfur.afyzhub.ui.chat.cacheUsageText(1000000000, 2000000000))
     }
 }

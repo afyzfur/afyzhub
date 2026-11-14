@@ -1,5 +1,8 @@
 package com.afyzfur.afyzhub.ui.chat
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -31,7 +34,8 @@ import java.util.Locale
 fun MessageMetaRow(
     message: Message,
     options: MessageDisplayOptions,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contrastBackground: Boolean = false
 ) {
     val parts = remember(message, options) { buildMetaParts(message, options) }
     if (parts.isEmpty()) return
@@ -44,7 +48,12 @@ fun MessageMetaRow(
             Arrangement.spacedBy(12.dp)
         },
         verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth().then(
+            if (contrastBackground) Modifier
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(12.dp))
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+            else Modifier
+        )
     ) {
         parts.forEach { part ->
             Text(

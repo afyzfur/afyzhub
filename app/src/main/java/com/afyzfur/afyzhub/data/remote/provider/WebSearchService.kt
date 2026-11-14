@@ -92,7 +92,7 @@ class WebSearchService(
         if (apiKey.isNullOrBlank()) {
             return searchBing(query, maxResults)
         }
-        val body = Json.encodeToString(TavilyRequest(apiKey, query, maxResults.coerceIn(1, 20)))
+        val body = Json { encodeDefaults = true }.encodeToString(TavilyRequest(apiKey, query, maxResults.coerceIn(1, 20)))
         val resp = transport.postForText(
             baseUrl = "https://api.tavily.com",
             path = "/search",
@@ -100,7 +100,7 @@ class WebSearchService(
             body = body,
             logContext = RequestLogContext(provider = "web-search", model = "tavily")
         )
-        val parsed = parseTavily(resp, maxResults)
+        val parsed = filterSearchResults(query, parseTavily(resp, maxResults))
         if (parsed.isNotEmpty()) return parsed
         // Tavily 也空(额度用尽/网络问题): 回退 Bing, 不让搜索彻底失败
         return searchBing(query, maxResults)
@@ -127,7 +127,7 @@ class WebSearchService(
             if (e is kotlinx.coroutines.CancellationException) throw e
             ""
         }
-        val fromRss = if (xml.isBlank()) emptyList() else parseBingRss(xml, maxResults, query)
+        val fromRss = if (xml.isBlank()) emptyList() else filterSearchResults(query, parseBingRss(xml, maxResults, query))
         if (fromRss.isNotEmpty()) {
             // RSS 退化检测: RSS 对长查询会退化成只取前几个词的泛搜索
             // (实测「重庆今日天气」返回「重庆」百科/旅游)。退化特征是
@@ -154,15 +154,6 @@ class WebSearchService(
             logContext = RequestLogContext(provider = "web-search", model = "bing-html")
         )
         val htmlRes = parseBing(html, maxResults, query)
-        if (htmlRes.isEmpty()) {
-            // 两级都拿不到相关结果: 明确告知, 而不是把无关结果塞给用户
-            return listOf(Result(
-                title = "必应未返回相关结果",
-                snippet = "已尝试 RSS 与网页两路。可能被反爬或按地域重排。建议: ① 换百度引擎 ② 换个问法 ③ 复制请求日志发开发者。诊断码: BING_ALL_EMPTY",
-                url = "",
-                site = "诊断"
-            ))
-        }
         return htmlRes
     }
     private suspend fun searchBaidu(query: String, maxResults: Int): List<Result> {
@@ -197,14 +188,7 @@ class WebSearchService(
             val parsed = parseBaidu(html, maxResults, query)
             if (parsed.isNotEmpty()) return parsed
         }
-        val diag = "[AfyzSearch] BAIDU_ALL_FAILED query=$query attempts=${strategies.size}"
-        // 返回特殊诊断条目: 标题就是错误信息, snippet 是建议
-        return listOf(Result(
-            title = "百度搜索失败（已尝试 ${strategies.size} 个 UA）",
-            snippet = "网络问题或被反爬拦截。建议: ① 换必应引擎 ② 检查网络 ③ 复制请求日志发开发者。诊断码: $diag",
-            url = "",
-            site = "诊断"
-        ))
+        return emptyList()
     }
     private suspend fun searchGoogle(query: String, maxResults: Int): List<Result> {
         val html = transport.getForText(
@@ -288,7 +272,7 @@ class WebSearchService(
                 /** 把搜索结果格式化为注入上下文的文本 */
         fun formatResults(results: List<Result>): String {
             if (results.isEmpty()) {
-                return "（搜索没有返回结果。请基于已有知识回答，并向用户说明信息可能过时。）"
+                return "（未获取到可靠搜索结果。请说明无法确认，不得猜测实时数据。）"
             }
             return results.joinToString("\n\n") { r ->
                 "${r.title}\n${r.snippet}\n来源: ${r.url}"

@@ -113,7 +113,6 @@ fun ChatScreen(
     val clipboard = LocalClipboardManager.current
     val error by viewModel.error.collectAsState()
     val listState = rememberLazyListState()
-    val listAtBottomForGesture = remember { mutableStateOf(false) }
     var inputText by remember { mutableStateOf("") }
 
     // 「编辑并重发」记下的消息 id：非空时下一次发送要先删掉它及其后续。
@@ -228,7 +227,7 @@ fun ChatScreen(
     val animateDrawerState = rememberUpdatedState<(Boolean) -> Unit>({ animateDrawer(it) })
     val drawerWidthState = rememberUpdatedState(drawerWidthPx)
     val imeVisibleState = rememberUpdatedState(imeVisible)
-    val atBottomState = rememberUpdatedState(atBottom)
+    val keyboardBottomState = rememberUpdatedState(!listState.canScrollForward)
     val keyboardActionState = rememberUpdatedState<(Int) -> Unit>({ action ->
         val next = kotlin.math.abs(focusRequestToken) + 1
         focusRequestToken = if (action < 0) next else -next
@@ -274,9 +273,8 @@ fun ChatScreen(
                     val gesture = ChatGestureState(
                         slop = slop, drawerTrigger = trigger,
                         // Only a second upward swipe that starts at the bottom may show the keyboard.
-                        keyboardTrigger = with(density) { 144.dp.toPx() },
-                        keyboardCanShow = atBottomState.value &&
-                            down.position.y >= size.height - with(density) { 120.dp.toPx() },
+                        keyboardTrigger = with(density) { 48.dp.toPx() },
+                        keyboardCanShow = keyboardBottomState.value && !listState.isScrollInProgress,
                         // 主聊天页全屏横向唤出/收起；方向锁定后不与竖向键盘手势混用。
                         drawerEligible = true,
                         drawerInitiallyOpen = drawerTargetState.value

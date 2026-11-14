@@ -174,28 +174,19 @@ internal object SearchResultParser {
         SearchPatterns.P9.find(url)?.groupValues?.get(1) ?: ""
 
     fun parseBing(html: String, maxResults: Int, query: String): List<Result> {
-        val blocks = html.split("<li class=\"b_algo\"").drop(1)
-        val out = mutableListOf<Result>()
-        val queryChars = meaningfulChars(query)
-        for (b in blocks) {
-            val url = SearchPatterns.P10.find(b)?.groupValues?.get(1)
-                ?: continue
-            val title = SearchPatterns.P11
-                .find(b)?.groupValues?.get(1) ?: continue
-            val snippet = SearchPatterns.P12
-                .find(b)?.groupValues?.get(1) ?: ""
-                        val cleanTitle = stripTags(title)
-            if (queryChars.isNotEmpty()) {
-                val chars = (cleanTitle + stripTags(snippet)).toSet()
-                val coverage = queryChars.count { it in chars }.toDouble() / queryChars.size
-                if (coverage < 0.5) {
-                    continue
-                }
-            }
-            out += Result(cleanTitle, stripTags(snippet), url, siteOf(url))
-            if (out.size >= maxResults) break
-        }
-        return out
+        val blocks = Regex("<li\\b[^>]*class=[\"'][^\"']*\\bb_algo\\b[^\"']*[\"'][^>]*>", RegexOption.IGNORE_CASE)
+            .split(html).drop(1)
+        val heading = Regex("<h2\\b[^>]*>(.*?)</h2>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        val link = Regex("<a\\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        return blocks.mapNotNull { block ->
+            val h2 = heading.find(block)?.groupValues?.get(1) ?: return@mapNotNull null
+            val match = link.find(h2) ?: return@mapNotNull null
+            val title = stripTags(match.groupValues[2])
+            val snippet = SearchPatterns.P12.find(block)?.groupValues?.get(1)?.let(::stripTags).orEmpty()
+            val url = stripTags(match.groupValues[1])
+            if (!isSearchResultRelevant(query, title, snippet, url)) return@mapNotNull null
+            Result(title, snippet, url, siteOf(url))
+        }.take(maxResults)
     }
 
     /** 去除 HTML 标签与实体，压缩空白 */
