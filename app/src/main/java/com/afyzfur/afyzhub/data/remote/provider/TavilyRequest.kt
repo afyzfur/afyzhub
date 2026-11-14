@@ -10,5 +10,5 @@ internal data class TavilyRequest(
     @SerialName("max_results") val maxResults: Int,
     @SerialName("search_depth") val searchDepth: String = "advanced",
     @SerialName("include_answer") val includeAnswer: Boolean = false,
-    @SerialName("include_raw_content") val includeRawContent: Boolean = false
+    @SerialName("include_raw_content") val includeRawContent: Boolean = true
 )

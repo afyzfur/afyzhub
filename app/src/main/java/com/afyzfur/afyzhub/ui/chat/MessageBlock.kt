@@ -95,10 +95,10 @@ fun MessageBlock(
     onLongPress: () -> Unit = {},
     /** 链接点击: 导航到应用内浏览器 */
     onLinkClick: ((String) -> Unit)? = null,
-    searchOpacity: Float = 1f,
-    thinkingOpacity: Float = 1f,
-    bodyOpacity: Float = 1f,
-    infoOpacity: Float = 1f
+    searchOpacity: Float = appearance.searchOpacity,
+    thinkingOpacity: Float = appearance.thinkingOpacity,
+    bodyOpacity: Float = appearance.bodyOpacity,
+    infoOpacity: Float = appearance.infoOpacity
 ) {
     val fromUser = message.isFromUser
     val style = if (fromUser) appearance.userBubble else appearance.assistantBubble
@@ -157,8 +157,7 @@ fun MessageBlock(
                     onLinkClick = onLinkClick,
                     searchOpacity = searchOpacity,
                     thinkingOpacity = thinkingOpacity,
-                    bodyOpacity = bodyOpacity,
-                    infoOpacity = infoOpacity
+                    bodyOpacity = bodyOpacity
                 )
             }
 
@@ -234,9 +233,9 @@ private fun MessageBody(
                 text = message.content,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (style == BubbleStyle.BUBBLE) {
-                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = bodyOpacity)
+                    MaterialTheme.colorScheme.onPrimaryContainer
                 } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = bodyOpacity)
+                    MaterialTheme.colorScheme.onSurface
                 }
             )
         } else {
@@ -244,9 +243,9 @@ private fun MessageBody(
                 // 用剥掉标签后的正文，否则 <think> 会原样显示
                 text = answerText,
                 color = if (style == BubbleStyle.BUBBLE) {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = bodyOpacity)
+                    MaterialTheme.colorScheme.onSurfaceVariant
                 } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = bodyOpacity)
+                    MaterialTheme.colorScheme.onSurface
                 },
                 onLinkClick = onLinkClick,
                 // 链接文本内部的 pointerInput 会消费指针事件,
@@ -530,7 +529,7 @@ private fun SearchBlock(
     // 每条来源 = favicon + 标题, 点整行进内置浏览器; 不显示摘要
     var expanded by remember { mutableStateOf(false) }
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = opacity.coerceIn(0f, 1f)),
         shape = AppShapeTokens.SettingsGroup,
         modifier = modifier.fillMaxWidth()
     ) {

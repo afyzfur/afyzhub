@@ -16,5 +16,7 @@ class TavilyRequestTest {
         assertEquals(query, parsed.getValue("query").jsonPrimitive.content)
         assertEquals("key\"\\\n", parsed.getValue("api_key").jsonPrimitive.content)
         assertEquals("5", parsed.getValue("max_results").jsonPrimitive.content)
+        assertEquals("advanced", parsed.getValue("search_depth").jsonPrimitive.content)
+        assertEquals("true", parsed.getValue("include_raw_content").jsonPrimitive.content)
     }
 }

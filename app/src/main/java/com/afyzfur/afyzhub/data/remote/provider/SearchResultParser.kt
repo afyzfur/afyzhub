@@ -23,7 +23,9 @@ internal object SearchResultParser {
                 val o = e.jsonObject
                 val url = o["url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                 val title = o["title"]?.jsonPrimitive?.contentOrNull ?: url
-                val content = o["content"]?.jsonPrimitive?.contentOrNull ?: ""
+                val summary = o["content"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                val raw = o["raw_content"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                val content = (summary.take(2500) + if (raw.isNotBlank() && raw != summary) "\n网页正文：\n" + raw.take(8000) else "")
                 Result(title, content, url, siteOf(url))
             }.take(maxResults)
         } catch (e: Exception) {

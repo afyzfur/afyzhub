@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
 import com.afyzfur.afyzhub.data.settings.MessageDisplayOptions
 import com.afyzfur.afyzhub.domain.model.Message
 import java.text.SimpleDateFormat
@@ -50,18 +51,19 @@ fun MessageMetaRow(
             Arrangement.spacedBy(12.dp)
         },
         verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = modifier.wrapContentWidth(unbounded = false).then(
-            if (contrastBackground) Modifier
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = opacity.coerceIn(0f, 1f)), RoundedCornerShape(12.dp))
-                .padding(horizontal = 10.dp, vertical = 6.dp)
-            else Modifier
-        )
+        modifier = modifier.fillMaxWidth()
     ) {
         parts.forEach { part ->
             Text(
                 text = part,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("metadata-chip").then(
+                    if (contrastBackground) Modifier
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = opacity.coerceIn(0f, 1f)), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                    else Modifier
+                )
             )
         }
     }

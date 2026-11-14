@@ -89,21 +89,23 @@ class WebSearchService(
      * 而不是直接报错——搜索是增强能力, 不该让整条消息失败。
      */
     private suspend fun searchTavily(query: String, maxResults: Int, apiKey: String?): List<Result> {
-        if (apiKey.isNullOrBlank()) {
-            return searchBing(query, maxResults)
+        // Preserve the selected engine; never label a Bing response as Tavily.
+        if (apiKey.isNullOrBlank()) return emptyList()
+        val weather = query.contains("天气") || query.contains("气温") || query.contains("weather", true)
+        val queries = listOf(query, if (weather) query + " " + java.time.LocalDate.now() + " 气象 预报" else query + " 最新资料")
+        val json = Json { encodeDefaults = true }
+        for (searchQuery in queries) {
+            val resp = transport.postForText(
+                baseUrl = "https://api.tavily.com",
+                path = "/search",
+                headers = mapOf("Content-Type" to "application/json"),
+                body = json.encodeToString(TavilyRequest(apiKey, searchQuery, maxResults.coerceIn(1, 20))),
+                logContext = RequestLogContext(provider = "web-search", model = "tavily")
+            )
+            val parsed = filterSearchResults(query, parseTavily(resp, maxResults))
+            if (parsed.isNotEmpty()) return parsed
         }
-        val body = Json { encodeDefaults = true }.encodeToString(
-            TavilyRequest(apiKey, query, maxResults.coerceIn(1, 20))
-        )
-        val resp = transport.postForText(
-            baseUrl = "https://api.tavily.com",
-            path = "/search",
-            headers = mapOf("Content-Type" to "application/json"),
-            body = body,
-            logContext = RequestLogContext(provider = "web-search", model = "tavily")
-        )
-        val parsed = filterSearchResults(query, parseTavily(resp, maxResults))
-        return parsed
+        return emptyList()
     }
 
     private suspend fun searchBing(query: String, maxResults: Int): List<Result> {
