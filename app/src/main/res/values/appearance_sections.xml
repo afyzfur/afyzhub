@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_customize">自定义外观</string>
+    <string name="appearance_colors">配色</string>
+    <string name="appearance_colors_hint">动态取色与主题色板</string>
+    <string name="appearance_messages">消息样式</string>
+    <string name="appearance_messages_hint">页面动画与双方气泡样式</string>
+    <string name="appearance_avatars">头像</string>
+    <string name="appearance_avatars_hint">显示开关、自定义图片与模糊</string>
+    <string name="appearance_background">聊天背景</string>
+    <string name="appearance_background_hint">更换图片、裁剪、遮罩与模糊</string>
+    <string name="appearance_input">顶栏与输入栏</string>
+    <string name="appearance_input_hint">透明背景、悬浮样式与透视强度</string>
+    <string name="appearance_opacity_hint">独立调节搜索、思考、正文和信息底色，实时预览</string>
+    <string name="appearance_preview">实时预览</string>
+    <string name="appearance_preview_hint">预览区可滚动；拖动滑杆立即查看底色变化</string>
+    <string name="appearance_preview_thinking">正在整理思路，准备给出简洁的回答。</string>
+    <string name="appearance_preview_search">示例搜索</string>
+    <string name="appearance_preview_answer">这是正文预览，文字保持清晰。</string>
+    <string name="appearance_preview_adjust">调节底色</string>
+    <string name="appearance_preview_background_hint">使用当前聊天背景；未设置图片时显示示例渐变</string>
+</resources>

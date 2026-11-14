@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -93,7 +94,8 @@ fun PaletteRow(
 }
 
 @Composable
-fun ChatAppearanceSettingsScreen(
+fun AppearanceSectionSettingsScreen(
+    section: AppearanceSection,
     onNavigateBack: () -> Unit,
     viewModel: UiPreferencesViewModel = koinViewModel()
 ) {
@@ -107,10 +109,6 @@ fun ChatAppearanceSettingsScreen(
     var blurOverride by remember { mutableStateOf<Float?>(null) }
     var avatarBlurOverride by remember { mutableStateOf<Float?>(null) }
     var inputSeeThroughOverride by remember { mutableStateOf<Float?>(null) }
-    var searchOpacityOverride by remember { mutableStateOf<Float?>(null) }
-    var thinkingOpacityOverride by remember { mutableStateOf<Float?>(null) }
-    var bodyOpacityOverride by remember { mutableStateOf<Float?>(null) }
-    var infoOpacityOverride by remember { mutableStateOf<Float?>(null) }
 
     // 传给预览的副本。只替换正在拖的那一项，其余仍取落盘值——
     // 一次只可能拖一个滑块，但三个覆盖值各自独立更简单，
@@ -119,11 +117,7 @@ fun ChatAppearanceSettingsScreen(
         backgroundDim = dimOverride ?: stored.backgroundDim,
         backgroundBlur = blurOverride ?: stored.backgroundBlur,
         avatarBlur = avatarBlurOverride ?: stored.avatarBlur,
-        inputBarSeeThrough = inputSeeThroughOverride ?: stored.inputBarSeeThrough,
-        searchOpacity = searchOpacityOverride ?: stored.searchOpacity,
-        thinkingOpacity = thinkingOpacityOverride ?: stored.thinkingOpacity,
-        bodyOpacity = bodyOpacityOverride ?: stored.bodyOpacity,
-        infoOpacity = infoOpacityOverride ?: stored.infoOpacity
+        inputBarSeeThrough = inputSeeThroughOverride ?: stored.inputBarSeeThrough
     )
     val imageError by viewModel.imageError.collectAsState()
 
@@ -153,7 +147,7 @@ fun ChatAppearanceSettingsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_cd4994e50397), onNavigateBack = onNavigateBack)
+            SettingsPageHeader(title = com.afyzfur.afyzhub.util.AppText.get(section.titleRes), onNavigateBack = onNavigateBack)
 
             // 加载失败时提示原因。放在页面顶部而非弹窗：
             // 弹窗会打断操作，而这里的失败通常需要用户换一张图重试
@@ -184,14 +178,19 @@ fun ChatAppearanceSettingsScreen(
 
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .weight(1f)
+                    .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
             ) {
+                if (section == AppearanceSection.COLORS) {
                 SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_5ef29a57bcc9))
                 SettingsGroup {
                     SettingsSwitchItem(icon = IconColorSwatch, title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_9d180a2c7855), subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_2bfbfbbf48f0), checked = prefs.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S, onCheckedChange = viewModel::setDynamicColor)
                     PaletteRow(selected = prefs.palette, enabled = !(prefs.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S), onSelect = viewModel::setPalette)
                 }
+                }
+
+                if (section == AppearanceSection.MESSAGES) {
                 SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_135f634fede4))
                 SettingsGroup {
                     ChatAnimation.entries.forEach { option ->
@@ -221,6 +220,9 @@ fun ChatAppearanceSettingsScreen(
                     modifier = Modifier.padding(horizontal = 28.dp)
                 )
 
+                }
+
+                if (section == AppearanceSection.AVATARS) {
                 SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4ceeeb31a55a))
                 SettingsGroup {
                     // 排除 NONE：是否显示已由下面两个开关表达，
@@ -237,7 +239,7 @@ fun ChatAppearanceSettingsScreen(
                 // 显示开关对所有模式都有效，因此不放在自定义模式的条件里。
                 // 与上一组之间需要间距——SettingsGroup 自身不带外边距，
                 // 其他页面靠分类标题分隔，这里两组之间没有标题会贴在一起
-                if (appearance.showAvatars) {
+                run {
                     Spacer(Modifier.height(12.dp))
                     SettingsGroup {
                         SettingsSwitchItem(
@@ -294,6 +296,9 @@ fun ChatAppearanceSettingsScreen(
                     }
                 }
 
+                }
+
+                if (section == AppearanceSection.BACKGROUND) {
                 SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_7e9e1587a765))
                 SettingsGroup {
                     ChatBackgroundMode.entries.forEach { mode ->
@@ -360,6 +365,9 @@ fun ChatAppearanceSettingsScreen(
                     }
                 }
 
+                }
+
+                if (section == AppearanceSection.INPUT) {
                 // 透明度开关独立成组：即使没有背景图也可能想让顶栏
                 // 与页面背景融为一体，因此不限定在有图时才显示
                 SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_e9944630f3e4))
@@ -429,16 +437,8 @@ fun ChatAppearanceSettingsScreen(
                     }
                 }
 
-                SettingsCategoryTitle(com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_category))
-                SettingsGroup {
-                    PercentSlider(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_search), value = appearance.searchOpacity, hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_hint), onChange = viewModel::setSearchOpacity, onPreview = { searchOpacityOverride = it })
-                    SettingsItemDivider()
-                    PercentSlider(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_thinking), value = appearance.thinkingOpacity, hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_hint), onChange = viewModel::setThinkingOpacity, onPreview = { thinkingOpacityOverride = it })
-                    SettingsItemDivider()
-                    PercentSlider(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_body), value = appearance.bodyOpacity, hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_hint), onChange = viewModel::setBodyOpacity, onPreview = { bodyOpacityOverride = it })
-                    SettingsItemDivider()
-                    PercentSlider(title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_info), value = appearance.infoOpacity, hint = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.opacity_hint), onChange = viewModel::setInfoOpacity, onPreview = { infoOpacityOverride = it })
                 }
+
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -626,7 +626,7 @@ private fun BackgroundPreview(
  * 与其复制一遍不如把标题与说明抽成参数。
  */
 @Composable
-private fun PercentSlider(
+internal fun PercentSlider(
     title: String,
     value: Float,
     hint: String,

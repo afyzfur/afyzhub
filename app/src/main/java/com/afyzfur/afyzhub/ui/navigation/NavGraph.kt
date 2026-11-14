@@ -22,7 +22,10 @@ import com.afyzfur.afyzhub.ui.chat.ChatScreen
 import com.afyzfur.afyzhub.ui.settings.AboutSettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ChangelogScreen
 import com.afyzfur.afyzhub.ui.settings.MessageDisplaySettingsScreen
-import com.afyzfur.afyzhub.ui.settings.ChatAppearanceSettingsScreen
+import com.afyzfur.afyzhub.ui.settings.AppearanceHomeScreen
+import com.afyzfur.afyzhub.ui.settings.AppearanceSection
+import com.afyzfur.afyzhub.ui.settings.AppearanceSectionSettingsScreen
+import com.afyzfur.afyzhub.ui.settings.ContentOpacitySettingsScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfileEditScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfilesScreen
 import com.afyzfur.afyzhub.ui.settings.ApiProfileModelsScreen
@@ -69,6 +72,9 @@ sealed class Screen(val route: String) {
     }
 
     object AppearanceSettings : Screen("settings/appearance")
+    object AppearanceDetail : Screen("settings/appearance/{section}") {
+        fun routeFor(section: AppearanceSection) = "settings/appearance/${section.id}"
+    }
     object ChatAppearanceSettings : Screen("settings/chat_appearance")
     object MessageDisplaySettings : Screen("settings/message_display")
     /** 内置浏览器设置: 链接打开方式与联网搜索引擎 */
@@ -234,7 +240,18 @@ fun NavGraph() {
         }
 
         composable(Screen.AppearanceSettings.route) {
-            ChatAppearanceSettingsScreen(onNavigateBack = { navController.popBackStack() })
+            AppearanceHomeScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenSection = { navController.navigate(Screen.AppearanceDetail.routeFor(it)) }
+            )
+        }
+        composable(Screen.AppearanceDetail.route) { entry ->
+            val section = AppearanceSection.fromId(entry.arguments?.getString("section"))
+            if (section == AppearanceSection.OPACITY) {
+                ContentOpacitySettingsScreen(onNavigateBack = { navController.popBackStack() })
+            } else {
+                AppearanceSectionSettingsScreen(section = section, onNavigateBack = { navController.popBackStack() })
+            }
         }
 
         composable(Screen.MessageDisplaySettings.route) {

@@ -517,7 +517,7 @@ private fun SiteIcon(url: String, size: Dp) {
 }
 
 @Composable
-private fun SearchBlock(
+internal fun SearchBlock(
     query: String,
     sources: List<Pair<String, String>>,
     searchEngine: String = "bing",
