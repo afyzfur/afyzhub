@@ -95,7 +95,7 @@ class OrdinaryFloatingTest {
         val top = (surface.top - root.top).toInt()
         assertEquals("Left outer margin has no rectangular fill", Color.Magenta, clear[1, clear.height / 2])
         assertEquals("Rounded corner is not painted as a square", Color.Magenta, clear[left + 1, top + 1])
-        assertNotEquals("Background responds to the ordinary transparency slider", opaque[opaque.width / 2, top + 3], clear[clear.width / 2, top + 3])
+        assertEquals("Floating mode has no broad backing plate regardless of transparency setting", clear[1, clear.height / 2], clear[clear.width / 2, top + 3])
         val textBounds = compose.onNodeWithText("Clear text").fetchSemanticsNode().boundsInRoot
         // Fully covered glyph pixels must remain identical: the content layer must not be faded to 10%.
         var unchangedText = 0

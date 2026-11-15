@@ -151,8 +151,12 @@ fun ChatInputBar(
     val alpha = if (transparent || deepSeeThrough) (1f - seeThrough).coerceIn(0f, 1f) else 1f
 
     // Ordinary transparency fades only the plate. Enhanced mode fades the complete input layer.
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.let {
-        if (deepSeeThrough) it else it.copy(alpha = alpha)
+    val surfaceColor = if (floating) {
+        Color.Transparent
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh.let {
+            if (deepSeeThrough) it else it.copy(alpha = alpha)
+        }
     }
     val layerAlpha = if (deepSeeThrough) alpha else 1f
 
