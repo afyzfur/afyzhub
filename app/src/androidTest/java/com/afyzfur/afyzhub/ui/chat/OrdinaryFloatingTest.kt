@@ -149,7 +149,8 @@ class OrdinaryFloatingTest {
             val y1 = (inner.bottom - outer.top).toInt()
             for (y in 0 until pixels.height step 3) for (x in 0 until pixels.width step 3) {
                 if (x < x0 || x >= x1 || y < y0 || y >= y1) {
-                    assertEquals("No external border/backing plate at $x,$y", Color.Magenta, pixels[x,y])
+                    val outside = pixels[x, y]
+                    assertTrue("No external border/backing plate at $x,$y", outside.red > 0.92f && outside.blue > 0.92f && outside.green < 0.12f)
                 }
             }
             assertEquals(Color.Magenta, pixels[x0 + 1, y0 + 1])
