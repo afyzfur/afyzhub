@@ -125,7 +125,7 @@ internal fun InputPreview(appearance: ChatAppearance, brush: Brush = Brush.linea
             ChatInputBar(
                 value = stringResource(R.string.appearance_preview_input), onValueChange = {}, onSend = {}, onStop = {},
                 providerLabel = "", modelName = "gpt-4o", isLoading = false, thinkingEnabled = true,
-                floating = appearance.inputBarFloating && appearance.inputBarDeepSeeThrough,
+                floating = appearance.inputBarFloating,
                 transparent = appearance.transparentInputBar, seeThrough = appearance.inputBarSeeThrough,
                 deepSeeThrough = appearance.inputBarDeepSeeThrough, previewOnly = true,
                 applyWindowInsets = false,

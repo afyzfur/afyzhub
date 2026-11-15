@@ -421,16 +421,9 @@ fun AppearanceSectionSettingsScreen(
                     SettingsSwitchItem(
                         icon = IconContrast,
                         title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_461a52654d0d),
-                        subtitle = if (!appearance.inputBarDeepSeeThrough) {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3730a9b6e216)
-                        } else if (appearance.inputBarFloating) {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_fe4469fdb011)
-                        } else {
-                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_d2908949f847)
-                        },
+                        subtitle = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.input_floating_independent_hint),
                         checked = appearance.inputBarFloating,
-                        onCheckedChange = { inputFloatingOverride = it; viewModel.setInputBarFloating(it) },
-                        enabled = appearance.inputBarDeepSeeThrough
+                        onCheckedChange = { inputFloatingOverride = it; viewModel.setInputBarFloating(it) }
                     )
                     // 强度只在透明开启时显示：关着的时候调它看不出
                     // 任何变化，留在界面上只会让人以为没生效

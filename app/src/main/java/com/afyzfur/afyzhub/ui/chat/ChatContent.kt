@@ -313,7 +313,7 @@ internal fun ChatContent(
                         
                         transparent = appearance.transparentInputBar,
                         seeThrough = appearance.inputBarSeeThrough,
-                        floating = appearance.inputBarFloating && appearance.inputBarDeepSeeThrough,
+                        floating = appearance.inputBarFloating,
 deepSeeThrough = appearance.inputBarDeepSeeThrough,
                          focusRequestToken = focusRequestToken,
 

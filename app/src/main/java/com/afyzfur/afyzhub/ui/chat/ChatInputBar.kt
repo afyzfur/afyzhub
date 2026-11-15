@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
@@ -197,8 +198,8 @@ fun ChatInputBar(
                 }
             )
             // 底色排在 padding 之后：悬浮式下不含外留白，留白区能透消息。
-            // 非增强档时这层底色是不透明的，叠在 Spacer 之上把底色"加厚"；
-            // 增强档时这层随 graphicsLayer 一起半透，Spacer 的半透底色透出来
+            // 透明关闭时底色不透明；普通透明仅改变底色，增强透视才改变整层。
+            .testTag("chat-input-surface")
             .background(surfaceColor, containerShape)
     ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
