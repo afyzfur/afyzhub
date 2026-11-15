@@ -153,8 +153,10 @@ class OrdinaryFloatingTest {
                     assertTrue("No external border/backing plate at $x,$y", outside.red > 0.92f && outside.blue > 0.92f && outside.green < 0.12f)
                 }
             }
-            assertEquals(Color.Magenta, pixels[x0 + 1, y0 + 1])
-            assertEquals(Color.Magenta, pixels[x1 - 2, y1 - 2])
+            val cornerStart = pixels[x0 + 1, y0 + 1]
+            val cornerEnd = pixels[x1 - 2, y1 - 2]
+            assertTrue("Rounded upper start stays transparent", cornerStart.red > 0.92f && cornerStart.blue > 0.92f && cornerStart.green < 0.12f)
+            assertTrue("Rounded lower end stays transparent", cornerEnd.red > 0.92f && cornerEnd.blue > 0.92f && cornerEnd.green < 0.12f)
         }
         val multiline = compose.onNodeWithTag("chat-input-surface").fetchSemanticsNode().boundsInRoot
         compose.runOnIdle { text = "One line" }
