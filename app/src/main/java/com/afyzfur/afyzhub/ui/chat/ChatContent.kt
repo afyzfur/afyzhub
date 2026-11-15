@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -192,8 +193,9 @@ internal fun ChatContent(
         ) { paddingValues ->
             var inputBarHeight by remember { mutableStateOf(0.dp) }
             val density = LocalDensity.current
-            // 增强透视时列表延伸到输入栏后面；关闭时由外层让位。
-            val deep = appearance.inputBarDeepSeeThrough
+            // Floating input must not cut the list at a separate horizontal edge above its outline.
+            // Reserve scroll space instead; full-width ordinary input retains its existing viewport.
+            val overlayInput = appearance.inputBarFloating || appearance.inputBarDeepSeeThrough
 
             Box(
                 modifier = Modifier
@@ -207,7 +209,7 @@ internal fun ChatContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
-                            bottom = if (deep) 0.dp else inputBarHeight
+                            bottom = if (overlayInput) 0.dp else inputBarHeight
                         )
                 ) {
                 if (messages.isEmpty() && !isLoading) {
@@ -221,13 +223,13 @@ internal fun ChatContent(
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxWidth(),
+                            .fillMaxWidth().testTag("chat-message-viewport"),
                         state = listState,
                         contentPadding = PaddingValues(
                             start = 16.dp,
                             end = 16.dp,
                             top = 12.dp,
-                            bottom = if (deep) inputBarHeight + 24.dp else 24.dp
+                            bottom = if (overlayInput) inputBarHeight + 24.dp else 24.dp
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)

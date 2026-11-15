@@ -52,6 +52,9 @@ class OrdinaryFloatingTest {
         assertEquals(root.left + inset, floating.left, 1.5f)
         assertEquals(root.right - inset, floating.right, 1.5f)
         assertTrue("Bottom margin must exist without deep mode", floating.bottom < root.bottom)
+        val viewport = compose.onNodeWithTag("chat-message-viewport").fetchSemanticsNode().boundsInRoot
+        assertTrue("Floating input must not create a second clipping edge above its outline", viewport.bottom > floating.bottom)
+
         compose.onNodeWithText("last message").performScrollTo()
         val last = compose.onNodeWithText("last message").fetchSemanticsNode().boundsInRoot
         assertTrue("The final reply must be above the input surface", last.bottom <= floating.top)
@@ -121,4 +124,43 @@ class OrdinaryFloatingTest {
         assertEquals("Preview adds the same left floating margin", full.left + inset, floating.left, 1.5f)
         assertEquals("Preview adds the same right floating margin", full.right - inset, floating.right, 1.5f)
     }
+    @Test fun floatingOutlineClipsMultilineContentAndNeverPaintsExternalPadding() {
+        var deep by mutableStateOf(false)
+        var text by mutableStateOf("First line\nSecond line\nThird line")
+        compose.setContent {
+            MaterialTheme {
+                Box(Modifier.fillMaxWidth().background(Color.Magenta).testTag("backdrop")) {
+                    ChatInputBar(value = text, onValueChange = {}, onSend = {}, onStop = {},
+                        providerLabel = "test", modelName = "test", isLoading = false,
+                        thinkingEnabled = true, floating = true, transparent = true, seeThrough = 0.4f,
+                        deepSeeThrough = deep, previewOnly = true, applyWindowInsets = false)
+                }
+            }
+        }
+        for (enhanced in listOf(false, true)) {
+            compose.runOnIdle { deep = enhanced }
+            compose.waitForIdle()
+            val pixels = snapshot()
+            val outer = compose.onNodeWithTag("backdrop").fetchSemanticsNode().boundsInRoot
+            val inner = compose.onNodeWithTag("chat-input-surface").fetchSemanticsNode().boundsInRoot
+            val x0 = (inner.left - outer.left).toInt()
+            val y0 = (inner.top - outer.top).toInt()
+            val x1 = (inner.right - outer.left).toInt()
+            val y1 = (inner.bottom - outer.top).toInt()
+            for (y in 0 until pixels.height step 3) for (x in 0 until pixels.width step 3) {
+                if (x < x0 || x >= x1 || y < y0 || y >= y1) {
+                    assertEquals("No external border/backing plate at $x,$y", Color.Magenta, pixels[x,y])
+                }
+            }
+            assertEquals(Color.Magenta, pixels[x0 + 1, y0 + 1])
+            assertEquals(Color.Magenta, pixels[x1 - 2, y1 - 2])
+        }
+        val multiline = compose.onNodeWithTag("chat-input-surface").fetchSemanticsNode().boundsInRoot
+        compose.runOnIdle { text = "One line" }
+        compose.waitForIdle()
+        val single = compose.onNodeWithTag("chat-input-surface").fetchSemanticsNode().boundsInRoot
+        assertTrue("Rounded backing follows actual input height", single.height < multiline.height)
+        assertEquals(single.width, multiline.width, 1f)
+    }
+
 }

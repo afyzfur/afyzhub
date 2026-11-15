@@ -164,44 +164,25 @@ fun ChatInputBar(
         AppShapeTokens.InputContainer
     }
 
-    // 不用 Surface，改为 Box + background。
-    //
-    // 上一版把 tonalElevation 与 shadowElevation 都归零了，那圈线仍在，
-    // 说明它不是抬升色调那一层。Surface 除色调外还管 contentColor、
-    // 点击拦截、边界裁剪，具体哪一步在边缘多画了一层我看不到。
-    //
-    // 而输入栏用不上 Surface 的任何附加行为——它只需要一块带圆角的
-    // 底色。background(color, shape) 就是单纯填一次色，绘制里没有
-    // 任何自动叠加的层，也就没有可能出现描边。
+    // Layout owns the floating margin; only the inner rounded outline owns drawing and clipping.
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            // 增强档下整块（含文字与图标）一起半透。graphicsLayer 把子树
-            // 先画到一个离屏层再按 alpha 合成，所以文字也会透。
-            //
-            // 恒定套一层而非按开关加减 modifier：链的结构一变就要重建
-            // 绘制节点，切换时会闪。alpha 为 1 时没有视觉效果。
-            //
-            // 若改为逐个给文字设颜色 alpha，每处都要改且容易漏，
-            // 而且叠加处的透明度会累积，看起来深浅不一
-            .graphicsLayer { this.alpha = layerAlpha }
-            // 悬浮式的外边距加在容器之外，让背景从四周透出来。
-            // 导航栏留白也在这里：通栏式要让容器背景延伸到屏幕底边，
-            // 所以留白在容器内部；悬浮式则整块都要抬离底边
-            .then(
-                if (floating) {
-                    Modifier
-                        .then(if (applyWindowInsets) Modifier.navigationBarsPadding() else Modifier)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                } else {
-                    Modifier
-                }
-            )
-            // 底色排在 padding 之后：悬浮式下不含外留白，留白区能透消息。
-            // 透明关闭时底色不透明；普通透明仅改变底色，增强透视才改变整层。
-            .testTag("chat-input-surface")
-            .background(surfaceColor, containerShape)
+        modifier = modifier.fillMaxWidth().then(
+            if (floating) Modifier
+                .then(if (applyWindowInsets) Modifier.navigationBarsPadding() else Modifier)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+            else Modifier
+        )
     ) {
+        Box(
+            modifier = Modifier.fillMaxWidth()
+                .testTag("chat-input-surface")
+                .graphicsLayer {
+                    this.alpha = layerAlpha
+                    shape = containerShape
+                    clip = true
+                }
+                .background(surfaceColor, containerShape)
+        ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
         // 而内容不被系统手势区域压住
         Column(
@@ -315,6 +296,7 @@ fun ChatInputBar(
                 )
             }
         }
+    }
     }
 }
 
