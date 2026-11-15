@@ -53,7 +53,7 @@ class OrdinaryFloatingTest {
         assertEquals(root.right - inset, floating.right, 1.5f)
         assertTrue("Bottom margin must exist without deep mode", floating.bottom < root.bottom)
         val viewport = compose.onNodeWithTag("chat-message-viewport").fetchSemanticsNode().boundsInRoot
-        assertTrue("Floating input must not create a second clipping edge above its outline", viewport.bottom > floating.bottom)
+        assertTrue("Ordinary floating input must end the message viewport above its surface", viewport.bottom <= floating.top)
 
         compose.onNodeWithText("last message").performScrollTo()
         val last = compose.onNodeWithText("last message").fetchSemanticsNode().boundsInRoot
@@ -65,8 +65,10 @@ class OrdinaryFloatingTest {
         compose.runOnIdle { appearance = appearance.copy(inputBarFloating = true, inputBarDeepSeeThrough = true) }
         compose.waitForIdle()
         val enhanced = compose.onNodeWithTag("chat-input-surface").fetchSemanticsNode().boundsInRoot
+        val enhancedViewport = compose.onNodeWithTag("chat-message-viewport").fetchSemanticsNode().boundsInRoot
         assertEquals(floating.left, enhanced.left, 1.5f)
         assertEquals(floating.width, enhanced.width, 1.5f)
+        assertTrue("Enhanced mode lets messages continue behind the input surface", enhancedViewport.bottom > enhanced.top)
     }
 
     private fun snapshot(): PixelMap = compose.onNodeWithTag("backdrop").captureToImage().toPixelMap()

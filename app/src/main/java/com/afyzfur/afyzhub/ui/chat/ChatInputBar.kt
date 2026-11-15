@@ -148,11 +148,9 @@ fun ChatInputBar(
 
     // 强度是"透多少"，alpha 取其反。不设下界：用户把强度拉满时
     // 就该是全透
-    val alpha = if (transparent) (1f - seeThrough).coerceIn(0f, 1f) else 1f
+    val alpha = if (transparent || deepSeeThrough) (1f - seeThrough).coerceIn(0f, 1f) else 1f
 
-    // 两档透视作用在不同层次上：
-    //  - 普通档把 alpha 给底色，文字与图标不受影响，始终清晰
-    //  - 增强档把 alpha 给整层，文字随之半透，背后的消息才看得见
+    // Ordinary transparency fades only the plate. Enhanced mode fades the complete input layer.
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.let {
         if (deepSeeThrough) it else it.copy(alpha = alpha)
     }
