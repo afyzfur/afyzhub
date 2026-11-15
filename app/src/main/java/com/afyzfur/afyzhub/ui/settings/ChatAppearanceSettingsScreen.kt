@@ -425,9 +425,8 @@ fun AppearanceSectionSettingsScreen(
                         checked = appearance.inputBarFloating,
                         onCheckedChange = { inputFloatingOverride = it; viewModel.setInputBarFloating(it) }
                     )
-                    // 强度只在透明开启时显示：关着的时候调它看不出
-                    // 任何变化，留在界面上只会让人以为没生效
-                    if (appearance.transparentInputBar) {
+                    // 增强透视可以独立启用整栏透明，因此强度控制也应保持可见。
+                    if (appearance.transparentInputBar || appearance.inputBarDeepSeeThrough) {
                         SettingsItemDivider()
                         AppearancePercentSlider(
                             title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_c5e26944beba),
@@ -440,19 +439,19 @@ fun AppearanceSectionSettingsScreen(
                             onChange = viewModel::setInputBarSeeThrough,
                             onPreview = { inputSeeThroughOverride = it }
                         )
-                        SettingsItemDivider()
-                        SettingsSwitchItem(
-                            icon = IconContrast,
-                            title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d2ad3dcb578),
-                            subtitle = if (appearance.inputBarDeepSeeThrough) {
-                                com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3cd58a38bcf7)
-                            } else {
-                                com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bdba71f57166)
-                            },
-                            checked = appearance.inputBarDeepSeeThrough,
-                            onCheckedChange = { inputDeepOverride = it; viewModel.setInputBarDeepSeeThrough(it) }
-                        )
                     }
+                    SettingsItemDivider()
+                    SettingsSwitchItem(
+                        icon = IconContrast,
+                        title = com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_4d2ad3dcb578),
+                        subtitle = if (appearance.inputBarDeepSeeThrough) {
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_3cd58a38bcf7)
+                        } else {
+                            com.afyzfur.afyzhub.util.AppText.get(com.afyzhub.chat.R.string.ui_bdba71f57166)
+                        },
+                        checked = appearance.inputBarDeepSeeThrough,
+                        onCheckedChange = { inputDeepOverride = it; viewModel.setInputBarDeepSeeThrough(it) }
+                    )
                 }
 
                 }
