@@ -105,13 +105,20 @@ class OrdinaryFloatingTest {
     }
 
     @Test fun previewAlsoFloatsWithDeepModeOff() {
+        var appearance by mutableStateOf(ChatAppearance(inputBarFloating = false, inputBarDeepSeeThrough = false))
         compose.setContent {
             MaterialTheme { Box(Modifier.fillMaxWidth().testTag("preview-root")) {
-                InputPreview(ChatAppearance(inputBarFloating = true, inputBarDeepSeeThrough = false))
+                InputPreview(appearance)
             } }
         }
-        val root = compose.onNodeWithTag("preview-root").fetchSemanticsNode().boundsInRoot
-        val surface = compose.onNodeWithTag("chat-input-surface").fetchSemanticsNode().boundsInRoot
-        assertTrue("Preview respects independent floating setting", surface.left > root.left && surface.right < root.right)
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val text = context.getString(com.afyzhub.chat.R.string.appearance_preview_input)
+        val full = compose.onNodeWithText(text).fetchSemanticsNode().boundsInRoot
+        compose.runOnIdle { appearance = appearance.copy(inputBarFloating = true) }
+        compose.waitForIdle()
+        val floating = compose.onNodeWithText(text).fetchSemanticsNode().boundsInRoot
+        val inset = with(compose.density) { 12.dp.toPx() }
+        assertEquals("Preview adds the same left floating margin", full.left + inset, floating.left, 1.5f)
+        assertEquals("Preview adds the same right floating margin", full.right - inset, floating.right, 1.5f)
     }
 }
