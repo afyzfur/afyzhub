@@ -209,7 +209,7 @@ internal fun ChatContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
-                            bottom = if (overlayInput) 0.dp else inputBarHeight + (if (appearance.inputBarFloating) 16.dp else 0.dp)
+                            bottom = if (overlayInput) 0.dp else inputBarHeight
                         )
                 ) {
                 if (messages.isEmpty() && !isLoading) {
@@ -229,7 +229,7 @@ internal fun ChatContent(
                             start = 16.dp,
                             end = 16.dp,
                             top = 12.dp,
-                            bottom = if (overlayInput) inputBarHeight + 24.dp else 24.dp + (if (appearance.inputBarFloating) 16.dp else 0.dp)
+                            bottom = if (overlayInput) inputBarHeight + 24.dp else 24.dp
                         ),
                         // 间距比改版前放宽，助手消息取消容器后需要更多留白来分隔
                         verticalArrangement = Arrangement.spacedBy(20.dp)
