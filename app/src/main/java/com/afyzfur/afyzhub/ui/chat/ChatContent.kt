@@ -24,7 +24,12 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -69,7 +74,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import androidx.compose.animation.core.animate
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionOnScreen
+import androidx.compose.ui.unit.toSize
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.ui.geometry.Rect
@@ -193,9 +200,10 @@ internal fun ChatContent(
         ) { paddingValues ->
             var inputBarHeight by remember { mutableStateOf(0.dp) }
             val density = LocalDensity.current
-            // Ordinary floating transparency reveals the chat backdrop, not messages under the bar.
-            // Only enhanced see-through overlays the message viewport beneath the input surface.
-            val overlayInput = appearance.inputBarDeepSeeThrough
+            var inputSurfaceBounds by remember { mutableStateOf<Rect?>(null) }
+            var messageViewportOrigin by remember { mutableStateOf(Offset.Zero) }
+            val overlayInput = appearance.inputBarFloating || appearance.inputBarDeepSeeThrough
+            val clipAtInputSurface = appearance.inputBarFloating && !appearance.inputBarDeepSeeThrough
 
             Box(
                 modifier = Modifier
@@ -217,13 +225,43 @@ internal fun ChatContent(
                         prompts = quickPrompts,
                         shufflePrompts = shufflePrompts,
                         onPromptClick = onPromptClick,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).padding(
+                            bottom = if (overlayInput) inputBarHeight else 0.dp
+                        )
                     )
                 } else {
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxWidth().testTag("chat-message-viewport"),
+                            .fillMaxWidth()
+                            .testTag("chat-message-viewport")
+                            .then(
+                                if (clipAtInputSurface) {
+                                    Modifier
+                                        .onGloballyPositioned { messageViewportOrigin = it.positionInRoot() }
+                                        .drawWithCache {
+                                            // The list fills the screen. Subtract only the rounded input surface
+                                            // so messages can still show in the corners and the bottom gap.
+                                            val cutout = inputSurfaceBounds?.takeUnless { it.isEmpty }?.let { bounds ->
+                                                val outline = AppShapeTokens.FloatingInputContainer.createOutline(
+                                                    bounds.size, layoutDirection, this
+                                                )
+                                                Path().apply {
+                                                    when (outline) {
+                                                        is Outline.Rounded -> addRoundRect(outline.roundRect)
+                                                        is Outline.Rectangle -> addRect(outline.rect)
+                                                        is Outline.Generic -> addPath(outline.path)
+                                                    }
+                                                    translate(bounds.topLeft - messageViewportOrigin)
+                                                }
+                                            }
+                                            onDrawWithContent {
+                                                if (cutout == null) drawContent()
+                                                else clipPath(cutout, ClipOp.Difference) { this@onDrawWithContent.drawContent() }
+                                            }
+                                        }
+                                } else Modifier
+                            ),
                         state = listState,
                         contentPadding = PaddingValues(
                             start = 16.dp,
@@ -312,14 +350,11 @@ internal fun ChatContent(
                         onDismiss = onDismissUndo
                     )
                     ChatInputBar(
-                        
                         transparent = appearance.transparentInputBar,
                         seeThrough = appearance.inputBarSeeThrough,
                         floating = appearance.inputBarFloating,
-deepSeeThrough = appearance.inputBarDeepSeeThrough,
-                         focusRequestToken = focusRequestToken,
-
-                        
+                        deepSeeThrough = appearance.inputBarDeepSeeThrough,
+                        focusRequestToken = focusRequestToken,
                         value = inputText,
                         onValueChange = onInputChange,
                         onSend = onSend,
@@ -331,7 +366,12 @@ deepSeeThrough = appearance.inputBarDeepSeeThrough,
                         modelName = modelName,
                         thinkingEnabled = thinkingEnabled,
                         thinkingEffort = thinkingEffort,
-                        onOpenThinkingSettings = onOpenThinkingSettings
+                        onOpenThinkingSettings = onOpenThinkingSettings,
+                        onSurfacePositioned = { coordinates ->
+                            if (appearance.inputBarFloating) {
+                                inputSurfaceBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
+                            }
+                        }
                     )
                 }
             }

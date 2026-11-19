@@ -38,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -106,7 +108,8 @@ fun ChatInputBar(
     focusRequestToken: Int = 0,
     previewOnly: Boolean = false,
     applyWindowInsets: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSurfacePositioned: (LayoutCoordinates) -> Unit = {}
 ) {
     val density = LocalDensity.current
     val focusRequester = remember { FocusRequester() }
@@ -149,9 +152,6 @@ fun ChatInputBar(
     } else {
         AppShapeTokens.InputContainer
     }
-    // Ordinary floating paints only the editor. Enhanced mode composites both rows together.
-    val compactFloating = floating && !deepSeeThrough
-
     // The outer box only sets the floating margins.
     Box(
         modifier = modifier.fillMaxWidth().then(
@@ -164,14 +164,13 @@ fun ChatInputBar(
         Box(
             modifier = Modifier.fillMaxWidth()
                 .testTag("chat-input-surface")
+                .onGloballyPositioned(onSurfacePositioned)
                 .graphicsLayer {
                     this.alpha = layerAlpha
                     shape = containerShape
-                    clip = !compactFloating
+                    clip = true
                 }
-                .then(
-                    if (compactFloating) Modifier else Modifier.background(surfaceColor, containerShape)
-                )
+                .background(surfaceColor, containerShape)
         ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
         // 而内容不被系统手势区域压住
@@ -203,10 +202,6 @@ fun ChatInputBar(
                     .focusRequester(focusRequester)
                     .onFocusChanged { hasFocus = it.isFocused }
                     .heightIn(min = 44.dp)
-                    .testTag("chat-input-editor")
-                    .then(
-                        if (compactFloating) Modifier.background(surfaceColor, containerShape) else Modifier
-                    )
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 decorationBox = { innerTextField ->
                     if (value.isEmpty()) {
@@ -230,12 +225,7 @@ fun ChatInputBar(
                 // 边缘看齐
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(
-                        start = 20.dp,
-                        top = if (compactFloating) 4.dp else 0.dp,
-                        end = 12.dp,
-                        bottom = 8.dp
-                    )
+                    .padding(start = 20.dp, end = 12.dp, bottom = 8.dp)
             ) {
                 // 最左是模型图标，其次思考程度，与 statusLabel 同一行。
                 // 把"以什么模型、想多久"放在离发送键最远的一侧：

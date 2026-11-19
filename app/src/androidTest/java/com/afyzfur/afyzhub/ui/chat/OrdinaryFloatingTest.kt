@@ -53,7 +53,7 @@ class OrdinaryFloatingTest {
         assertEquals(root.right - inset, floating.right, 1.5f)
         assertTrue("Bottom margin must exist without deep mode", floating.bottom < root.bottom)
         val viewport = compose.onNodeWithTag("chat-message-viewport").fetchSemanticsNode().boundsInRoot
-        assertTrue("Ordinary floating input must end the message viewport above its surface", viewport.bottom <= floating.top)
+        assertTrue("The list extends past the floating surface into the bottom gap", viewport.bottom > floating.bottom)
 
         compose.onNodeWithText("last message").performScrollTo()
         val last = compose.onNodeWithText("last message").fetchSemanticsNode().boundsInRoot
@@ -73,7 +73,7 @@ class OrdinaryFloatingTest {
 
     private fun snapshot(): PixelMap = compose.onNodeWithTag("backdrop").captureToImage().toPixelMap()
 
-    @Test fun ordinaryFloatingPaintsOnlyTheEditorAndEnhancedModeFadesTheWholeBar() {
+    @Test fun ordinaryFloatingUsesOneSurfaceAndEnhancedModeFadesTheWholeBar() {
         var transparent by mutableStateOf(false)
         var enhanced by mutableStateOf(false)
         compose.setContent {
@@ -94,17 +94,12 @@ class OrdinaryFloatingTest {
         val root = compose.onNodeWithTag("backdrop").fetchSemanticsNode().boundsInRoot
         val left = (surface.left - root.left).toInt()
         val top = (surface.top - root.top).toInt()
-        val editor = compose.onNodeWithTag("chat-input-editor", useUnmergedTree = true)
-            .fetchSemanticsNode().boundsInRoot
-        val editorY = ((editor.top + editor.bottom) / 2f - root.top).toInt()
-        val actionsY = ((editor.bottom + surface.bottom) / 2f - root.top).toInt()
+        val panelY = ((surface.bottom - root.top) - with(compose.density) { 20.dp.toPx() }).toInt()
         val centerX = clear.width / 2
         assertEquals("Left outer margin has no rectangular fill", Color.Magenta, clear[1, clear.height / 2])
-        assertEquals("The top gap stays clear", Color.Magenta, clear[left + 1, top + 1])
-        assertEquals("Ordinary floating has no shared plate behind the buttons", Color.Magenta, opaque[centerX, actionsY])
-        assertEquals("The button row stays clear when ordinary transparency is enabled", Color.Magenta, clear[centerX, actionsY])
-        assertNotEquals("The editor retains its background", Color.Magenta, clear[centerX, editorY])
-        assertNotEquals("Transparency changes the editor background", opaque[centerX, editorY], clear[centerX, editorY])
+        assertEquals("Rounded corner is not filled", Color.Magenta, clear[left + 1, top + 1])
+        assertNotEquals("One surface extends behind the buttons", Color.Magenta, clear[centerX, panelY])
+        assertNotEquals("Transparency changes the shared surface", opaque[centerX, panelY], clear[centerX, panelY])
         val textBounds = compose.onNodeWithText("Clear text").fetchSemanticsNode().boundsInRoot
         // Fully covered glyph pixels must remain identical: the content layer must not be faded to 10%.
         var unchangedText = 0
@@ -123,7 +118,7 @@ class OrdinaryFloatingTest {
         }
         val deep = snapshot()
         assertNotEquals("Enhanced mode retains a shared translucent surface behind the buttons",
-            Color.Magenta, deep[centerX, actionsY])
+            Color.Magenta, deep[centerX, panelY])
         var fadedText = 0
         for (y in (textBounds.top - root.top).toInt() until (textBounds.bottom - root.top).toInt()) {
             for (x in (textBounds.left - root.left).toInt() until (textBounds.right - root.left).toInt()) {
