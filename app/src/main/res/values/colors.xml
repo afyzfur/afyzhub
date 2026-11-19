@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 取自图标本体的暖橙色，作为自适应图标的背景层 -->
-    <color name="ic_launcher_background">#FCA43C</color>
+    <!-- 与自适应图标前景图的外沿底色一致。 -->
+    <color name="ic_launcher_background">#FDF7EA</color>
 </resources>
