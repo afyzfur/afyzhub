@@ -58,20 +58,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.afyzfur.afyzhub.ui.theme.AppShapeTokens
 
-/**
- * 输入区。
- *
- * 与改版前的差别：原实现是 OutlinedTextField + 独立 FAB 并排，外层 Surface 带 8dp 阴影，
- * 是 Material 2 的语言。现在整体收进一个圆角容器，内部上下分层——
- * 上层文本输入，下层功能行。阴影去掉，靠色阶与页面背景区分。
- *
- * 容器铺满宽度、只圆上方两角、贴住屏幕底边。此前四周留 12dp 外边距做悬浮效果，
- * 但容器色（surfaceContainerHigh）与页面色（surfaceContainer）相近，
- * 四周露出的页面背景在视觉上成了一圈多余的浅色描边。铺满则没有这个问题。
- *
- * 功能行当前只放提供商标识与发送按钮。联网搜索、思考模式、附件等按钮
- * 需要对应功能落地后再加，先不放不可用的占位图标。
- */
+/** 聊天输入区，上排编辑文字，下排显示模型、思考程度和发送控件。 */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChatInputBar(
@@ -92,7 +79,7 @@ fun ChatInputBar(
     thinkingEffort: ThinkingEffort = ThinkingEffort.DEFAULT,
     onOpenThinkingSettings: () -> Unit = {},
     transparent: Boolean = false,
-    /** 透视强度，0 为不透明。仅在 [transparent] 为真时生效 */
+    /** 透视强度，0 为不透明。开启 [transparent] 或 [deepSeeThrough] 时生效 */
     seeThrough: Float = 0.35f,
     /**
      * 是否悬浮样式。
@@ -162,8 +149,10 @@ fun ChatInputBar(
     } else {
         AppShapeTokens.InputContainer
     }
+    // Ordinary floating paints only the editor. Enhanced mode composites both rows together.
+    val compactFloating = floating && !deepSeeThrough
 
-    // Layout owns the floating margin; only the inner rounded outline owns drawing and clipping.
+    // The outer box only sets the floating margins.
     Box(
         modifier = modifier.fillMaxWidth().then(
             if (floating) Modifier
@@ -178,9 +167,11 @@ fun ChatInputBar(
                 .graphicsLayer {
                     this.alpha = layerAlpha
                     shape = containerShape
-                    clip = true
+                    clip = !compactFloating
                 }
-                .background(surfaceColor, containerShape)
+                .then(
+                    if (compactFloating) Modifier else Modifier.background(surfaceColor, containerShape)
+                )
         ) {
         // 导航栏内边距加在容器内部，使容器背景延伸到屏幕底边，
         // 而内容不被系统手势区域压住
@@ -212,6 +203,10 @@ fun ChatInputBar(
                     .focusRequester(focusRequester)
                     .onFocusChanged { hasFocus = it.isFocused }
                     .heightIn(min = 44.dp)
+                    .testTag("chat-input-editor")
+                    .then(
+                        if (compactFloating) Modifier.background(surfaceColor, containerShape) else Modifier
+                    )
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 decorationBox = { innerTextField ->
                     if (value.isEmpty()) {
@@ -235,7 +230,12 @@ fun ChatInputBar(
                 // 边缘看齐
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 12.dp, bottom = 8.dp)
+                    .padding(
+                        start = 20.dp,
+                        top = if (compactFloating) 4.dp else 0.dp,
+                        end = 12.dp,
+                        bottom = 8.dp
+                    )
             ) {
                 // 最左是模型图标，其次思考程度，与 statusLabel 同一行。
                 // 把"以什么模型、想多久"放在离发送键最远的一侧：
