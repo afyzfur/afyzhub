@@ -33,8 +33,8 @@ class ThinkingEffortTest {
         assertEquals("high", ThinkingEffort.openAiEffort(ThinkingEffort.HIGH))
         assertEquals("high", ThinkingEffort.openAiEffort(ThinkingEffort.XHIGH, "o3-mini"))
         assertEquals("high", ThinkingEffort.openAiEffort(ThinkingEffort.MAX, "o3-mini"))
-        assertEquals("high", ThinkingEffort.openAiEffort(ThinkingEffort.XHIGH, "gpt-6.2"))
-        assertEquals("high", ThinkingEffort.openAiEffort(ThinkingEffort.MAX, "gpt-6.2"))
+        assertEquals("xhigh", ThinkingEffort.openAiEffort(ThinkingEffort.XHIGH, "gpt-6.2"))
+        assertEquals("xhigh", ThinkingEffort.openAiEffort(ThinkingEffort.MAX, "gpt-6.2"))
     }
 
     @Test fun legacyOffMapsToDisabledMasterAndDefaultSlider() {
