@@ -504,12 +504,12 @@ class GeminiChatClientTest {
     @Test
     fun `thinking budget is sent for Gemini 25 and zero disables it`() = runTest {
         val enabled = settings.copy(model = "gemini-2.5-flash", thinkingEnabled = true,
-            thinkingEffort = ThinkingEffort.XHIGH)
+            thinkingEffort = ThinkingEffort.HIGH)
         val onTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
         GeminiChatClient(onTransport, json).complete(listOf(ChatTurn("user", "hi")), enabled)
         val onConfig = body(onTransport)["generationConfig"]?.jsonObject?.get("thinkingConfig")?.jsonObject
             ?: error("Gemini thinkingConfig missing when enabled")
-        assertEquals("16384", onConfig["thinkingBudget"]?.jsonPrimitive?.content)
+        assertEquals("8192", onConfig["thinkingBudget"]?.jsonPrimitive?.content)
         assertEquals("true", onConfig["includeThoughts"]?.jsonPrimitive?.content)
 
         val offTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
