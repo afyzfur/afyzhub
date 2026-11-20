@@ -503,17 +503,19 @@ class GeminiChatClientTest {
             thinkingEffort = ThinkingEffort.XHIGH)
         val onTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
         GeminiChatClient(onTransport, json).complete(listOf(ChatTurn("user", "hi")), enabled)
-        val onConfig = body(onTransport)["generationConfig"]!!.jsonObject["thinkingConfig"]!!.jsonObject
-        assertEquals("16384", onConfig["thinkingBudget"]!!.jsonPrimitive.content)
-        assertEquals("true", onConfig["includeThoughts"]!!.jsonPrimitive.content)
+        val onConfig = body(onTransport)["generationConfig"]?.jsonObject?.get("thinkingConfig")?.jsonObject
+            ?: error("Gemini thinkingConfig missing when enabled")
+        assertEquals("16384", onConfig["thinkingBudget"]?.jsonPrimitive?.content)
+        assertEquals("true", onConfig["includeThoughts"]?.jsonPrimitive?.content)
 
         val offTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
         GeminiChatClient(offTransport, json).complete(
             listOf(ChatTurn("user", "hi")), enabled.copy(thinkingEnabled = false)
         )
-        val offConfig = body(offTransport)["generationConfig"]!!.jsonObject["thinkingConfig"]!!.jsonObject
-        assertEquals("0", offConfig["thinkingBudget"]!!.jsonPrimitive.content)
-        assertEquals("false", offConfig["includeThoughts"]!!.jsonPrimitive.content)
+        val offConfig = body(offTransport)["generationConfig"]?.jsonObject?.get("thinkingConfig")?.jsonObject
+            ?: error("Gemini thinkingConfig missing when disabled")
+        assertEquals("0", offConfig["thinkingBudget"]?.jsonPrimitive?.content)
+        assertEquals("false", offConfig["includeThoughts"]?.jsonPrimitive?.content)
 
         val unsupportedTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
         GeminiChatClient(unsupportedTransport, json).complete(

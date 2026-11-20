@@ -122,9 +122,13 @@ class GeminiChatClient(
         val effort = settings.thinkingEffort
         val supportsNativeThinking = ThinkingEffort.supportsNativeThinking(settings.provider, settings.model)
         val config = if (supportsNativeThinking) {
+            val modernLevel = modernThinkingLevel(settings.model, effort)
             GenerationConfig(
                 thinkingConfig = ThinkingConfig(
-                    thinkingBudget = if (settings.thinkingEnabled) effort.tokenBudget else 0,
+                    thinkingBudget = if (modernLevel == null) {
+                        if (settings.thinkingEnabled) effort.tokenBudget else 0
+                    } else null,
+                    thinkingLevel = modernLevel?.takeIf { settings.thinkingEnabled },
                     includeThoughts = settings.thinkingEnabled
                 )
             )
@@ -138,6 +142,17 @@ class GeminiChatClient(
             generationConfig = config,
             tools = if (settings.geminiSearchEnabled) listOf(Tool(googleSearch = GoogleSearch())) else null
         )
+    }
+
+    private fun modernThinkingLevel(model: String, effort: ThinkingEffort): String? {
+        val normalized = model.lowercase()
+        if (!normalized.contains("gemini-4") && !normalized.contains("gemini-5")) return null
+        return when (effort) {
+            ThinkingEffort.LOW -> "LOW"
+            ThinkingEffort.MEDIUM -> "MEDIUM"
+            ThinkingEffort.HIGH -> "HIGH"
+            ThinkingEffort.XHIGH, ThinkingEffort.MAX -> "XHIGH"
+        }
     }
 
     private fun authHeaders(settings: AppSettings) = mapOf(
@@ -180,7 +195,8 @@ class GeminiChatClient(
 
     @Serializable
     private data class ThinkingConfig(
-        val thinkingBudget: Int,
+        val thinkingBudget: Int? = null,
+        val thinkingLevel: String? = null,
         val includeThoughts: Boolean
     )
 

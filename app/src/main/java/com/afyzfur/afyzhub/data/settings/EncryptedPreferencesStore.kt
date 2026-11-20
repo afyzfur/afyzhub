@@ -29,8 +29,11 @@ internal class EncryptedPreferencesStore(
     private val mutableUnavailable = MutableStateFlow(false)
     val credentialsUnavailable: StateFlow<Boolean> = mutableUnavailable.asStateFlow()
 
-    private fun sensitive(name: String) = name == "api_profiles" || name == "tavily_api_key" ||
-        name == "openai_api_key" || name.startsWith("api_key_")
+    private fun sensitive(name: String) = name == "api_profiles" ||
+        name == "tavily_api_key" ||
+        name == "openai_api_key" ||
+        name == "memory_items" ||
+        name.startsWith("api_key_")
 
     private data class Decoded(val preferences: Preferences, val failed: Boolean)
 

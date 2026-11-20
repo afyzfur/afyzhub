@@ -18,22 +18,31 @@ enum class ThinkingEffort(
     companion object {
         val DEFAULT = MEDIUM
 
-        fun openAiEffort(effort: ThinkingEffort): String = when (effort) {
+        fun openAiEffort(effort: ThinkingEffort, model: String = ""): String = when (effort) {
             LOW -> "low"
             MEDIUM -> "medium"
             HIGH -> "high"
-            XHIGH, MAX -> "high"
+            XHIGH -> if (supportsExtendedOpenAiEffort(model)) "xhigh" else "high"
+            MAX -> if (supportsExtendedOpenAiEffort(model)) "max" else "high"
+        }
+
+        private fun supportsExtendedOpenAiEffort(model: String): Boolean {
+            val normalized = model.trim().lowercase()
+            return normalized.startsWith("gpt-6") || normalized.contains("xhigh") || normalized.contains("max")
         }
 
         fun supportsNativeThinking(provider: AiProvider, model: String): Boolean {
             val normalized = model.trim().lowercase()
             return when (provider) {
                 AiProvider.OPENAI -> normalized.startsWith("o1") || normalized.startsWith("o3") ||
-                    normalized.startsWith("o4") || normalized.startsWith("gpt-5")
-                AiProvider.ANTHROPIC -> normalized.startsWith("claude-3-7") || normalized.startsWith("claude-4") ||
-                    normalized.startsWith("claude-opus-4") || normalized.startsWith("claude-sonnet-4") ||
-                    normalized.startsWith("claude-haiku-4")
-                AiProvider.GEMINI -> normalized.contains("gemini-2.5")
+                    normalized.startsWith("o4") || normalized.startsWith("gpt-5") || normalized.startsWith("gpt-6")
+                AiProvider.ANTHROPIC -> normalized.startsWith("claude-3-7") ||
+                    normalized.startsWith("claude-4") ||
+                    normalized.startsWith("claude-opus-4") ||
+                    normalized.startsWith("claude-sonnet-4") ||
+                    normalized.startsWith("claude-haiku-4") || normalized.startsWith("claude-5")
+                AiProvider.GEMINI -> normalized.contains("gemini-2.5") ||
+                    normalized.contains("gemini-3") || normalized.contains("gemini-4")
             }
         }
 

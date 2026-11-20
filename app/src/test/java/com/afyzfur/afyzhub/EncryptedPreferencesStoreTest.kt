@@ -24,13 +24,15 @@ class EncryptedPreferencesStoreTest {
     @Test fun legacyMigrationAndUpdatesNeverPersistPlainCredentials() = runTest {
         val profiles = stringPreferencesKey("api_profiles")
         val tavily = stringPreferencesKey("tavily_api_key")
+        val memory = stringPreferencesKey("memory_items")
         val model = stringPreferencesKey("model_openai")
-        val raw = MemoryStore(preferencesOf(profiles to "{key:secret}", tavily to "secret-2", model to "gpt"))
+        val raw = MemoryStore(preferencesOf(profiles to "{key:secret}", tavily to "secret-2", memory to """[\"用户住在重庆\"]""", model to "gpt"))
         val store = EncryptedPreferencesStore(raw,cipher)
         assertEquals("{key:secret}",store.data.first()[profiles])
         store.updateData { it }
         assertTrue(raw.data.value[profiles].orEmpty().startsWith("enc:v1:"))
         assertTrue(raw.data.value[tavily].orEmpty().startsWith("enc:v1:"))
+        assertTrue(raw.data.value[memory].orEmpty().startsWith("enc:v1:"))
         assertEquals("gpt",raw.data.value[model])
         store.edit { it[tavily]="updated" }
         assertEquals("updated",store.data.first()[tavily])
