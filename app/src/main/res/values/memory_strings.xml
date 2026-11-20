@@ -5,6 +5,12 @@
     <string name="memory_subtitle_off">未开启</string>
     <string name="memory_hero_title">长期记忆</string>
     <string name="memory_hero_body">开启后，会从你的对话中总结关于你的信息，并在之后的所有对话中参考。只有新增的对话会发送给当前配置的模型。</string>
+    <string name="memory_intro_title">让对话更懂你</string>
+    <string name="memory_intro_body">记忆会保存长期有效的偏好、目标和背景，在新对话开始时提供给助手参考。你可以手动添加、编辑或随时清空。</string>
+    <string name="memory_intro_safe">不保存密钥和密码</string>
+    <string name="memory_intro_control">你始终可以控制</string>
+    <string name="memory_count">%1$d 条</string>
+    <string name="memory_frequency_label">整理周期</string>
     <string name="memory_status_running">正在整理对话…</string>
     <string name="memory_status_never">尚未整理</string>
     <string name="memory_status_last">上次整理：%1$s</string>

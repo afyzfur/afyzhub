@@ -21,6 +21,9 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -117,6 +120,7 @@ internal fun MemoryContent(
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             SettingsPageHeader(title = stringResource(R.string.memory_title), onNavigateBack = onNavigateBack)
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                MemoryIntroCard()
                 MemoryHero(state, run, onSummarize)
                 SettingsCategoryTitle(stringResource(R.string.memory_section_settings))
                 SettingsGroup {
@@ -206,6 +210,55 @@ internal fun MemoryContent(
 }
 
 @Composable
+private fun MemoryIntroCard() {
+    Surface(
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        shape = AppShapeTokens.SettingsGroup,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                    shape = AppShapeTokens.CircleButton,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.AutoStories, contentDescription = null, modifier = Modifier.size(21.dp))
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.memory_intro_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(stringResource(R.string.memory_intro_body), style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MemoryInfoPill(Icons.Default.Lock, stringResource(R.string.memory_intro_safe))
+                MemoryInfoPill(Icons.Default.Tune, stringResource(R.string.memory_intro_control))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MemoryInfoPill(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        shape = AppShapeTokens.DropdownButton
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(text, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
 private fun MemoryHero(state: MemorySnapshot, run: MemoryRunState, onSummarize: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer,
@@ -281,6 +334,7 @@ private fun memoryStatus(state: MemorySnapshot, run: MemoryRunState): String = w
 
 @Composable
 private fun MemoryRow(item: MemoryItem, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val accent = if (item.manual) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -289,13 +343,19 @@ private fun MemoryRow(item: MemoryItem, onEdit: () -> Unit, onDelete: () -> Unit
             .settingsRowClickable(onClick = onEdit)
             .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp)
     ) {
+        Surface(
+            color = accent.copy(alpha = 0.12f),
+            shape = AppShapeTokens.CircleButton,
+            modifier = Modifier.size(8.dp)
+        ) {}
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(item.content, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.height(4.dp))
             Text(
                 stringResource(if (item.manual) R.string.memory_source_manual else R.string.memory_source_auto),
                 style = MaterialTheme.typography.labelSmall,
-                color = if (item.manual) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                color = accent
             )
         }
         IconButton(onClick = onDelete, modifier = Modifier.testTag("memory-delete-${item.id}")) {

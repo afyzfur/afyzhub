@@ -43,6 +43,8 @@ class MemoryScreenTest {
 
     @Test fun addEditDeleteAndClearReachTheRepository() {
         show(MemorySnapshot(loaded = true, enabled = true, items = items))
+        compose.onNodeWithText(text(R.string.memory_intro_title)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.memory_intro_safe)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(text(R.string.memory_source_manual)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(text(R.string.memory_add)).performScrollTo().performClick()
         compose.onNodeWithTag("memory-save").assertIsNotEnabled()
