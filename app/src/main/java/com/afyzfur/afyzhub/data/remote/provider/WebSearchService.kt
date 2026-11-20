@@ -205,17 +205,13 @@ class WebSearchService(
         )
         return parseGoogle(html, maxResults)
     }
-
     private fun parseTavily(json: String, maxResults: Int): List<Result> = SearchResultParser.parseTavily(json, maxResults)
-    private fun parseResults(html: String, maxResults: Int): List<Result> = SearchResultParser.parseResults(html, maxResults)
     private fun parseBaidu(html: String, maxResults: Int, query: String): List<Result> = SearchResultParser.parseBaidu(html, maxResults, query)
     private fun parseGoogle(html: String, maxResults: Int): List<Result> = SearchResultParser.parseGoogle(html, maxResults)
     private fun parseBingRss(xml: String, maxResults: Int, query: String): List<Result> = SearchResultParser.parseBingRss(xml, maxResults, query)
     private fun meaningfulChars(q: String): Set<Char> = SearchResultParser.meaningfulChars(q)
-    private fun siteOf(url: String): String = SearchResultParser.siteOf(url)
     private fun parseBing(html: String, maxResults: Int, query: String): List<Result> = SearchResultParser.parseBing(html, maxResults, query)
-    private fun stripTags(raw: String): String = SearchResultParser.stripTags(raw)
-    private fun cleanUrl(raw: String): String = SearchResultParser.cleanUrl(raw)
+
 
     companion object {
         /**

@@ -6,6 +6,7 @@ import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
 import com.afyzfur.afyzhub.data.remote.provider.CompletionResult
 import com.afyzfur.afyzhub.data.remote.provider.StreamEvent
 import com.afyzfur.afyzhub.data.remote.provider.TokenUsage
+import com.afyzfur.afyzhub.data.remote.provider.mergeTokenUsage
 import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.domain.model.SendPhase
 import kotlinx.coroutines.flow.collect
@@ -24,17 +25,7 @@ internal class ChatStreamCollector {
      * usage 只出现在流末尾的 Finished 事件里，且部分提供商不返回，
      * 因此返回值与非流式共用 [CompletionResult]，usage 可空。
      */
-    /** 查询词与用户问题的字符重合度(0~1)。模型的缩写查询常不是子串,
-     * 例如「重庆市」vs「重庆今天天气」, 用字符重合度兜住这类情况。 */
-    private fun mergeTokenUsage(old: TokenUsage?, next: TokenUsage?): TokenUsage? {
-        if (old == null) return next
-        if (next == null) return old
-        return TokenUsage(
-            promptTokens = maxOf(old.promptTokens, next.promptTokens),
-            completionTokens = maxOf(old.completionTokens, next.completionTokens),
-            cachedTokens = listOfNotNull(old.cachedTokens, next.cachedTokens).maxOrNull()
-        )
-    }
+    // Shared usage merging is provided by UsageParser.
 
     suspend fun collect(
         client: ChatClient,

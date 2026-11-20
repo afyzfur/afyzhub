@@ -4,17 +4,15 @@ import com.afyzfur.afyzhub.data.local.dao.ConversationDao
 import com.afyzfur.afyzhub.data.local.dao.MessageDao
 import com.afyzfur.afyzhub.data.local.entity.ConversationEntity
 import com.afyzfur.afyzhub.data.local.entity.MessageEntity
-import com.afyzfur.afyzhub.data.remote.provider.ChatClient
+import com.afyzfur.afyzhub.data.memory.MemoryProvider
 import com.afyzfur.afyzhub.data.remote.provider.ChatClientRegistry
 import com.afyzfur.afyzhub.data.remote.provider.ChatTurn
 import com.afyzfur.afyzhub.data.remote.provider.CompletionResult
 import com.afyzfur.afyzhub.data.remote.provider.StreamEvent
-import com.afyzfur.afyzhub.data.memory.MemoryProvider
 import com.afyzfur.afyzhub.data.remote.provider.WebSearchService
 import com.afyzfur.afyzhub.data.remote.provider.filterSearchResults
+import com.afyzfur.afyzhub.data.remote.provider.mergeTokenUsage
 import com.afyzfur.afyzhub.data.remote.provider.searchTimelinePrefix
-import com.afyzfur.afyzhub.data.remote.provider.TokenUsage
-import com.afyzfur.afyzhub.data.settings.AppSettings
 import com.afyzfur.afyzhub.data.settings.SettingsProvider
 import com.afyzfur.afyzhub.domain.model.AiProvider
 import com.afyzfur.afyzhub.domain.model.Conversation
@@ -23,11 +21,6 @@ import com.afyzfur.afyzhub.domain.model.Message
 import com.afyzfur.afyzhub.domain.model.ThinkingEffort
 import com.afyzfur.afyzhub.domain.model.SendPhase
 import com.afyzfur.afyzhub.domain.model.sanitizeHistory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -51,23 +44,6 @@ class ChatRepositoryImpl(
     private val memoryProvider: MemoryProvider = MemoryProvider.NONE
 ) : ChatRepository {
     private val streamCollector = ChatStreamCollector()
-
-    private fun sharedChars(a: String, b: String): Double {
-        val setA = a.filter { !it.isWhitespace() }.toSet()
-        if (setA.isEmpty()) return 0.0
-        val setB = b.filter { !it.isWhitespace() }.toSet()
-        return setA.count { it in setB }.toDouble() / setA.size
-    }
-
-    private fun mergeTokenUsage(old: TokenUsage?, next: TokenUsage?): TokenUsage? {
-        if (old == null) return next
-        if (next == null) return old
-        return TokenUsage(
-            promptTokens = maxOf(old.promptTokens, next.promptTokens),
-            completionTokens = maxOf(old.completionTokens, next.completionTokens),
-            cachedTokens = listOfNotNull(old.cachedTokens, next.cachedTokens).maxOrNull()
-        )
-    }
 
 
     override fun getAllConversations(): Flow<List<Conversation>> =
@@ -604,7 +580,6 @@ class ChatRepositoryImpl(
     )
 
     private companion object {
-        private const val BATCH_UPDATE_WINDOW_MS = 50L
         private const val THINKING_GUIDANCE = "请在回答前审慎分析问题、检查前提并考虑重要边界情况；只输出结论与必要的简要说明，不输出隐藏的逐步思维过程。"
         /** 抽屉摘要行的字符上限，足够填满一行且留有余量 */
         const val SUMMARY_MAX_LENGTH = 60

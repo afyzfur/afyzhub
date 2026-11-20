@@ -1,16 +1,11 @@
 package com.afyzfur.afyzhub.data.remote.provider
 
-import com.afyzfur.afyzhub.data.log.RequestLogContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.encodeToString
+import com.afyzfur.afyzhub.data.remote.provider.WebSearchService.Result
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.contentOrNull
-import com.afyzfur.afyzhub.data.settings.AppSettings
-import com.afyzfur.afyzhub.data.remote.provider.WebSearchService.Result
 
 /** Pure result decoding, separated from transport retries and model instructions. */
 internal object SearchResultParser {
@@ -34,37 +29,7 @@ internal object SearchResultParser {
             emptyList()
         }
     }
-    /**
-     * 解析 DuckDuckGo HTML 版结果页。
-     *
-     * 结果条目的结构稳定多年：
-     * - 标题与链接在 `<a class="result__a" href="...">标题</a>`
-     * - 摘要在 `<a class="result__snippet">摘要</a>`
-     * 两者按出现顺序一一对应，各自正则提取后 zip。
-     */
-    fun parseResults(html: String, maxResults: Int): List<Result> {
-        val linkPattern = SearchPatterns.P1
-        val snippetPattern = SearchPatterns.P2
-
-        val links = linkPattern.findAll(html)
-            .map { m ->
-                Result(
-                    title = stripTags(m.groupValues[2]),
-                    snippet = "",
-                    url = cleanUrl(m.groupValues[1]),
-                    site = siteOf(cleanUrl(m.groupValues[1]))
-                )
-            }
-            .toList()
-
-        val snippets = snippetPattern.findAll(html)
-            .map { stripTags(it.groupValues[1]) }
-            .toList()
-
-        return links.zip(snippets) { link, snippet ->
-            link.copy(snippet = snippet)
-        }.take(maxResults)
-    }
+    /** Provider-specific HTML and JSON parsers used by the active search engines. */
 
     /**
      * 解析百度 PC 版结果页。
@@ -197,33 +162,15 @@ internal object SearchResultParser {
         .replace("&amp;", "&")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
-        .replace("&quot;", "\"")
+        .replace("&" + "quot;", Char(34).toString())
         .replace("&#x27;", "'")
         .replace("&nbsp;", " ")
         .replace(SearchPatterns.P14, " ")
         .trim()
 
-    /**
-     * DuckDuckGo 的链接是跳转格式 `//duckduckgo.com/l/?uddg=<encoded>`，
-     * 解出真实地址；已是直链则原样返回。
-     */
-    fun cleanUrl(raw: String): String {
-        val uddg = SearchPatterns.P15.find(raw)?.groupValues?.get(1)
-            ?: return if (raw.startsWith("//")) "https:$raw" else raw
-        return java.net.URLDecoder.decode(uddg, "UTF-8")
-    }
-
 }
 
 internal object SearchPatterns {
-    val P1 = Regex(
-            """<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>""",
-            RegexOption.DOT_MATCHES_ALL
-        )
-    val P2 = Regex(
-            """<a[^>]*class="result__snippet"[^>]*>(.*?)</a>""",
-            RegexOption.DOT_MATCHES_ALL
-        )
     val P3 = Regex(
             "<h3[^>]*>\\s*<a[^>]*href=\"([^\"]+)\"[^>]*>(.*?)</a>",
             RegexOption.DOT_MATCHES_ALL
@@ -234,11 +181,8 @@ internal object SearchPatterns {
     val P7 = Regex("<link>(.*?)</link>", RegexOption.DOT_MATCHES_ALL)
     val P8 = Regex("<description>(.*?)</description>", RegexOption.DOT_MATCHES_ALL)
     val P9 = Regex("https?://(?:www\\.)?([^/]+)")
-    val P10 = Regex("href=\"([^\"]+)\"")
-    val P11 = Regex("<a[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL)
     val P12 = Regex("<p[^>]*>(.*?)</p>", RegexOption.DOT_MATCHES_ALL)
     val P13 = Regex("<[^>]+>")
     val P14 = Regex("\\s+")
-    val P15 = Regex("""[?&]uddg=([^&]+)""")
     val P16 = Regex("""<web_search>(.*?)</web_search>""", RegexOption.DOT_MATCHES_ALL)
 }
