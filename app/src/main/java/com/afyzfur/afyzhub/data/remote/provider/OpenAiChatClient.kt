@@ -133,7 +133,7 @@ class OpenAiChatClient(
         model = settings.model,
         messages = turns.map { RequestMessage(role = it.role, content = it.content) },
         stream = stream,
-        temperature = null,
+        temperature = if (ThinkingEffort.supportsNativeThinking(settings.provider, settings.model)) null else 0.7,
         // 仅流式请求索取 usage。非流式的 usage 本来就在响应体里
         stream_options = if (stream) StreamOptions() else null,
         // OFF 时为 null，序列化会省略该字段

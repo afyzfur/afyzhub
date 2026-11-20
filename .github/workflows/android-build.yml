@@ -34,8 +34,6 @@ jobs:
             app/build/test-results/
             app/schemas/
   migrations:
-    # Run emulator tests on every event; the label is retained only as a compatibility alias.
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci-migration') || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

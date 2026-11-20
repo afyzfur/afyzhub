@@ -152,11 +152,8 @@ class OpenAiChatClientTest {
         OpenAiChatClient(streaming, json)
             .stream(listOf(ChatTurn("user", "hi")), settings)
             .textDeltas()
-        assertEquals(
-            true,
-            checkNotNull(body(streaming)["stream_options"])
-                .jsonObject.let { checkNotNull(it["include_usage"]) }.jsonPrimitive.content.toBoolean()
-        )
+        assertEquals("true", body(streaming)["stream_options"]?.jsonObject?.get("include_usage")?.jsonPrimitive?.content)
+        assertEquals("0.7", body(streaming)["temperature"]?.jsonPrimitive?.content)
 
         val plain = FakeTransport(
             response = """{"choices":[{"message":{"content":"a"}}]}"""
@@ -275,6 +272,13 @@ class OpenAiChatClientTest {
             listOf(ChatTurn("user", "hi")), enabled.copy(model = "gpt-4o")
         )
         assertNull(body(unsupportedTransport)["reasoning_effort"])
+
+        val reasoningTransport = FakeTransport(response = """{"choices":[{"message":{"content":"ok"}}]}""")
+        OpenAiChatClient(reasoningTransport, json).complete(
+            listOf(ChatTurn("user", "hi")), enabled.copy(model = "gpt-6.2", thinkingEffort = ThinkingEffort.MAX)
+        )
+        assertNull(body(reasoningTransport)["temperature"])
+        assertEquals("xhigh", body(reasoningTransport)["reasoning_effort"]?.jsonPrimitive?.content)
     }
 }
 
@@ -516,6 +520,25 @@ class GeminiChatClientTest {
             ?: error("Gemini thinkingConfig missing when disabled")
         assertEquals("0", offConfig["thinkingBudget"]?.jsonPrimitive?.content)
         assertEquals("false", offConfig["includeThoughts"]?.jsonPrimitive?.content)
+
+        val modernTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
+        GeminiChatClient(modernTransport, json).complete(
+            listOf(ChatTurn("user", "hi")), enabled.copy(model = "gemini-4-flash")
+        )
+        val modernConfig = body(modernTransport)["generationConfig"]?.jsonObject?.get("thinkingConfig")?.jsonObject
+            ?: error("Gemini modern thinkingConfig missing")
+        assertEquals("HIGH", modernConfig["thinkingLevel"]?.jsonPrimitive?.content)
+        assertNull(modernConfig["thinkingBudget"])
+
+        val modernOffTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
+        GeminiChatClient(modernOffTransport, json).complete(
+            listOf(ChatTurn("user", "hi")), enabled.copy(model = "gemini-4-flash", thinkingEnabled = false)
+        )
+        val modernOffConfig = body(modernOffTransport)["generationConfig"]?.jsonObject?.get("thinkingConfig")?.jsonObject
+            ?: error("Gemini modern disabled thinkingConfig missing")
+        assertEquals("LOW", modernOffConfig["thinkingLevel"]?.jsonPrimitive?.content)
+        assertEquals("false", modernOffConfig["includeThoughts"]?.jsonPrimitive?.content)
+        assertNull(modernOffConfig["thinkingBudget"])
 
         val unsupportedTransport = FakeTransport(response = """{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
         GeminiChatClient(unsupportedTransport, json).complete(

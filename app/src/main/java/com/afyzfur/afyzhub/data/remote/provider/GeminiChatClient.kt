@@ -122,13 +122,13 @@ class GeminiChatClient(
         val effort = settings.thinkingEffort
         val supportsNativeThinking = ThinkingEffort.supportsNativeThinking(settings.provider, settings.model)
         val config = if (supportsNativeThinking) {
-            val modernLevel = modernThinkingLevel(settings.model, effort)
+            val modernLevel = modernThinkingLevel(settings.model, effort, settings.thinkingEnabled)
             GenerationConfig(
                 thinkingConfig = ThinkingConfig(
                     thinkingBudget = if (modernLevel == null) {
                         if (settings.thinkingEnabled) effort.tokenBudget else 0
                     } else null,
-                    thinkingLevel = modernLevel?.takeIf { settings.thinkingEnabled },
+                    thinkingLevel = modernLevel,
                     includeThoughts = settings.thinkingEnabled
                 )
             )
@@ -144,9 +144,10 @@ class GeminiChatClient(
         )
     }
 
-    private fun modernThinkingLevel(model: String, effort: ThinkingEffort): String? {
+    private fun modernThinkingLevel(model: String, effort: ThinkingEffort, enabled: Boolean): String? {
         val normalized = model.lowercase()
         if (!normalized.contains("gemini-4") && !normalized.contains("gemini-5")) return null
+        if (!enabled) return "LOW"
         return when (effort) {
             ThinkingEffort.LOW -> "LOW"
             ThinkingEffort.MEDIUM -> "MEDIUM"

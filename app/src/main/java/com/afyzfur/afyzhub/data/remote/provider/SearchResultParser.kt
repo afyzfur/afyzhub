@@ -141,10 +141,9 @@ internal object SearchResultParser {
         SearchPatterns.P9.find(url)?.groupValues?.get(1) ?: ""
 
     fun parseBing(html: String, maxResults: Int, query: String): List<Result> {
-        val blocks = Regex("<li\\b[^>]*class=[\"'][^\"']*\\bb_algo\\b[^\"']*[\"'][^>]*>", RegexOption.IGNORE_CASE)
-            .split(html).drop(1)
-        val heading = Regex("<h2\\b[^>]*>(.*?)</h2>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-        val link = Regex("<a\\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        val blocks = SearchPatterns.BING_BLOCK.split(html).drop(1)
+        val heading = SearchPatterns.BING_HEADING
+        val link = SearchPatterns.BING_LINK
         return blocks.mapNotNull { block ->
             val h2 = heading.find(block)?.groupValues?.get(1) ?: return@mapNotNull null
             val match = link.find(h2) ?: return@mapNotNull null
@@ -185,4 +184,10 @@ internal object SearchPatterns {
     val P13 = Regex("<[^>]+>")
     val P14 = Regex("\\s+")
     val P16 = Regex("""<web_search>(.*?)</web_search>""", RegexOption.DOT_MATCHES_ALL)
+    val BING_BLOCK = Regex(
+        """<li\b[^>]*class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>""",
+        RegexOption.IGNORE_CASE
+    )
+    val BING_HEADING = Regex("""<h2\b[^>]*>(.*?)</h2>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    val BING_LINK = Regex("""<a\b[^>]*href=["']([^"']+)["'][^>]*>(.*?)</a>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
 }

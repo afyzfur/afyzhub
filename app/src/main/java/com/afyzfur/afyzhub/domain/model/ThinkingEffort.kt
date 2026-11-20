@@ -23,12 +23,12 @@ enum class ThinkingEffort(
             MEDIUM -> "medium"
             HIGH -> "high"
             XHIGH -> if (supportsExtendedOpenAiEffort(model)) "xhigh" else "high"
-            MAX -> if (supportsExtendedOpenAiEffort(model)) "max" else "high"
+            MAX -> if (supportsExtendedOpenAiEffort(model)) "xhigh" else "high"
         }
 
         private fun supportsExtendedOpenAiEffort(model: String): Boolean {
             val normalized = model.trim().lowercase()
-            return normalized.startsWith("gpt-6") || normalized.contains("xhigh") || normalized.contains("max")
+            return normalized.startsWith("gpt-6")
         }
 
         fun supportsNativeThinking(provider: AiProvider, model: String): Boolean {
